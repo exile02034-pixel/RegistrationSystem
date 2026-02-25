@@ -13,14 +13,25 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { dashboard } from '@/routes';
+
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
+        icon: LayoutGrid,
+    },
+    // {
+    //     title: 'User',
+    //     href: '/CreatePage/create',
+    //     icon: LayoutGrid,
+    // },
+    {
+        title: 'User',
+        href: '/User/Index',
         icon: LayoutGrid,
     },
 ];
