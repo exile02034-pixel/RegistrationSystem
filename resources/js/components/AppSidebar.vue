@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
-import NavFooter from '@/components/NavFooter.vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Folder, File, LayoutGrid, Users, HomeIcon } from 'lucide-vue-next';
+import { computed } from 'vue';
+
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -15,28 +16,33 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { dashboard } from '@/routes';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage();
+const user = computed(() => page.props.auth.user);
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
+const dashboardHref = computed(() =>
+    user.value?.role === 'admin' ? '/admin/dashboard' : '/user/dashboard'
+);
+
+const mainNavItems = computed<NavItem[]>(() => {
+    const role = user.value?.role;
+
+    if (role === 'admin') {
+        return [
+            { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+            { title: 'Users', href: '/admin/user', icon: Users },
+            { title: 'Drive', href: '/admin/folders', icon: Folder },
+            { title: 'Registration', href: '/admin/registration', icon: Folder },
+
+        ];
+    }
+    return [
+        { title: 'Dashboard', href: '/user/dashboard', icon: LayoutGrid },
+        { title: 'Registration', href: '/user/home', icon: HomeIcon },
+    ];
+});
+
+
 </script>
 
 <template>
@@ -45,20 +51,18 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="dashboardHref">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
-
         <SidebarContent>
             <NavMain :items="mainNavItems" />
         </SidebarContent>
-
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
+
             <NavUser />
         </SidebarFooter>
     </Sidebar>
