@@ -14,7 +14,10 @@ use ZipArchive;
 
 class RegistrationWorkflowService
 {
-    public function __construct(private readonly RegistrationTemplateService $templateService)
+    public function __construct(
+        private readonly RegistrationTemplateService $templateService,
+        private readonly AdminNotificationService $adminNotificationService,
+    )
     {
     }
 
@@ -35,6 +38,8 @@ class RegistrationWorkflowService
             companyTypeLabel: $this->templateService->labelFor($companyType),
             templateAttachments: $templates,
         ));
+
+        $this->adminNotificationService->notifyRegistrationLinkSent($link);
 
         return $link;
     }
@@ -69,6 +74,8 @@ class RegistrationWorkflowService
             companyTypeLabel: $this->templateService->labelFor($registrationLink->company_type),
             filesCount: $uploadedCount,
         ));
+
+        $this->adminNotificationService->notifyRegistrationSubmitted($registrationLink, $uploadedCount);
     }
 
     private function extractText(UploadedFile $file, string $storagePath): ?string

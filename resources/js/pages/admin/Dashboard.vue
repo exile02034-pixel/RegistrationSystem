@@ -11,6 +11,14 @@ defineProps<{
     acceptedUsers: number
     totalUploads: number
   }
+  recentActivities?: Array<{
+    id: string
+    title: string
+    message: string
+    time: string | null
+    url: string
+    actor?: string
+  }>
 }>()
 </script>
 
@@ -77,9 +85,35 @@ defineProps<{
                 <Link href="/admin/registration">Registration</Link>
               </Button>
               <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]">
-                <Link href="/admin/folders">Drive</Link>
+                <Link href="/notifications">Notifications</Link>
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card class="rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#12325B]">
+          <CardHeader class="px-0 pb-2">
+            <CardTitle class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent class="px-0">
+            <div v-if="recentActivities?.length" class="space-y-3">
+              <Link
+                v-for="activity in recentActivities"
+                :key="activity.id"
+                :href="activity.url"
+                class="block rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 transition hover:border-[#BFDBFE] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:hover:border-[#2563EB] dark:hover:bg-[#12325B]"
+              >
+                <p class="font-['Public_Sans'] text-sm font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ activity.title }}</p>
+                <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">{{ activity.message }}</p>
+                <p v-if="activity.actor" class="mt-2 font-['Public_Sans'] text-xs text-[#64748B] dark:text-[#7FA0BF]">By {{ activity.actor }}</p>
+                <p class="mt-2 font-['Public_Sans'] text-xs text-[#64748B] dark:text-[#7FA0BF]">{{ activity.time ?? 'Just now' }}</p>
+              </Link>
+            </div>
+            <p v-else class="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-4 font-['Public_Sans'] text-sm text-[#64748B] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
+              No recent activity yet.
+            </p>
           </CardContent>
         </Card>
       </div>

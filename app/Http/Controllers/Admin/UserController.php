@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
 use App\Models\User;
+use App\Services\AdminActivityService;
+use App\Services\AdminNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +14,12 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly AdminNotificationService $adminNotificationService,
+        private readonly AdminActivityService $adminActivityService,
+    ) {
+    }
+
     public function index()
     {
         $users = User::query()
@@ -49,7 +57,7 @@ class UserController extends Controller
         return Inertia::render('admin/users/create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -57,12 +65,23 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        User::create([
+        $createdUser = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'user',
         ]);
+
+        $this->adminActivityService->log(
+            admin: $request->user(),
+            action: 'client_created',
+            title: 'Client account created',
+            description: 'Created client account for '.$createdUser->email.'.',
+            url: route('admin.user.index'),
+            metadata: ['email' => $createdUser->email],
+        );
+
+        $this->adminNotificationService->notifyClientCreated($request->string('email')->toString());
 
         return back()->with('success', 'User created successfully');
     }
@@ -73,7 +92,17 @@ class UserController extends Controller
             return back()->with('error', 'Only client users can be deleted.');
         }
 
+        $deletedEmail = $user->email;
         $user->delete();
+
+        $this->adminActivityService->log(
+            admin: request()->user(),
+            action: 'client_deleted',
+            title: 'Client account deleted',
+            description: 'Deleted client account for '.$deletedEmail.'.',
+            url: route('admin.user.index'),
+            metadata: ['email' => $deletedEmail],
+        );
 
         return back()->with('success', 'User deleted successfully');
     }

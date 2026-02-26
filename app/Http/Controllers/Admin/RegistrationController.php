@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
+use App\Services\AdminActivityService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,7 @@ class RegistrationController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
+        private readonly AdminActivityService $adminActivityService,
     ) {
     }
 
@@ -56,9 +58,21 @@ class RegistrationController extends Controller
 
     public function sendLink(SendRegistrationLinkRequest $request): RedirectResponse
     {
-        $this->workflowService->createRegistrationLinkAndSend(
+        $registrationLink = $this->workflowService->createRegistrationLinkAndSend(
             email: $request->string('email')->toString(),
             companyType: $request->string('company_type')->toString(),
+        );
+
+        $this->adminActivityService->log(
+            admin: $request->user(),
+            action: 'registration_link_sent',
+            title: 'Registration email sent',
+            description: 'Sent registration email to '.$registrationLink->email.'.',
+            url: route('admin.register.show', $registrationLink->id),
+            metadata: [
+                'email' => $registrationLink->email,
+                'company_type' => $registrationLink->company_type,
+            ],
         );
 
         return back()->with('success', 'Registration email sent successfully.');

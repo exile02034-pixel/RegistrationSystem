@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\UserController;
+use App\Models\AdminActivity;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -12,7 +14,23 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::get('/dashboard', function () {
+        Route::get('/dashboard', function (Request $request) {
+            $recentActivities = AdminActivity::query()
+                ->with('user:id,name,email')
+                ->latest()
+                ->limit(6)
+                ->get()
+                ->map(fn (AdminActivity $activity) => [
+                    'id' => (string) $activity->id,
+                    'title' => $activity->title,
+                    'message' => $activity->description ?? 'No details provided.',
+                    'time' => $activity->created_at?->diffForHumans(),
+                    'url' => $activity->url ?? route('notifications.index'),
+                    'actor' => $activity->user?->name ?? $activity->user?->email ?? 'System',
+                ])
+                ->values()
+                ->all();
+
             return Inertia::render('admin/Dashboard', [
                 'stats' => [
                     'totalUsers' => User::where('role', 'user')->count(),
@@ -20,6 +38,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
                     'acceptedUsers' => RegistrationLink::where('status', 'completed')->count(),
                     'totalUploads' => RegistrationUpload::count(),
                 ],
+                'recentActivities' => $recentActivities,
             ]);
         })->name('dashboard');
 
