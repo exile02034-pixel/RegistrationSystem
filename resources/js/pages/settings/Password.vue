@@ -26,7 +26,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
         <h1 class="sr-only">Password Settings</h1>
 
         <SettingsLayout>
-            <div class="space-y-6">
+            <div
+                class="space-y-6 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+            >
                 <Heading
                     variant="small"
                     title="Update password"
@@ -48,12 +50,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
-                        <Label for="current_password">Current password</Label>
+                        <Label for="current_password" class="text-[#0B1F3A] dark:text-[#E6F1FF]">Current password</Label>
                         <Input
                             id="current_password"
                             name="current_password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="mt-1 block w-full border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] placeholder:text-[#475569] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:placeholder:text-[#9FB3C8]"
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
@@ -61,12 +63,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password">New password</Label>
+                        <Label for="password" class="text-[#0B1F3A] dark:text-[#E6F1FF]">New password</Label>
                         <Input
                             id="password"
                             name="password"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="mt-1 block w-full border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] placeholder:text-[#475569] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:placeholder:text-[#9FB3C8]"
                             autocomplete="new-password"
                             placeholder="New password"
                         />
@@ -74,14 +76,14 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password_confirmation"
+                        <Label for="password_confirmation" class="text-[#0B1F3A] dark:text-[#E6F1FF]"
                             >Confirm password</Label
                         >
                         <Input
                             id="password_confirmation"
                             name="password_confirmation"
                             type="password"
-                            class="mt-1 block w-full"
+                            class="mt-1 block w-full border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] placeholder:text-[#475569] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:placeholder:text-[#9FB3C8]"
                             autocomplete="new-password"
                             placeholder="Confirm password"
                         />
@@ -90,6 +92,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
                     <div class="flex items-center gap-4">
                         <Button
+                            class="border border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:border-[#2563EB] dark:bg-[#2563EB] dark:text-[#E6F1FF] dark:hover:bg-[#3B82F6]"
                             :disabled="processing"
                             data-test="update-password-button"
                             >Save password</Button
@@ -103,7 +106,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                         >
                             <p
                                 v-show="recentlySuccessful"
-                                class="text-sm text-neutral-600"
+                                class="text-sm text-[#475569] dark:text-[#9FB3C8]"
                             >
                                 Saved.
                             </p>

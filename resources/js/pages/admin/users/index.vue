@@ -1,22 +1,9 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
-import user from '@/routes/admin/user'
 import Button from '@/components/ui/button/Button.vue'
-interface User {
-  name: string
-  email: string
-  status: 'Pending' | 'Accepted'
-  createdAt: string
-}
-const props = defineProps<{users:any}>()
-console.log(props.users);
-// Static data for now
-const users: User[] = [
-  { name: 'John Doe', email: 'john@example.com', status: 'Accepted', createdAt: '2026-02-01' },
-  { name: 'Jane Smith', email: 'jane@example.com', status: 'Pending', createdAt: '2026-02-15' },
-  { name: 'Alice Johnson', email: 'alice@example.com', status: 'Accepted', createdAt: '2026-01-25' },
-]
+import AppLayout from '@/layouts/AppLayout.vue'
+import user from '@/routes/admin/user'
+const props = defineProps<{ users: any[] }>()
 </script>
 
 <template>
@@ -49,7 +36,7 @@ const users: User[] = [
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr  v-for="user in props.users" :key="user.id"class="hover:bg-gray-50">
+            <tr v-for="user in props.users" :key="user.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.name }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.email }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm">
