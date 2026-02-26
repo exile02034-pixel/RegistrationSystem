@@ -4,16 +4,22 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\RegistrationUpload;
-use Illuminate\Http\Response as HttpResponse;
+use App\Services\DocumentConversionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use ZipArchive;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly DocumentConversionService $conversionService,
+    ) {
+    }
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -48,171 +54,196 @@ class DashboardController extends Controller
             ->whereHas('registrationLink', fn ($query) => $query->where('email', $user->email))
             ->latest()
             ->get()
-            ->map(fn (RegistrationUpload $upload) => [
-                'id' => $upload->id,
-                'original_name' => $upload->original_name,
-                'pdf_name' => pathinfo($upload->original_name, PATHINFO_FILENAME).'.pdf',
-                'size_bytes' => $upload->size_bytes,
-                'submitted_at' => $upload->created_at?->toDateTimeString(),
-                'view_url' => route('user.uploads.view', $upload->id),
-                'download_url' => route('user.uploads.download', $upload->id),
-                'is_pdf' => $this->isPdfUpload($upload),
-            ]);
+            ->map(function (RegistrationUpload $upload) {
+                $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+                $isPdf = $extension === 'pdf';
+                $canConvertPdf = in_array($extension, ['doc', 'docx'], true);
+
+                return [
+                    'id' => $upload->id,
+                    'original_name' => $upload->original_name,
+                    'size_bytes' => $upload->size_bytes,
+                    'submitted_at' => $upload->created_at?->toDateTimeString(),
+                    'view_raw_url' => route('user.uploads.view', ['upload' => $upload->id, 'format' => 'raw']),
+                    'preview_pdf_url' => route('user.uploads.view', ['upload' => $upload->id, 'format' => 'pdf', 'strict' => 1]),
+                    'download_original_url' => route('user.uploads.download', $upload->id),
+                    'download_pdf_url' => route('user.uploads.download', $upload->id).'?format=pdf',
+                    'print_url' => route('user.uploads.print', $upload->id),
+                    'can_convert_pdf' => $canConvertPdf,
+                    'is_pdf' => $isPdf,
+                ];
+            });
 
         return Inertia::render('user/Files', [
             'uploads' => $uploads,
+            'batchPrintBaseUrl' => route('user.uploads.print-batch'),
         ]);
     }
 
-    public function downloadUpload(Request $request, RegistrationUpload $upload): HttpResponse
+    public function downloadUpload(Request $request, RegistrationUpload $upload): BinaryFileResponse
     {
         $user = $request->user();
 
         abort_unless($upload->registrationLink && $upload->registrationLink->email === $user->email, 403);
 
-        return $this->renderUploadAsPdfResponse(
-            $upload,
-            asInline: false
-        );
-    }
-
-    public function viewUpload(Request $request, RegistrationUpload $upload): HttpResponse
-    {
-        $user = $request->user();
-
-        abort_unless($upload->registrationLink && $upload->registrationLink->email === $user->email, 403);
-
-        return $this->renderUploadAsPdfResponse(
-            $upload,
-            asInline: true
-        );
-    }
-
-    private function renderUploadAsPdfResponse(RegistrationUpload $upload, bool $asInline): HttpResponse
-    {
         $path = Storage::disk('public')->path($upload->storage_path);
-        $pdfFileName = pathinfo($upload->original_name, PATHINFO_FILENAME).'.pdf';
-        $disposition = $asInline ? 'inline' : 'attachment';
-
-        if ($this->isPdfUpload($upload)) {
-            return response(
-                file_get_contents($path),
-                200,
-                [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => $disposition.'; filename="'.$pdfFileName.'"',
-                ]
-            );
-        }
-
-        $pdfContent = $this->convertUploadToPdfBinary($upload, $path);
-
-        return response(
-            $pdfContent,
-            200,
-            [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => $disposition.'; filename="'.$pdfFileName.'"',
-            ]
-        );
-    }
-
-    private function convertUploadToPdfBinary(RegistrationUpload $upload, string $absolutePath): string
-    {
         $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        $wantsPdf = $request->query('format') === 'pdf';
 
-        if (in_array($extension, ['jpg', 'jpeg', 'png'], true)) {
-            return $this->convertImageToPdfBinary($absolutePath);
+        if ($wantsPdf && in_array($extension, ['doc', 'docx'], true)) {
+            $pdf = $this->conversionService->convertToPdf($path, $upload->original_name);
+
+            if ($pdf !== null) {
+                return response()->download($pdf['path'], $pdf['name'])->deleteFileAfterSend(true);
+            }
         }
 
-        if ($extension === 'docx') {
-            $text = $this->extractDocxText($absolutePath);
-
-            return $this->buildSimplePdf(
-                title: $upload->original_name,
-                text: $text ?: 'No readable text found in this DOCX file.'
-            );
-        }
-
-        return $this->buildSimplePdf(
-            title: $upload->original_name,
-            text: 'This file was converted to a simple PDF view for client access.'
-        );
+        return response()->download($path, $upload->original_name);
     }
 
-    private function convertImageToPdfBinary(string $absolutePath): string
+    public function viewUpload(Request $request, RegistrationUpload $upload): BinaryFileResponse
     {
-        $imagick = new \Imagick($absolutePath);
-        $imagick->setImageFormat('pdf');
+        $user = $request->user();
 
-        return $imagick->getImagesBlob();
+        abort_unless($upload->registrationLink && $upload->registrationLink->email === $user->email, 403);
+
+        $path = Storage::disk('public')->path($upload->storage_path);
+        $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        $format = $request->query('format', 'raw');
+        $strict = (bool) $request->boolean('strict');
+
+        if ($format === 'pdf' && in_array($extension, ['doc', 'docx'], true)) {
+            $pdf = $this->conversionService->convertToPdf($path, $upload->original_name);
+
+            if ($pdf !== null) {
+                return response()->file($pdf['path'])->deleteFileAfterSend(true);
+            }
+
+            abort_if($strict, 422, 'PDF preview is unavailable for this document.');
+        }
+
+        if ($format === 'pdf' && $extension === 'pdf') {
+            return response()->file($path);
+        }
+
+        if ($format === 'pdf') {
+            abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
+        }
+
+        return response()->file($path);
     }
 
-    private function extractDocxText(string $absolutePath): ?string
+    public function printUpload(Request $request, RegistrationUpload $upload): \Illuminate\Contracts\View\View
     {
-        $zip = new ZipArchive();
+        $user = $request->user();
 
-        if ($zip->open($absolutePath) !== true) {
-            return null;
-        }
+        abort_unless($upload->registrationLink && $upload->registrationLink->email === $user->email, 403);
 
-        $documentXml = $zip->getFromName('word/document.xml');
-        $zip->close();
+        $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        $supportsPdfPrint = in_array($extension, ['doc', 'docx', 'pdf'], true);
 
-        if (! $documentXml) {
-            return null;
-        }
-
-        $cleanText = trim(preg_replace('/\s+/', ' ', strip_tags($documentXml)) ?? '');
-
-        return $cleanText !== '' ? $cleanText : null;
+        return view('user/print-upload', [
+            'fileName' => $upload->original_name,
+            'printableUrl' => $supportsPdfPrint
+                ? route('user.uploads.view', ['upload' => $upload->id, 'format' => 'pdf', 'strict' => 1])
+                : null,
+            'errorMessage' => $supportsPdfPrint ? null : 'This file type cannot be printed as PDF.',
+        ]);
     }
 
-    private function buildSimplePdf(string $title, string $text): string
+    public function printBatch(Request $request): \Illuminate\Contracts\View\View
     {
-        $lines = preg_split('/\r\n|\r|\n/', wordwrap($title."\n\n".$text, 95, "\n", true)) ?: [];
-        $content = "BT\n/F1 11 Tf\n14 TL\n40 800 Td\n";
+        $user = $request->user();
+        $all = $request->boolean('all');
+        $idCsv = trim((string) $request->query('ids', ''));
+        $ids = $idCsv !== '' ? array_values(array_filter(array_map('intval', explode(',', $idCsv)))) : [];
 
-        foreach ($lines as $line) {
-            $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $line);
-            $content .= "({$escaped}) Tj\nT*\n";
+        $query = RegistrationUpload::query()
+            ->with('registrationLink')
+            ->whereHas('registrationLink', fn ($q) => $q->where('email', $user->email))
+            ->latest();
+
+        if (! $all) {
+            $query->whereIn('id', $ids);
         }
 
-        $content .= "ET";
-        $length = strlen($content);
+        $uploads = $query->get();
 
-        $objects = [];
-        $objects[] = "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj";
-        $objects[] = "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj";
-        $objects[] = "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj";
-        $objects[] = "4 0 obj << /Length {$length} >> stream\n{$content}\nendstream endobj";
-        $objects[] = "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj";
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-
-        foreach ($objects as $object) {
-            $offsets[] = strlen($pdf);
-            $pdf .= $object."\n";
+        if ($uploads->isEmpty()) {
+            return view('user/print-upload', [
+                'fileName' => 'Batch Print',
+                'printableUrl' => null,
+                'errorMessage' => 'No files found for batch printing.',
+            ]);
         }
 
-        $xrefPosition = strlen($pdf);
-        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
-        $pdf .= "0000000000 65535 f \n";
+        $pdfPaths = [];
+        $tmpGeneratedPaths = [];
 
-        for ($index = 1; $index <= count($objects); $index++) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsets[$index]);
+        foreach ($uploads as $upload) {
+            $path = Storage::disk('public')->path($upload->storage_path);
+            $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+
+            if ($extension === 'pdf') {
+                $pdfPaths[] = $path;
+                continue;
+            }
+
+            if (in_array($extension, ['doc', 'docx'], true)) {
+                $pdf = $this->conversionService->convertToPdfViaLibreOffice($path, $upload->original_name)
+                    ?? $this->conversionService->convertToPdf($path, $upload->original_name);
+
+                if ($pdf !== null) {
+                    $pdfPaths[] = $pdf['path'];
+                    $tmpGeneratedPaths[] = $pdf['path'];
+                }
+            }
         }
 
-        $pdf .= "trailer << /Size ".(count($objects) + 1)." /Root 1 0 R >>\n";
-        $pdf .= "startxref\n{$xrefPosition}\n%%EOF";
+        if ($pdfPaths === []) {
+            return view('user/print-upload', [
+                'fileName' => 'Batch Print',
+                'printableUrl' => null,
+                'errorMessage' => 'No printable PDF output could be generated from selected files.',
+            ]);
+        }
 
-        return $pdf;
+        $merged = $this->conversionService->mergePdfFiles($pdfPaths, 'batch_print.pdf');
+
+        foreach ($tmpGeneratedPaths as $tmpPath) {
+            if (file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
+        }
+
+        if ($merged === null) {
+            return view('user/print-upload', [
+                'fileName' => 'Batch Print',
+                'printableUrl' => null,
+                'errorMessage' => 'Unable to merge files into a single printable PDF.',
+            ]);
+        }
+
+        $token = Str::uuid()->toString();
+        $targetPath = storage_path('app/tmp-pdf/print_batch_'.$user->id.'_'.$token.'.pdf');
+        copy($merged['path'], $targetPath);
+        @unlink($merged['path']);
+
+        return view('user/print-upload', [
+            'fileName' => 'Batch Print',
+            'printableUrl' => route('user.uploads.print-batch.file', ['token' => $token]),
+            'errorMessage' => null,
+        ]);
     }
 
-    private function isPdfUpload(RegistrationUpload $upload): bool
+    public function printBatchFile(Request $request, string $token): SymfonyResponse
     {
-        return $upload->mime_type === 'application/pdf'
-            || Str::endsWith(Str::lower($upload->original_name), '.pdf');
+        $user = $request->user();
+        $safeToken = preg_replace('/[^a-zA-Z0-9\\-]/', '', $token);
+        $path = storage_path('app/tmp-pdf/print_batch_'.$user->id.'_'.$safeToken.'.pdf');
+
+        abort_unless(file_exists($path), 404);
+
+        return response()->file($path)->deleteFileAfterSend(true);
     }
 }

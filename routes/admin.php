@@ -26,12 +26,18 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/user', [UserController::class, 'index'])->name('user.index');
         Route::get('/user/create', [UserController::class, 'create'])->name('user.create');
         Route::post('/user', [UserController::class, 'store'])->name('user.store');
+        Route::get('/users/{user}', [UserController::class, 'show'])->name('user.show');
         Route::delete('/user/{user}', [UserController::class, 'destroy'])->name('user.destroy');
 
         Route::get('/registration', [RegistrationController::class, 'index'])->name('register.index');
         Route::get('/registration/create', [RegistrationController::class, 'create'])->name('register.create');
         Route::post('/registration/send', [RegistrationController::class, 'sendLink'])->name('register.send');
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
+        Route::delete('/registrations/{registrationLink}', [RegistrationController::class, 'destroy'])->name('register.destroy');
         Route::get('/registration/{registrationLink}/uploads/{upload}/download', [RegistrationController::class, 'downloadUpload'])
             ->name('register.uploads.download');
+        Route::get('/registration/{registrationLink}/uploads/{upload}/view', [RegistrationController::class, 'viewUpload'])
+            ->name('register.uploads.view');
+        Route::delete('/registration/{registrationLink}/uploads/{upload}', [RegistrationController::class, 'destroyUpload'])
+            ->name('register.uploads.destroy');
     });

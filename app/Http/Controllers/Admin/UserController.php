@@ -4,52 +4,75 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
+use App\Models\RegistrationUpload;
 use App\Models\User;
+use App\Services\RegistrationTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index()
+    public function __construct(
+        private readonly RegistrationTemplateService $templateService,
+    ) {
+    }
+
+    public function index(): Response
     {
         $users = User::query()
             ->where('role', 'user')
             ->latest()
             ->get();
 
-        $latestLinkByEmail = RegistrationLink::query()
+        $linkStatsByEmail = RegistrationLink::query()
+            ->withCount('uploads')
             ->whereIn('email', $users->pluck('email')->filter()->values())
             ->latest()
             ->get()
-            ->unique('email')
-            ->keyBy('email');
+            ->groupBy('email');
 
         return Inertia::render('admin/users/index', [
-            'users' => $users->map(function (User $user) use ($latestLinkByEmail) {
-                $registrationLink = $latestLinkByEmail->get($user->email);
+            'users' => $users->map(function (User $user) use ($linkStatsByEmail) {
+                $emailLinks = $linkStatsByEmail->get($user->email, collect());
+                $totalUploads = $emailLinks->sum('uploads_count');
+                $assignedTypeValues = $emailLinks
+                    ->where('status', 'completed')
+                    ->pluck('company_type')
+                    ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
+                    ->unique()
+                    ->take(3)
+                    ->values()
+                    ->all();
 
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'created_at' => $user->created_at?->toDateTimeString(),
-                    'company_type' => $registrationLink?->company_type,
-                    'registration_show_url' => $registrationLink
-                        ? route('admin.register.show', $registrationLink->id)
-                        : null,
+                    'company_types' => array_map(
+                        fn (string $type) => [
+                            'value' => $type,
+                            'label' => $this->templateService->labelFor($type),
+                        ],
+                        $assignedTypeValues
+                    ),
+                    'company_type_values' => $assignedTypeValues,
+                    'uploads_count' => $totalUploads,
+                    'show_url' => route('admin.user.show', $user->id),
                 ];
             }),
         ]);
     }
 
-    public function create()
+    public function create(): Response
     {
         return Inertia::render('admin/users/create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -65,6 +88,60 @@ class UserController extends Controller
         ]);
 
         return back()->with('success', 'User created successfully');
+    }
+
+    public function show(User $user): Response
+    {
+        abort_unless($user->role === 'user', 404);
+
+        $links = RegistrationLink::query()
+            ->with('uploads')
+            ->where('email', $user->email)
+            ->latest()
+            ->get();
+
+        $uploads = $links
+            ->flatMap(function (RegistrationLink $link) {
+                return $link->uploads->map(fn (RegistrationUpload $upload) => [
+                    'id' => $upload->id,
+                    'registration_link_id' => $link->id,
+                    'company_type' => $link->company_type,
+                    'company_type_label' => $this->templateService->labelFor($link->company_type),
+                    'original_name' => $upload->original_name,
+                    'mime_type' => $upload->mime_type,
+                    'size_bytes' => $upload->size_bytes,
+                    'created_at' => $upload->created_at?->toDateTimeString(),
+                    'view_url' => route('admin.register.uploads.view', [$link->id, $upload->id]),
+                    'download_url' => route('admin.register.uploads.download', [$link->id, $upload->id]),
+                    'download_pdf_url' => route('admin.register.uploads.download', [$link->id, $upload->id]).'?format=pdf',
+                    'can_convert_pdf' => in_array(strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION)), ['doc', 'docx'], true),
+                ]);
+            })
+            ->values();
+
+        $assignedTypes = $links
+            ->where('status', 'completed')
+            ->pluck('company_type')
+            ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
+            ->unique()
+            ->take(3)
+            ->values();
+
+        return Inertia::render('admin/users/show', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->email_verified_at ? 'Verified' : 'Pending Verification',
+                'created_at' => $user->created_at?->toDateTimeString(),
+                'company_types' => $assignedTypes
+                    ->map(fn (string $type) => [
+                        'value' => $type,
+                        'label' => $this->templateService->labelFor($type),
+                    ])->values(),
+            ],
+            'uploads' => $uploads,
+        ]);
     }
 
     public function destroy(User $user): RedirectResponse

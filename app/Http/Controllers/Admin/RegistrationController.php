@@ -67,6 +67,15 @@ class RegistrationController extends Controller
         return back()->with('success', 'Registration email sent successfully.');
     }
 
+    public function destroy(RegistrationLink $registrationLink): RedirectResponse
+    {
+        $registrationLink->delete();
+
+        return redirect()
+            ->route('admin.register.index')
+            ->with('success', 'Registration deleted successfully.');
+    }
+
     public function show(RegistrationLink $registrationLink): Response
     {
         $registrationLink->load('uploads');
@@ -87,6 +96,7 @@ class RegistrationController extends Controller
                     'created_at' => $upload->created_at?->toDateTimeString(),
                     'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
                     'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
+                    'delete_url' => route('admin.register.uploads.destroy', [$registrationLink->id, $upload->id]),
                     'can_convert_pdf' => in_array(strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION)), ['doc', 'docx'], true),
                 ]),
             ],
@@ -110,5 +120,45 @@ class RegistrationController extends Controller
         }
 
         return response()->download($sourcePath, $upload->original_name);
+    }
+
+    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
+    {
+        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
+
+        $sourcePath = Storage::disk('public')->path($upload->storage_path);
+        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        $format = $request->query('format', 'raw');
+        $strict = (bool) $request->boolean('strict');
+
+        if ($format === 'pdf' && in_array($extension, ['doc', 'docx'], true)) {
+            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
+
+            if ($pdf !== null) {
+                return response()->file($pdf['path'])->deleteFileAfterSend(true);
+            }
+
+            abort_if($strict, 422, 'PDF preview is unavailable for this document.');
+        }
+
+        if ($format === 'pdf' && $extension === 'pdf') {
+            return response()->file($sourcePath);
+        }
+
+        if ($format === 'pdf') {
+            abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
+        }
+
+        return response()->file($sourcePath);
+    }
+
+    public function destroyUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): RedirectResponse
+    {
+        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
+
+        Storage::disk('public')->delete($upload->storage_path);
+        $upload->delete();
+
+        return back()->with('success', 'File deleted successfully.');
     }
 }

@@ -1,8 +1,22 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from '@/components/ui/sonner'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Eye, Trash2 } from 'lucide-vue-next'
 
 type RegistrationLink = {
   id: number
@@ -26,6 +40,9 @@ const props = defineProps<{
 }>()
 
 const isModalOpen = ref(false)
+const isDeleteModalOpen = ref(false)
+const deleting = ref(false)
+const selectedForDelete = ref<RegistrationLink | null>(null)
 
 const form = useForm({
   email: '',
@@ -38,6 +55,33 @@ const submit = () => {
     onSuccess: () => {
       form.reset('email')
       isModalOpen.value = false
+    },
+  })
+}
+
+const openDeleteModal = (link: RegistrationLink) => {
+  selectedForDelete.value = link
+  isDeleteModalOpen.value = true
+}
+
+const confirmDelete = () => {
+  if (!selectedForDelete.value) return
+
+  router.delete(`/admin/registrations/${selectedForDelete.value.id}`, {
+    preserveScroll: true,
+    onStart: () => {
+      deleting.value = true
+    },
+    onSuccess: () => {
+      toast.success('Deleted successfully.')
+      isDeleteModalOpen.value = false
+      selectedForDelete.value = null
+    },
+    onError: () => {
+      toast.error('Unable to delete registration.')
+    },
+    onFinish: () => {
+      deleting.value = false
     },
   })
 }
@@ -133,7 +177,38 @@ const submit = () => {
                 <td class="px-4 py-3">{{ link.uploads_count }}</td>
                 <td class="px-4 py-3">{{ link.created_at }}</td>
                 <td class="px-4 py-3">
-                  <a :href="link.show_url" class="text-blue-600 hover:underline">View</a>
+                  <div class="flex items-center gap-3">
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button
+                          as="a"
+                          :href="link.show_url"
+                          size="icon-sm"
+                          variant="outline"
+                          class="cursor-pointer"
+                          aria-label="View"
+                        >
+                          <Eye />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="destructive"
+                          class="cursor-pointer"
+                          aria-label="Delete Registration"
+                          @click="openDeleteModal(link)"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!links.length">
@@ -144,5 +219,27 @@ const submit = () => {
         </div>
       </div>
     </div>
+
+    <AlertDialog :open="isDeleteModalOpen" @update:open="isDeleteModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Registration</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this registration? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            :disabled="deleting"
+            @click="isDeleteModalOpen = false; selectedForDelete = null"
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleting" @click="confirmDelete">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </AppLayout>
 </template>
