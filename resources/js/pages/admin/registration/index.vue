@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
-
-type CompanyType = {
-  value: string
-  label: string
-}
+import { ref } from 'vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 type RegistrationLink = {
   id: number
@@ -18,20 +15,30 @@ type RegistrationLink = {
   show_url: string
 }
 
+type CompanyType = {
+  value: string
+  label: string
+}
+
 const props = defineProps<{
-  companyTypes: CompanyType[]
   links: RegistrationLink[]
+  companyTypes: CompanyType[]
 }>()
+
+const isModalOpen = ref(false)
 
 const form = useForm({
   email: '',
   company_type: props.companyTypes[0]?.value ?? 'corp',
 })
 
-const sendRegistration = () => {
+const submit = () => {
   form.post('/admin/registration/send', {
     preserveScroll: true,
-    onSuccess: () => form.reset('email'),
+    onSuccess: () => {
+      form.reset('email')
+      isModalOpen.value = false
+    },
   })
 }
 </script>
@@ -39,45 +46,69 @@ const sendRegistration = () => {
 <template>
   <AppLayout>
     <div class="space-y-8 p-6">
-      <div>
+      <div class="flex items-center justify-between gap-4">
+        <div>
         <h1 class="text-3xl font-bold">Client Registration</h1>
-        <p class="text-gray-500">Send client links with company-specific DOCX requirements.</p>
-      </div>
-
-      <div class="max-w-xl space-y-4 rounded-xl border bg-white p-5 shadow-sm">
-        <p v-if="form.recentlySuccessful" class="rounded bg-green-100 p-2 text-sm text-green-700">
-          Registration email sent successfully.
-        </p>
-
-        <div>
-          <label class="mb-1 block text-sm font-medium">Client Email</label>
-          <input
-            v-model="form.email"
-            type="email"
-            class="w-full rounded border p-2"
-            placeholder="client@example.com"
-          />
-          <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
+        <p class="text-gray-500">View all sent registration links and client submissions.</p>
         </div>
+        <Dialog :open="isModalOpen" @update:open="isModalOpen = $event">
+          <DialogTrigger as-child>
+            <button class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+              Send Registration
+            </button>
+          </DialogTrigger>
+          <DialogContent class="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Send Registration Email</DialogTitle>
+            </DialogHeader>
 
-        <div>
-          <label class="mb-1 block text-sm font-medium">Company Type</label>
-          <select v-model="form.company_type" class="w-full rounded border p-2">
-            <option v-for="type in companyTypes" :key="type.value" :value="type.value">
-              {{ type.label }}
-            </option>
-          </select>
-          <p v-if="form.errors.company_type" class="mt-1 text-sm text-red-600">{{ form.errors.company_type }}</p>
-        </div>
+            <div class="space-y-4">
+              <p v-if="form.recentlySuccessful" class="rounded bg-green-100 p-2 text-sm text-green-700">
+                Registration email sent successfully.
+              </p>
 
-        <button
-          type="button"
-          :disabled="form.processing"
-          @click="sendRegistration"
-          class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          Send Registration Email
-        </button>
+              <div>
+                <label class="mb-1 block text-sm font-medium">Client Email</label>
+                <input
+                  v-model="form.email"
+                  type="email"
+                  class="w-full rounded border p-2"
+                  placeholder="client@example.com"
+                />
+                <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium">Company Type</label>
+                <select v-model="form.company_type" class="w-full rounded border p-2">
+                  <option v-for="type in companyTypes" :key="type.value" :value="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>
+                <p v-if="form.errors.company_type" class="mt-1 text-sm text-red-600">{{ form.errors.company_type }}</p>
+              </div>
+
+              <div class="flex justify-end gap-2">
+                <button
+                  type="button"
+                  class="rounded border px-4 py-2 text-sm hover:bg-gray-50"
+                  :disabled="form.processing"
+                  @click="isModalOpen = false"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  :disabled="form.processing"
+                  @click="submit"
+                  class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Send Registration Email
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div class="space-y-3">

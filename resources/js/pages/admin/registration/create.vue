@@ -1,83 +1,76 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
-import { reactive } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+
+type CompanyType = {
+  value: string
+  label: string
+}
 
 const props = defineProps<{
-  token: string
-  email: string
+  companyTypes: CompanyType[]
 }>()
 
-const form = reactive({
-  name: '',
-  email: props.email,
-  phone: '',
-  address: '',
-  password: '',
-  password_confirmation: '',
-})
-
-const errors = reactive({
-  name: '',
+const form = useForm({
   email: '',
-  phone: '',
-  address: '',
-  password: '',
-  password_confirmation: '',
+  company_type: props.companyTypes[0]?.value ?? 'corp',
 })
 
 const submit = () => {
-  router.post(`/registration/${props.token}`, form, {
-    onSuccess: () => {
-      alert('Account successfully created! You can now login.')
-      router.visit('/login')
-    },
-    onError: (e) => Object.assign(errors, e)
+  form.post('/admin/registration/send', {
+    preserveScroll: true,
+    onSuccess: () => form.reset('email'),
   })
 }
 </script>
 
 <template>
   <AppLayout>
-    <div class="p-6 max-w-lg mx-auto space-y-6">
-      <h1 class="text-3xl font-bold">Client Registration</h1>
-      <p class="text-gray-500">Please fill out your information</p>
+    <div class="space-y-6 p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold">Send Registration Email</h1>
+          <p class="text-gray-500">Select company type and send required DOCX templates.</p>
+        </div>
+        <Link href="/admin/registration" class="rounded border px-4 py-2 text-sm hover:bg-gray-50">
+          Back to List
+        </Link>
+      </div>
 
-      <div class="bg-white shadow rounded-xl p-6">
-        <form @submit.prevent="submit" class="space-y-4">
-          <!-- Name -->
-          <div>
-            <label class="block text-sm font-medium">Name</label>
-            <input v-model="form.name" type="text" class="w-full border rounded p-2" placeholder="John Doe" />
-            <span class="text-red-500 text-sm">{{ errors.name }}</span>
-          </div>
+      <div class="max-w-xl space-y-4 rounded-xl border bg-white p-5 shadow-sm">
+        <p v-if="form.recentlySuccessful" class="rounded bg-green-100 p-2 text-sm text-green-700">
+          Registration email sent successfully.
+        </p>
 
-          <!-- Email -->
-          <div>
-            <label class="block text-sm font-medium">Email</label>
-            <input v-model="form.email" type="email" class="w-full border rounded p-2" placeholder="john@example.com" />
-            <span class="text-red-500 text-sm">{{ errors.email }}</span>
-          </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium">Client Email</label>
+          <input
+            v-model="form.email"
+            type="email"
+            class="w-full rounded border p-2"
+            placeholder="client@example.com"
+          />
+          <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">{{ form.errors.email }}</p>
+        </div>
 
-          <!-- Phone -->
-          <div>
-            <label class="block text-sm font-medium">Phone</label>
-            <input v-model="form.phone" type="text" class="w-full border rounded p-2" placeholder="09123456789" />
-            <span class="text-red-500 text-sm">{{ errors.phone }}</span>
-          </div>
+        <div>
+          <label class="mb-1 block text-sm font-medium">Company Type</label>
+          <select v-model="form.company_type" class="w-full rounded border p-2">
+            <option v-for="type in companyTypes" :key="type.value" :value="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+          <p v-if="form.errors.company_type" class="mt-1 text-sm text-red-600">{{ form.errors.company_type }}</p>
+        </div>
 
-          <!-- Address -->
-          <div>
-            <label class="block text-sm font-medium">Address</label>
-            <input v-model="form.address" type="text" class="w-full border rounded p-2" placeholder="123 Street, City" />
-            <span class="text-red-500 text-sm">{{ errors.address }}</span>
-          </div>
-
-          <!-- Submit -->
-          <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Submit Registration
-          </button>
-        </form>
+        <button
+          type="button"
+          :disabled="form.processing"
+          @click="submit"
+          class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          Send Registration Email
+        </button>
       </div>
     </div>
   </AppLayout>

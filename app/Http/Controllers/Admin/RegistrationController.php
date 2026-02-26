@@ -42,8 +42,15 @@ class RegistrationController extends Controller
             ]);
 
         return Inertia::render('admin/registration/index', [
-            'companyTypes' => $this->templateService->availableCompanyTypes(),
             'links' => $links,
+            'companyTypes' => $this->templateService->availableCompanyTypes(),
+        ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('admin/registration/create', [
+            'companyTypes' => $this->templateService->availableCompanyTypes(),
         ]);
     }
 
