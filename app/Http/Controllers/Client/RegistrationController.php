@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\StoreClientUploadsRequest;
 use App\Models\RegistrationLink;
+use App\Services\DocumentConversionService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +18,7 @@ class RegistrationController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
+        private readonly DocumentConversionService $conversionService,
     ) {
     }
 
@@ -47,8 +49,14 @@ class RegistrationController extends Controller
     {
         $link = RegistrationLink::where('token', $token)->firstOrFail();
         $template = $this->templateService->templateByKey($link->company_type, $templateKey);
+        $sourcePath = base_path($template['path']);
+        $pdf = $this->conversionService->convertToPdf($sourcePath, $template['name']);
 
-        return response()->download(base_path($template['path']), $template['name']);
+        if ($pdf !== null) {
+            return response()->download($pdf['path'], $pdf['name'])->deleteFileAfterSend(true);
+        }
+
+        return response()->download($sourcePath, $template['name']);
     }
 
     public function storeUploads(StoreClientUploadsRequest $request, string $token): RedirectResponse
