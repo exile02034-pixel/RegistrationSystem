@@ -57,6 +57,17 @@ class RegistrationController extends Controller
 
         $this->workflowService->storeClientUploads($link, $request->file('files'));
 
-        return back()->with('success', 'Files uploaded successfully.');
+        return redirect()
+            ->route('client.registration.thank-you', $link->token)
+            ->with('success', 'Files uploaded successfully.');
+    }
+
+    public function thankYou(string $token): Response
+    {
+        $link = RegistrationLink::where('token', $token)->firstOrFail();
+
+        return Inertia::render('client/registration/ThankYou', [
+            'email' => $link->email,
+        ]);
     }
 }
