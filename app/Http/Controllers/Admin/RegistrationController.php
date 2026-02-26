@@ -3,81 +3,91 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\ClientRegistrationLink;
-use App\Mail\RegistrationLinkMail;
+use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Models\RegistrationLink;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use App\Models\RegistrationUpload;
+use App\Services\RegistrationTemplateService;
+use App\Services\RegistrationWorkflowService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RegistrationController extends Controller
 {
-    // Admin page to send registration emails
-    public function index()
-    {
-        return Inertia::render('admin/registration/index');
+    public function __construct(
+        private readonly RegistrationTemplateService $templateService,
+        private readonly RegistrationWorkflowService $workflowService,
+    ) {
     }
 
-    // Handle sending registration email
-    public function sendLink(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-    ]);
+    public function index(): Response
+    {
+        $links = RegistrationLink::query()
+            ->withCount('uploads')
+            ->latest()
+            ->get()
+            ->map(fn (RegistrationLink $link) => [
+                'id' => $link->id,
+                'email' => $link->email,
+                'company_type' => $link->company_type,
+                'company_type_label' => $this->templateService->labelFor($link->company_type),
+                'status' => $link->status,
+                'token' => $link->token,
+                'uploads_count' => $link->uploads_count,
+                'created_at' => $link->created_at?->toDateTimeString(),
+                'client_url' => route('client.registration.show', $link->token),
+                'show_url' => route('admin.register.show', $link->id),
+            ]);
 
-    $token = Str::random(40);
+        return Inertia::render('admin/registration/index', [
+            'companyTypes' => $this->templateService->availableCompanyTypes(),
+            'links' => $links,
+        ]);
+    }
 
-    $link = RegistrationLink::create([
-        'email' => $request->email,
-        'token' => $token,
-        'status' => 'pending',
-    ]);
+    public function sendLink(SendRegistrationLinkRequest $request): RedirectResponse
+    {
+        $this->workflowService->createRegistrationLinkAndSend(
+            email: $request->string('email')->toString(),
+            companyType: $request->string('company_type')->toString(),
+        );
 
-    // Generate full registration URL
-    $registrationUrl = route('client.registration.create', $token);
+        return back()->with('success', 'Registration email sent successfully.');
+    }
 
-    // Send email
-    Mail::to($request->email)->queue(new RegistrationLinkMail($registrationUrl));
+    public function show(RegistrationLink $registrationLink): Response
+    {
+        $registrationLink->load('uploads');
 
-    return back()->with('success', 'Registration email sent successfully');
-}
+        return Inertia::render('admin/registration/show', [
+            'registration' => [
+                'id' => $registrationLink->id,
+                'email' => $registrationLink->email,
+                'token' => $registrationLink->token,
+                'company_type_label' => $this->templateService->labelFor($registrationLink->company_type),
+                'status' => $registrationLink->status,
+                'created_at' => $registrationLink->created_at?->toDateTimeString(),
+                'uploads' => $registrationLink->uploads->map(fn (RegistrationUpload $upload) => [
+                    'id' => $upload->id,
+                    'original_name' => $upload->original_name,
+                    'mime_type' => $upload->mime_type,
+                    'size_bytes' => $upload->size_bytes,
+                    'created_at' => $upload->created_at?->toDateTimeString(),
+                    'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
+                ]),
+            ],
+        ]);
+    }
 
-    // Show client registration form
-    public function create($token)
-{
-    $link = RegistrationLink::where('token', $token)
-        ->where('status', 'pending')
-        ->firstOrFail();
+    public function downloadUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
+    {
+        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
 
-    return view('emails.registration.create', [
-        'token' => $link->token,
-        'email' => $link->email,
-    ]);
-}
-
-    // Handle client registration form submission
-  public function store(Request $request, $token)
-{
-    $link = RegistrationLink::where('token', $token)
-        ->where('status', 'pending')
-        ->firstOrFail();
-
-    $data = $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|email',
-        'phone' => 'required|string|max:20',
-        'address' => 'nullable|string|max:255',
-    ]);
-
-    // Save form submission to database
-    \App\Models\ClientRegistration::create($data);
-
-    // Mark link as completed
-    $link->update(['status' => 'completed']);
-
-    return redirect()->route('client.registration.thankyou')
-                     ->with('success', 'Form submitted successfully!');
-}
+        return response()->download(
+            Storage::disk('public')->path($upload->storage_path),
+            $upload->original_name
+        );
+    }
 }
