@@ -48,11 +48,15 @@ class DashboardController extends Controller
     public function files(Request $request): Response
     {
         $user = $request->user();
+        $search = trim((string) $request->query('search', ''));
+        $sort = $request->query('sort') === 'created_at' ? 'created_at' : 'created_at';
+        $direction = $request->query('direction') === 'asc' ? 'asc' : 'desc';
 
         $uploads = RegistrationUpload::query()
             ->with('registrationLink')
             ->whereHas('registrationLink', fn ($query) => $query->where('email', $user->email))
-            ->latest()
+            ->when($search !== '', fn ($query) => $query->where('original_name', 'like', "%{$search}%"))
+            ->orderBy($sort, $direction)
             ->get()
             ->map(function (RegistrationUpload $upload) {
                 $extension = Str::lower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
@@ -77,6 +81,11 @@ class DashboardController extends Controller
         return Inertia::render('user/Files', [
             'uploads' => $uploads,
             'batchPrintBaseUrl' => route('user.uploads.print-batch'),
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'direction' => $direction,
+            ],
         ]);
     }
 
