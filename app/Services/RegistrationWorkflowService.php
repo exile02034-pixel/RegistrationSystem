@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\ClientUploadReceivedMail;
 use App\Mail\RegistrationLinkMail;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
@@ -43,6 +44,8 @@ class RegistrationWorkflowService
      */
     public function storeClientUploads(RegistrationLink $registrationLink, array $files): void
     {
+        $uploadedCount = 0;
+
         foreach ($files as $file) {
             $storedName = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
             $storagePath = $file->storeAs('client-uploads/'.$registrationLink->token, $storedName, 'public');
@@ -56,9 +59,16 @@ class RegistrationWorkflowService
                 'size_bytes' => $file->getSize(),
                 'extracted_text' => $this->extractText($file, $storagePath),
             ]);
+
+            $uploadedCount++;
         }
 
         $registrationLink->update(['status' => 'completed']);
+
+        Mail::to($registrationLink->email)->send(new ClientUploadReceivedMail(
+            companyTypeLabel: $this->templateService->labelFor($registrationLink->company_type),
+            filesCount: $uploadedCount,
+        ));
     }
 
     private function extractText(UploadedFile $file, string $storagePath): ?string

@@ -11,3 +11,6 @@ Route::get('/client-registration/{token}/templates/{templateKey}', [Registration
 
 Route::post('/client-registration/{token}/uploads', [RegistrationController::class, 'storeUploads'])
     ->name('client.registration.uploads.store');
+
+Route::get('/client-registration/{token}/thank-you', [RegistrationController::class, 'thankYou'])
+    ->name('client.registration.thank-you');

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
 type TemplateFile = {
   key: string
@@ -21,16 +22,46 @@ const form = useForm({
   files: [] as File[],
 })
 
+const fileInput = ref<HTMLInputElement | null>(null)
+const selectedFiles = ref<File[]>([])
+const queuedFiles = ref<File[]>([])
+
 const onFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
-  form.files = Array.from(target.files ?? [])
+  selectedFiles.value = Array.from(target.files ?? [])
+}
+
+const addToQueue = () => {
+  if (!selectedFiles.value.length) {
+    return
+  }
+
+  queuedFiles.value = [...queuedFiles.value, ...selectedFiles.value]
+  selectedFiles.value = []
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const removeQueuedFile = (index: number) => {
+  queuedFiles.value = queuedFiles.value.filter((_, fileIndex) => fileIndex !== index)
 }
 
 const submit = () => {
+  form.files = queuedFiles.value
+
   form.post(props.uploadUrl, {
     forceFormData: true,
     preserveScroll: true,
-    onSuccess: () => form.reset(),
+    onSuccess: () => {
+      form.reset()
+      queuedFiles.value = []
+      selectedFiles.value = []
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
+    },
   })
 }
 </script>
@@ -60,24 +91,57 @@ const submit = () => {
 
         <div class="rounded-xl border bg-white p-6 shadow-sm">
           <h2 class="text-lg font-semibold">Upload Completed Files</h2>
-          <p class="mt-1 text-sm text-gray-600">You can upload multiple files in one submission.</p>
+          <p class="mt-1 text-sm text-gray-600">Click Upload Files to stage files first, then click Submit Files to save them.</p>
 
           <form class="mt-4 space-y-4" @submit.prevent="submit">
             <p v-if="form.recentlySuccessful" class="rounded bg-green-100 p-2 text-sm text-green-700">
               Files uploaded successfully.
             </p>
 
-            <input type="file" multiple @change="onFileChange" class="w-full rounded border p-2" />
+            <input ref="fileInput" type="file" multiple @change="onFileChange" class="w-full rounded border p-2" />
             <p v-if="form.errors.files" class="text-sm text-red-600">{{ form.errors.files }}</p>
             <p v-if="form.errors['files.0']" class="text-sm text-red-600">{{ form.errors['files.0'] }}</p>
 
-            <button
-              type="submit"
-              :disabled="form.processing"
-              class="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              Upload Files
-            </button>
+            <div class="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                :disabled="!selectedFiles.length"
+                @click="addToQueue"
+                class="w-full rounded bg-slate-700 px-4 py-2 text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Upload Files
+              </button>
+
+              <button
+                type="submit"
+                :disabled="form.processing || !queuedFiles.length"
+                class="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Submit Files
+              </button>
+            </div>
+
+            <div class="rounded border p-3">
+              <p class="text-sm font-medium text-gray-700">Staged Files</p>
+              <p v-if="!queuedFiles.length" class="mt-2 text-sm text-gray-500">No files staged yet.</p>
+
+              <ul v-else class="mt-2 space-y-2">
+                <li
+                  v-for="(file, index) in queuedFiles"
+                  :key="`${file.name}-${file.size}-${index}`"
+                  class="flex items-center justify-between rounded bg-gray-50 px-3 py-2 text-sm"
+                >
+                  <span class="truncate pr-2">{{ file.name }}</span>
+                  <button
+                    type="button"
+                    class="text-red-600 hover:underline"
+                    @click="removeQueuedFile(index)"
+                  >
+                    Remove
+                  </button>
+                </li>
+              </ul>
+            </div>
           </form>
         </div>
       </div>
