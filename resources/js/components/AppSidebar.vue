@@ -28,15 +28,15 @@ const mainNavItems = computed<NavItem[]>(() => {
     if (role === 'admin') {
         return [
             { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+                        { title: 'Registration', href: '/admin/registration', icon: Folder },
+
             { title: 'Users', href: '/admin/user', icon: Users },
-            { title: 'Drive', href: '/admin/folders', icon: Folder },
-            { title: 'Registration', href: '/admin/registration', icon: Folder },
 
         ];
     }
     return [
         { title: 'Dashboard', href: '/user/dashboard', icon: LayoutGrid },
-        { title: 'Registration', href: '/user/home', icon: HomeIcon },
+        { title: 'My Files', href: '/user/files', icon: HomeIcon },
     ];
 });
 

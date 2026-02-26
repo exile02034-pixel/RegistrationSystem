@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Http\Request;
+use App\Http\Controllers\User\DashboardController as UserDashboardController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -18,16 +19,21 @@ Route::get('/dashboard', function (Request $request) {
         return redirect()->route('home');
     }
 
-    return $user->role === 'admin'
-        ? redirect()->route('admin.dashboard')
-        : redirect()->route('user.dashboard');
+    return match ($user->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'user' => redirect()->route('user.dashboard'),
+        default => abort(403, 'Unauthorized role.'),
+    };
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', 'role:user'])
     ->prefix('user')
     ->name('user.')
     ->group(function () {
-        Route::get('/dashboard', fn () => Inertia::render('user/Dashboard'))->name('dashboard');
+        Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/files', [UserDashboardController::class, 'files'])->name('files');
+        Route::get('/uploads/{upload}/view', [UserDashboardController::class, 'viewUpload'])->name('uploads.view');
+        Route::get('/uploads/{upload}/download', [UserDashboardController::class, 'downloadUpload'])->name('uploads.download');
     });
 
 require __DIR__.'/admin.php';

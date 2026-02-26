@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -34,6 +35,7 @@ class UserController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'created_at' => $user->created_at?->toDateTimeString(),
+                    'company_type' => $registrationLink?->company_type,
                     'registration_show_url' => $registrationLink
                         ? route('admin.register.show', $registrationLink->id)
                         : null,
@@ -63,5 +65,16 @@ class UserController extends Controller
         ]);
 
         return back()->with('success', 'User created successfully');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->role !== 'user') {
+            return back()->with('error', 'Only client users can be deleted.');
+        }
+
+        $user->delete();
+
+        return back()->with('success', 'User deleted successfully');
     }
 }
