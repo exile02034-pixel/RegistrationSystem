@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Download, Eye, FileText, Printer } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Input } from '@/components/ui/input'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Download, Eye, FileText, Printer } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 
 type UploadItem = {
   id: number
@@ -22,9 +23,16 @@ type UploadItem = {
   is_pdf: boolean
 }
 
+type Filters = {
+  search: string
+  sort: 'created_at'
+  direction: 'asc' | 'desc'
+}
+
 const props = defineProps<{
   uploads: UploadItem[]
   batchPrintBaseUrl: string
+  filters: Filters
 }>()
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,6 +41,50 @@ const breadcrumbs: BreadcrumbItem[] = [
     href: '/user/files',
   },
 ]
+
+const search = ref(props.filters.search ?? '')
+const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
+const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc')
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const currentUploads = computed(() => props.uploads)
+
+const buildQuery = () => {
+  const query: Record<string, string | number> = {
+    search: search.value.trim(),
+    sort: sort.value,
+    direction: direction.value,
+  }
+
+  if (!query.search) {
+    delete query.search
+  }
+
+  return query
+}
+
+const reload = () => {
+  router.get('/user/files', buildQuery(), {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  })
+}
+
+watch(search, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => reload(), 300)
+})
+
+const toggleSort = () => {
+  direction.value = direction.value === 'asc' ? 'desc' : 'asc'
+  reload()
+}
+
+const sortIcon = computed(() => {
+  if (sort.value !== 'created_at') return ChevronsUpDown
+  return direction.value === 'asc' ? ChevronUp : ChevronDown
+})
 
 const microsoftViewerUrl = (rawUrl: string) => {
   const encoded = encodeURIComponent(rawUrl)
@@ -80,15 +132,15 @@ const downloadUrl = (upload: UploadItem) => {
 const selectedIds = ref<number[]>([])
 
 const allSelected = computed(() => {
-  return props.uploads.length > 0 && selectedIds.value.length === props.uploads.length
+  return currentUploads.value.length > 0 && selectedIds.value.length === currentUploads.value.length
 })
 
 const toggleAll = (checked: boolean) => {
-  selectedIds.value = checked ? props.uploads.map((upload) => upload.id) : []
+  selectedIds.value = checked ? currentUploads.value.map((upload) => upload.id) : []
 }
 
 const selectedUploads = computed(() => {
-  return props.uploads.filter((upload) => selectedIds.value.includes(upload.id))
+  return currentUploads.value.filter((upload) => selectedIds.value.includes(upload.id))
 })
 
 const printSelected = () => {
@@ -106,11 +158,12 @@ const printSelected = () => {
 }
 
 const printAll = () => {
-  const printable = props.uploads.filter((upload) => upload.can_convert_pdf || upload.is_pdf)
-  const skipped = props.uploads.length - printable.length
+  const printable = currentUploads.value.filter((upload) => upload.can_convert_pdf || upload.is_pdf)
+  const skipped = currentUploads.value.length - printable.length
 
   if (printable.length > 0) {
-    window.open(`${props.batchPrintBaseUrl}?all=1`, '_blank')
+    const ids = printable.map((upload) => upload.id).join(',')
+    window.open(`${props.batchPrintBaseUrl}?ids=${encodeURIComponent(ids)}`, '_blank')
   }
 
   if (skipped > 0) {
@@ -134,12 +187,22 @@ const printAll = () => {
       <div class="relative space-y-6">
         <Card class="rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 backdrop-blur dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <CardHeader class="px-0 pb-2">
-            <CardTitle class="font-['Space_Grotesk'] text-3xl text-center font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+            <CardTitle class="font-['Space_Grotesk'] text-center text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
               My Files
             </CardTitle>
           </CardHeader>
           <CardContent class="px-0">
-            
+            <div class="grid gap-3 md:grid-cols-2">
+              <Input v-model="search" placeholder="Search by filename..." />
+              <button
+                type="button"
+                class="inline-flex h-9 items-center justify-center gap-1 rounded-md border bg-background px-3 text-sm cursor-pointer"
+                @click="toggleSort"
+              >
+                Sort by Date
+                <component :is="sortIcon" class="h-4 w-4" />
+              </button>
+            </div>
           </CardContent>
         </Card>
 
@@ -148,14 +211,7 @@ const printAll = () => {
             <div class="flex items-center justify-end gap-2 border-b border-[#E2E8F0] p-3 dark:border-[#1E3A5F]">
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    class="cursor-pointer"
-                    :disabled="selectedIds.length === 0"
-                    aria-label="Print Selected"
-                    @click="printSelected"
-                  >
+                  <Button variant="outline" size="icon-sm" class="cursor-pointer" :disabled="selectedIds.length === 0" aria-label="Print Selected" @click="printSelected">
                     <Printer />
                   </Button>
                 </TooltipTrigger>
@@ -163,14 +219,7 @@ const printAll = () => {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger as-child>
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    class="cursor-pointer"
-                    :disabled="props.uploads.length === 0"
-                    aria-label="Print All"
-                    @click="printAll"
-                  >
+                  <Button variant="outline" size="icon-sm" class="cursor-pointer" :disabled="currentUploads.length === 0" aria-label="Print All" @click="printAll">
                     <Printer />
                   </Button>
                 </TooltipTrigger>
@@ -181,11 +230,7 @@ const printAll = () => {
               <thead class="bg-[#EFF6FF] text-left dark:bg-[#0F2747]">
                 <tr>
                   <th class="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      :checked="allSelected"
-                      @change="toggleAll(($event.target as HTMLInputElement).checked)"
-                    />
+                    <input type="checkbox" :checked="allSelected" @change="toggleAll(($event.target as HTMLInputElement).checked)">
                   </th>
                   <th class="px-4 py-3">File</th>
                   <th class="px-4 py-3">Size</th>
@@ -194,13 +239,11 @@ const printAll = () => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#E2E8F0] dark:divide-[#1E3A5F]">
-                <tr v-for="upload in props.uploads" :key="upload.id">
+                <tr v-for="upload in currentUploads" :key="upload.id">
                   <td class="px-4 py-3">
-                    <input type="checkbox" :value="upload.id" v-model="selectedIds" />
+                    <input v-model="selectedIds" type="checkbox" :value="upload.id">
                   </td>
-                  <td class="px-4 py-3">
-                    <p>{{ upload.original_name }}</p>
-                  </td>
+                  <td class="px-4 py-3"><p>{{ upload.original_name }}</p></td>
                   <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
                   <td class="px-4 py-3">{{ formatDate(upload.submitted_at) }}</td>
                   <td class="px-4 py-3">
@@ -238,7 +281,7 @@ const printAll = () => {
                     </div>
                   </td>
                 </tr>
-                <tr v-if="!props.uploads.length">
+                <tr v-if="!currentUploads.length">
                   <td colspan="5" class="px-4 py-6 text-center text-[#475569] dark:text-[#9FB3C8]">
                     No files found yet.
                   </td>

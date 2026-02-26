@@ -27,11 +27,41 @@ class RegistrationController extends Controller
 
     public function index(): Response
     {
+        $search = trim((string) request('search', ''));
+        $sort = request('sort') === 'created_at' ? 'created_at' : 'created_at';
+        $direction = request('direction') === 'asc' ? 'asc' : 'desc';
+        $companyType = request('company_type');
+
         $links = RegistrationLink::query()
             ->withCount('uploads')
-            ->latest()
-            ->get()
-            ->map(fn (RegistrationLink $link) => [
+            ->when(in_array($companyType, ['corp', 'sole_prop', 'opc'], true), function ($query) use ($companyType) {
+                $query->where('company_type', $companyType);
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $innerSearch = strtolower($search);
+                $searchType = match (true) {
+                    str_contains($innerSearch, 'opc') => 'opc',
+                    str_contains($innerSearch, 'sole') || str_contains($innerSearch, 'prop') || str_contains($innerSearch, 'proprietorship') => 'sole_prop',
+                    str_contains($innerSearch, 'corp') || str_contains($innerSearch, 'corporation') || str_contains($innerSearch, 'regular') => 'corp',
+                    default => null,
+                };
+
+                $query->where(function ($inner) use ($search, $searchType) {
+                    $inner
+                        ->where('email', 'like', "%{$search}%")
+                        ->orWhere('token', 'like', "%{$search}%")
+                        ->orWhere('company_type', 'like', "%{$search}%");
+
+                    if ($searchType !== null) {
+                        $inner->orWhere('company_type', $searchType);
+                    }
+                });
+            })
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
+
+        $links->setCollection($links->getCollection()->map(fn (RegistrationLink $link) => [
                 'id' => $link->id,
                 'email' => $link->email,
                 'company_type' => $link->company_type,
@@ -42,11 +72,17 @@ class RegistrationController extends Controller
                 'created_at' => $link->created_at?->toDateTimeString(),
                 'client_url' => route('client.registration.show', $link->token),
                 'show_url' => route('admin.register.show', $link->id),
-            ]);
+            ]));
 
         return Inertia::render('admin/registration/index', [
             'links' => $links,
             'companyTypes' => $this->templateService->availableCompanyTypes(),
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'direction' => $direction,
+                'company_type' => in_array($companyType, ['corp', 'sole_prop', 'opc'], true) ? $companyType : '',
+            ],
         ]);
     }
 

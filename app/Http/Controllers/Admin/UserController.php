@@ -22,20 +22,42 @@ class UserController extends Controller
 
     public function index(): Response
     {
+        $search = trim((string) request('search', ''));
+        $sort = request('sort') === 'created_at' ? 'created_at' : 'created_at';
+        $direction = request('direction') === 'asc' ? 'asc' : 'desc';
+        $companyType = request('company_type');
+
         $users = User::query()
             ->where('role', 'user')
-            ->latest()
-            ->get();
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when(in_array($companyType, ['corp', 'sole_prop', 'opc'], true), function ($query) use ($companyType) {
+                $query->whereExists(function ($subQuery) use ($companyType) {
+                    $subQuery->selectRaw('1')
+                        ->from('registration_links')
+                        ->whereColumn('registration_links.email', 'users.email')
+                        ->where('registration_links.status', 'completed')
+                        ->where('registration_links.company_type', $companyType);
+                });
+            })
+            ->orderBy($sort, $direction)
+            ->paginate(10)
+            ->withQueryString();
 
         $linkStatsByEmail = RegistrationLink::query()
             ->withCount('uploads')
-            ->whereIn('email', $users->pluck('email')->filter()->values())
+            ->whereIn('email', $users->getCollection()->pluck('email')->filter()->values())
             ->latest()
             ->get()
             ->groupBy('email');
 
-        return Inertia::render('admin/users/index', [
-            'users' => $users->map(function (User $user) use ($linkStatsByEmail) {
+        $users->setCollection(
+            $users->getCollection()->map(function (User $user) use ($linkStatsByEmail) {
                 $emailLinks = $linkStatsByEmail->get($user->email, collect());
                 $totalUploads = $emailLinks->sum('uploads_count');
                 $assignedTypeValues = $emailLinks
@@ -63,7 +85,17 @@ class UserController extends Controller
                     'uploads_count' => $totalUploads,
                     'show_url' => route('admin.user.show', $user->id),
                 ];
-            }),
+            })
+        );
+
+        return Inertia::render('admin/users/index', [
+            'users' => $users,
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'direction' => $direction,
+                'company_type' => in_array($companyType, ['corp', 'sole_prop', 'opc'], true) ? $companyType : '',
+            ],
         ]);
     }
 

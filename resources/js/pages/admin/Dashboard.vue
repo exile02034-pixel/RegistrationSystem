@@ -76,9 +76,7 @@ defineProps<{
               <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]">
                 <Link href="/admin/registration">Registration</Link>
               </Button>
-              <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]">
-                <Link href="/admin/folders">Drive</Link>
-              </Button>
+            
             </div>
           </CardContent>
         </Card>

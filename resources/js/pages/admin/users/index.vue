@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Badge } from '@/components/ui/badge'
 import Button from '@/components/ui/button/Button.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,10 +17,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { Eye, Trash2, UserPlus } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Trash2, UserPlus } from 'lucide-vue-next'
 
 type UserRow = {
   id: number
@@ -33,41 +34,117 @@ type UserRow = {
   show_url: string
 }
 
+type PaginatedUsers = {
+  data: UserRow[]
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+type Filters = {
+  search: string
+  sort: 'created_at'
+  direction: 'asc' | 'desc'
+  company_type: '' | 'opc' | 'sole_prop' | 'corp'
+}
+
 const props = defineProps<{
-  users: UserRow[]
+  users: PaginatedUsers
+  filters: Filters
 }>()
 
 const isCreateModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const selectedUserForDelete = ref<UserRow | null>(null)
 const deleting = ref(false)
-const search = ref('')
-const companyTypeFilter = ref<'all' | 'opc' | 'sole_prop' | 'corp'>('all')
 
-const totalUsers = computed(() => props.users.length)
+const search = ref(props.filters.search ?? '')
+const companyTypeFilter = ref<Filters['company_type']>(props.filters.company_type ?? '')
+const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
+const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc')
 
-const filteredUsers = computed(() => {
-  const query = search.value.trim().toLowerCase()
-
-  return props.users.filter((user) => {
-    const matchesSearch =
-      !query ||
-      user.name.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query)
-
-    const matchesCompanyType =
-      companyTypeFilter.value === 'all' ||
-      user.company_type_values.includes(companyTypeFilter.value)
-
-    return matchesSearch && matchesCompanyType
-  })
-})
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = useForm({
   name: '',
   email: '',
   password: '',
   password_confirmation: '',
+})
+
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+const formatDate = (value: string | null) => {
+  if (!value) return 'n/a'
+
+  return new Date(value).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
+  if (value === 'opc') return 'OPC'
+  if (value === 'corp') return 'CORP'
+  return 'SOLE PROP'
+}
+
+const buildQuery = (overrides: Partial<{ page: number }> = {}) => {
+  const query: Record<string, string | number> = {
+    page: overrides.page ?? props.users.current_page,
+    search: search.value.trim(),
+    sort: sort.value,
+    direction: direction.value,
+  }
+
+  if (companyTypeFilter.value) {
+    query.company_type = companyTypeFilter.value
+  }
+
+  if (!query.search) {
+    delete query.search
+  }
+
+  return query
+}
+
+const reload = (page = 1) => {
+  router.get('/admin/user', buildQuery({ page }), {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  })
+}
+
+watch(search, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => reload(1), 300)
+})
+
+watch(companyTypeFilter, () => reload(1))
+
+const toggleSort = () => {
+  if (sort.value === 'created_at') {
+    direction.value = direction.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sort.value = 'created_at'
+    direction.value = 'desc'
+  }
+
+  reload(1)
+}
+
+const sortIcon = computed(() => {
+  if (sort.value !== 'created_at') return ChevronsUpDown
+  return direction.value === 'asc' ? ChevronUp : ChevronDown
 })
 
 const submit = () => {
@@ -116,39 +193,12 @@ const confirmDelete = () => {
     },
   })
 }
-
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
-const formatDate = (value: string | null) => {
-  if (!value) return 'n/a'
-
-  return new Date(value).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
-  if (value === 'opc') return 'OPC'
-  if (value === 'corp') return 'CORP'
-  return 'SOLE PROP'
-}
-
 </script>
 
 <template>
   <AppLayout>
     <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
       <div class="relative space-y-6">
-
-        <!-- Header -->
         <Card class="rounded-2xl border bg-white dark:bg-[#12325B]">
           <CardHeader class="flex flex-row items-center justify-between">
             <div>
@@ -179,39 +229,25 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
                   <div>
                     <Label>Name</Label>
                     <Input v-model="form.name" />
-                    <p v-if="form.errors.name" class="text-red-500 text-sm">
-                      {{ form.errors.name }}
-                    </p>
+                    <p v-if="form.errors.name" class="text-red-500 text-sm">{{ form.errors.name }}</p>
                   </div>
-
                   <div>
                     <Label>Email</Label>
                     <Input v-model="form.email" type="email" />
-                    <p v-if="form.errors.email" class="text-red-500 text-sm">
-                      {{ form.errors.email }}
-                    </p>
+                    <p v-if="form.errors.email" class="text-red-500 text-sm">{{ form.errors.email }}</p>
                   </div>
-
                   <div>
                     <Label>Password</Label>
                     <Input v-model="form.password" type="password" />
-                    <p v-if="form.errors.password" class="text-red-500 text-sm">
-                      {{ form.errors.password }}
-                    </p>
+                    <p v-if="form.errors.password" class="text-red-500 text-sm">{{ form.errors.password }}</p>
                   </div>
-
                   <div>
                     <Label>Confirm Password</Label>
                     <Input v-model="form.password_confirmation" type="password" />
                   </div>
-
                   <div class="flex justify-end gap-2">
-                    <Button variant="outline" @click="isCreateModalOpen = false">
-                      Cancel
-                    </Button>
-                    <Button class="bg-blue-600 text-white" @click="submit">
-                      Create User
-                    </Button>
+                    <Button variant="outline" @click="isCreateModalOpen = false">Cancel</Button>
+                    <Button class="bg-blue-600 text-white" @click="submit">Create User</Button>
                   </div>
                 </div>
               </DialogContent>
@@ -219,23 +255,36 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
           </CardHeader>
         </Card>
 
-        <!-- Table -->
         <Card class="overflow-x-auto rounded-2xl border bg-white dark:bg-[#12325B]">
           <CardContent class="p-4">
+            <div class="mb-4 grid gap-3 md:grid-cols-2">
+              <Input v-model="search" placeholder="Search by name or email..." />
+              <select v-model="companyTypeFilter" class="h-9 rounded-md border bg-background px-3 text-sm">
+                <option value="">All Company Types</option>
+                <option value="opc">OPC</option>
+                <option value="sole_prop">SOLE PROP</option>
+                <option value="corp">CORP</option>
+              </select>
+            </div>
 
             <table class="min-w-full divide-y">
               <thead>
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Client</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Company Types</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium uppercase">Created</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase">
+                    <button type="button" class="inline-flex items-center gap-1 cursor-pointer" @click="toggleSort">
+                      Created
+                      <component :is="sortIcon" class="h-4 w-4" />
+                    </button>
+                  </th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Files</th>
                   <th class="px-6 py-3 text-right text-xs font-medium uppercase">Actions</th>
                 </tr>
               </thead>
 
               <tbody class="divide-y">
-                <tr v-for="user in filteredUsers" :key="user.id">
+                <tr v-for="user in users.data" :key="user.id">
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div class="h-9 w-9 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
@@ -257,28 +306,17 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
                     </div>
                   </td>
 
-                  <td class="px-6 py-4 text-sm">
-                    {{ formatDate(user.created_at) }}
-                  </td>
+                  <td class="px-6 py-4 text-sm">{{ formatDate(user.created_at) }}</td>
 
                   <td class="px-6 py-4">
-                    <Badge>
-                      {{ user.uploads_count > 0 ? `${user.uploads_count} file(s)` : 'No Files' }}
-                    </Badge>
+                    <Badge>{{ user.uploads_count > 0 ? `${user.uploads_count} file(s)` : 'No Files' }}</Badge>
                   </td>
 
-                  <td class="px-6 py-4 text-right space-x-2">
+                  <td class="px-6 py-4 text-right">
                     <div class="inline-flex items-center gap-2">
                       <Tooltip>
                         <TooltipTrigger as-child>
-                          <Button
-                            as="a"
-                            :href="user.show_url"
-                            size="icon-sm"
-                            variant="outline"
-                            class="cursor-pointer"
-                            aria-label="View User Details"
-                          >
+                          <Button as="a" :href="user.show_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View User Details">
                             <Eye />
                           </Button>
                         </TooltipTrigger>
@@ -287,13 +325,7 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
 
                       <Tooltip>
                         <TooltipTrigger as-child>
-                          <Button
-                            size="icon-sm"
-                            variant="destructive"
-                            class="cursor-pointer"
-                            aria-label="Delete User"
-                            @click="openDeleteModal(user)"
-                          >
+                          <Button size="icon-sm" variant="destructive" class="cursor-pointer" aria-label="Delete User" @click="openDeleteModal(user)">
                             <Trash2 />
                           </Button>
                         </TooltipTrigger>
@@ -302,9 +334,18 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
                     </div>
                   </td>
                 </tr>
+                <tr v-if="!users.data.length">
+                  <td colspan="5" class="px-6 py-6 text-center text-sm text-gray-500">No users found.</td>
+                </tr>
               </tbody>
             </table>
 
+            <Pagination
+              :current-page="users.current_page"
+              :last-page="users.last_page"
+              :total="users.total"
+              @change="reload"
+            />
           </CardContent>
         </Card>
       </div>
@@ -319,14 +360,11 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel :disabled="deleting" @click="isDeleteModalOpen = false; selectedUserForDelete = null">
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction :disabled="deleting" @click="confirmDelete">
-            Delete
-          </AlertDialogAction>
+          <AlertDialogCancel :disabled="deleting" @click="isDeleteModalOpen = false; selectedUserForDelete = null">Cancel</AlertDialogCancel>
+          <AlertDialogAction :disabled="deleting" @click="confirmDelete">Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   </AppLayout>
 </template>
+
