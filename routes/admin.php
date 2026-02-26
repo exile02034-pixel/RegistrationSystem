@@ -16,6 +16,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('/user', [UserController::class, 'store'])->name('user.store');
 
         Route::get('/registration', [RegistrationController::class, 'index'])->name('register.index');
+        Route::get('/registration/create', [RegistrationController::class, 'create'])->name('register.create');
         Route::post('/registration/send', [RegistrationController::class, 'sendLink'])->name('register.send');
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
         Route::get('/registration/{registrationLink}/uploads/{upload}/download', [RegistrationController::class, 'downloadUpload'])
