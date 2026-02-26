@@ -5,18 +5,32 @@ import { Badge } from '@/components/ui/badge'
 import Button from '@/components/ui/button/Button.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { Eye, Trash2, UserPlus } from 'lucide-vue-next'
 
 type UserRow = {
   id: number
   name: string
   email: string
   created_at: string | null
-  company_type: 'opc' | 'sole_prop' | 'corp' | null
-  registration_show_url: string | null
+  company_types: Array<{ value: 'opc' | 'sole_prop' | 'corp'; label: string }>
+  company_type_values: Array<'opc' | 'sole_prop' | 'corp'>
+  uploads_count: number
+  show_url: string
 }
 
 const props = defineProps<{
@@ -43,7 +57,7 @@ const filteredUsers = computed(() => {
 
     const matchesCompanyType =
       companyTypeFilter.value === 'all' ||
-      user.company_type === companyTypeFilter.value
+      user.company_type_values.includes(companyTypeFilter.value)
 
     return matchesSearch && matchesCompanyType
   })
@@ -88,9 +102,7 @@ const confirmDelete = () => {
       deleting.value = true
     },
     onSuccess: () => {
-      toast.success('User deleted successfully', {
-        description: 'The client account has been removed.',
-      })
+      toast.success('Deleted successfully.')
       isDeleteModalOpen.value = false
       selectedUserForDelete.value = null
     },
@@ -123,12 +135,12 @@ const formatDate = (value: string | null) => {
   })
 }
 
-const companyTypeLabel = (type: UserRow['company_type']) => {
-  if (type === 'opc') return 'OPC'
-  if (type === 'sole_prop') return 'SOLE PROP'
-  if (type === 'corp') return 'REGULAR CORP'
-  return 'N/A'
+const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
+  if (value === 'opc') return 'OPC'
+  if (value === 'corp') return 'CORP'
+  return 'SOLE PROP'
 }
+
 </script>
 
 <template>
@@ -148,9 +160,14 @@ const companyTypeLabel = (type: UserRow['company_type']) => {
 
             <Dialog :open="isCreateModalOpen" @update:open="isCreateModalOpen = $event">
               <DialogTrigger as-child>
-                <Button class="bg-blue-600 text-white hover:bg-blue-700">
-                  + Create User
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700" size="icon-sm" aria-label="Create User">
+                      <UserPlus />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Create User</TooltipContent>
+                </Tooltip>
               </DialogTrigger>
 
               <DialogContent class="sm:max-w-lg">
@@ -210,7 +227,7 @@ const companyTypeLabel = (type: UserRow['company_type']) => {
               <thead>
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Client</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium uppercase">Company Type</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium uppercase">Company Types</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Created</th>
                   <th class="px-6 py-3 text-left text-xs font-medium uppercase">Files</th>
                   <th class="px-6 py-3 text-right text-xs font-medium uppercase">Actions</th>
@@ -232,7 +249,12 @@ const companyTypeLabel = (type: UserRow['company_type']) => {
                   </td>
 
                   <td class="px-6 py-4 text-sm">
-                    {{ companyTypeLabel(user.company_type) }}
+                    <div class="flex flex-wrap gap-1">
+                      <Badge v-for="type in user.company_types" :key="`${user.id}-${type.value}`">
+                        {{ shortCompanyType(type.value) }}
+                      </Badge>
+                      <span v-if="!user.company_types.length">N/A</span>
+                    </div>
                   </td>
 
                   <td class="px-6 py-4 text-sm">
@@ -241,27 +263,43 @@ const companyTypeLabel = (type: UserRow['company_type']) => {
 
                   <td class="px-6 py-4">
                     <Badge>
-                      {{ user.registration_show_url ? 'Available' : 'No Files' }}
+                      {{ user.uploads_count > 0 ? `${user.uploads_count} file(s)` : 'No Files' }}
                     </Badge>
                   </td>
 
                   <td class="px-6 py-4 text-right space-x-2">
-                    <Button
-                      v-if="user.registration_show_url"
-                      as="a"
-                      :href="user.registration_show_url"
-                      size="sm"
-                    >
-                      View Files
-                    </Button>
+                    <div class="inline-flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <Button
+                            as="a"
+                            :href="user.show_url"
+                            size="icon-sm"
+                            variant="outline"
+                            class="cursor-pointer"
+                            aria-label="View User Details"
+                          >
+                            <Eye />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>View</TooltipContent>
+                      </Tooltip>
 
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      @click="openDeleteModal(user)"
-                    >
-                      Delete
-                    </Button>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <Button
+                            size="icon-sm"
+                            variant="destructive"
+                            class="cursor-pointer"
+                            aria-label="Delete User"
+                            @click="openDeleteModal(user)"
+                          >
+                            <Trash2 />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -271,5 +309,24 @@ const companyTypeLabel = (type: UserRow['company_type']) => {
         </Card>
       </div>
     </div>
+
+    <AlertDialog :open="isDeleteModalOpen" @update:open="isDeleteModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete User</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleting" @click="isDeleteModalOpen = false; selectedUserForDelete = null">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleting" @click="confirmDelete">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </AppLayout>
 </template>

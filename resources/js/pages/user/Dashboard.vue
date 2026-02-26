@@ -54,7 +54,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <ul class="mt-3 space-y-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
                             <li>View personal documents only</li>
                             <li>Download submitted files</li>
-                            <li>No access to admin pages</li>
+                          
                         </ul>
                     </Card>
 
@@ -62,15 +62,15 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">My Submission Stats</p>
                         <div class="mt-3 space-y-2 text-sm text-[#475569] dark:text-[#9FB3C8]">
                             <p><strong>Total Submitted Files:</strong> {{ props.stats.totalUploads }}</p>
-                            <p><strong>Total PDF Files:</strong> {{ props.stats.pdfUploads }}</p>
-                            <p><strong>Latest Submission:</strong> {{ props.stats.latestSubmissionAt ?? 'n/a' }}</p>
+                            <p><strong>Latest Submission:</strong>   {{ props.stats.latestSubmissionAt ? new Date(props.stats.latestSubmissionAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'n/a' }}</p>
+
                         </div>
                     </Card>
                 </div>
 
                 <Card class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] dark:border-[#1E3A5F] dark:bg-[#12325B]">
                     <CardHeader class="pb-2">
-                        <CardTitle class="font-['Space_Grotesk'] text-xl text-[#0B1F3A] dark:text-[#E6F1FF]">My Files</CardTitle>
+                        <CardTitle class="font-['Space_Grotesk'] text-xl text-[#0B1F3A] dark:text-[#E6F1FF]">Quick Action</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div class="flex flex-wrap gap-3">

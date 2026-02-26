@@ -31,6 +31,56 @@ class DocumentConversionService
         return null;
     }
 
+    public function convertToPdfViaLibreOffice(string $sourcePath, string $downloadFileName): ?array
+    {
+        $outputDir = storage_path('app/tmp-pdf');
+
+        if (! is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+
+        $pdfFileName = pathinfo($downloadFileName, PATHINFO_FILENAME).'.pdf';
+        $outputPath = $outputDir.'/'.uniqid('template_', true).'_'.$pdfFileName;
+
+        if ($this->convertViaLibreOffice($sourcePath, $outputDir, $outputPath)) {
+            return ['path' => $outputPath, 'name' => $pdfFileName];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, string>  $pdfPaths
+     */
+    public function mergePdfFiles(array $pdfPaths, string $outputFileName = 'batch_print.pdf'): ?array
+    {
+        $pdfPaths = array_values(array_filter($pdfPaths, fn (string $path) => file_exists($path)));
+
+        if ($pdfPaths === []) {
+            return null;
+        }
+
+        $outputDir = storage_path('app/tmp-pdf');
+
+        if (! is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+
+        $outputPath = $outputDir.'/'.uniqid('merged_', true).'_'.$outputFileName;
+
+        if (count($pdfPaths) === 1) {
+            copy($pdfPaths[0], $outputPath);
+
+            return file_exists($outputPath) ? ['path' => $outputPath, 'name' => $outputFileName] : null;
+        }
+
+        if ($this->mergeViaPdfUnite($pdfPaths, $outputPath) || $this->mergeViaGhostscript($pdfPaths, $outputPath)) {
+            return ['path' => $outputPath, 'name' => $outputFileName];
+        }
+
+        return null;
+    }
+
     private function convertViaLibreOffice(string $sourcePath, string $outputDir, string $outputPath): bool
     {
         $binary = $this->detectLibreOfficeBinary();
@@ -89,6 +139,66 @@ class DocumentConversionService
     private function detectLibreOfficeBinary(): ?string
     {
         foreach (['soffice', 'libreoffice'] as $binary) {
+            $process = new Process(['which', $binary]);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                return trim($process->getOutput());
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, string>  $pdfPaths
+     */
+    private function mergeViaPdfUnite(array $pdfPaths, string $outputPath): bool
+    {
+        $binary = $this->detectBinary(['pdfunite']);
+
+        if ($binary === null) {
+            return false;
+        }
+
+        $process = new Process([$binary, ...$pdfPaths, $outputPath], null, null, null, 120);
+        $process->run();
+
+        return $process->isSuccessful() && file_exists($outputPath);
+    }
+
+    /**
+     * @param  array<int, string>  $pdfPaths
+     */
+    private function mergeViaGhostscript(array $pdfPaths, string $outputPath): bool
+    {
+        $binary = $this->detectBinary(['gs']);
+
+        if ($binary === null) {
+            return false;
+        }
+
+        $process = new Process([
+            $binary,
+            '-dBATCH',
+            '-dNOPAUSE',
+            '-q',
+            '-sDEVICE=pdfwrite',
+            '-dAutoRotatePages=/None',
+            '-sOutputFile='.$outputPath,
+            ...$pdfPaths,
+        ], null, null, null, 120);
+        $process->run();
+
+        return $process->isSuccessful() && file_exists($outputPath);
+    }
+
+    /**
+     * @param  array<int, string>  $candidates
+     */
+    private function detectBinary(array $candidates): ?string
+    {
+        foreach ($candidates as $binary) {
             $process = new Process(['which', $binary]);
             $process->run();
 
