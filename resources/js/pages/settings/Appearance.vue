@@ -22,7 +22,9 @@ const breadcrumbItems: BreadcrumbItem[] = [
         <h1 class="sr-only">Appearance Settings</h1>
 
         <SettingsLayout>
-            <div class="space-y-6">
+            <div
+                class="space-y-6 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+            >
                 <Heading
                     variant="small"
                     title="Appearance settings"

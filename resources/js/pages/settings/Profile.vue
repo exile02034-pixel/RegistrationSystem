@@ -38,7 +38,9 @@ const user = page.props.auth.user;
         <h1 class="sr-only">Profile Settings</h1>
 
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
+            <div
+                class="flex flex-col space-y-6 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+            >
                 <Heading
                     variant="small"
                     title="Profile information"
@@ -51,10 +53,10 @@ const user = page.props.auth.user;
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <div class="grid gap-2">
-                        <Label for="name">Name</Label>
+                        <Label for="name" class="text-[#0B1F3A] dark:text-[#E6F1FF]">Name</Label>
                         <Input
                             id="name"
-                            class="mt-1 block w-full"
+                            class="mt-1 block w-full border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] placeholder:text-[#475569] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:placeholder:text-[#9FB3C8]"
                             name="name"
                             :default-value="user.name"
                             required
@@ -65,11 +67,11 @@ const user = page.props.auth.user;
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="email">Email address</Label>
+                        <Label for="email" class="text-[#0B1F3A] dark:text-[#E6F1FF]">Email address</Label>
                         <Input
                             id="email"
                             type="email"
-                            class="mt-1 block w-full"
+                            class="mt-1 block w-full border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] placeholder:text-[#475569] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:placeholder:text-[#9FB3C8]"
                             name="email"
                             :default-value="user.email"
                             required
@@ -80,12 +82,12 @@ const user = page.props.auth.user;
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="-mt-4 text-sm text-muted-foreground">
+                        <p class="-mt-4 text-sm text-[#475569] dark:text-[#9FB3C8]">
                             Your email address is unverified.
                             <Link
                                 :href="send()"
                                 as="button"
-                                class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                                class="text-[#2563EB] underline underline-offset-4 transition-colors duration-300 ease-out hover:text-[#1D4ED8] dark:text-[#60A5FA] dark:hover:text-[#E6F1FF]"
                             >
                                 Click here to resend the verification email.
                             </Link>
@@ -93,7 +95,7 @@ const user = page.props.auth.user;
 
                         <div
                             v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-green-600"
+                            class="mt-2 text-sm font-medium text-[#2563EB] dark:text-[#60A5FA]"
                         >
                             A new verification link has been sent to your email
                             address.
@@ -102,6 +104,7 @@ const user = page.props.auth.user;
 
                     <div class="flex items-center gap-4">
                         <Button
+                            class="border border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:border-[#2563EB] dark:bg-[#2563EB] dark:text-[#E6F1FF] dark:hover:bg-[#3B82F6]"
                             :disabled="processing"
                             data-test="update-profile-button"
                             >Save</Button
@@ -115,7 +118,7 @@ const user = page.props.auth.user;
                         >
                             <p
                                 v-show="recentlySuccessful"
-                                class="text-sm text-neutral-600"
+                                class="text-sm text-[#475569] dark:text-[#9FB3C8]"
                             >
                                 Saved.
                             </p>

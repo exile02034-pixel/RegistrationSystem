@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Folder, File, LayoutGrid, Users, HomeIcon } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Users, HomeIcon } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -46,11 +44,21 @@ const mainNavItems = computed<NavItem[]>(() => {
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
-        <SidebarHeader>
+    <Sidebar
+        collapsible="icon"
+        variant="inset"
+        class="bg-[#FFFFFF] dark:bg-[#0B1F3A]"
+    >
+        <SidebarHeader
+            class="border-b border-[#E2E8F0] bg-[#FFFFFF] dark:border-[#1E3A5F] dark:bg-[#0B1F3A]"
+        >
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" as-child>
+                    <SidebarMenuButton
+                        size="lg"
+                        as-child
+                        class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:hover:bg-[#0F2747]"
+                    >
                         <Link :href="dashboardHref">
                             <AppLogo />
                         </Link>
@@ -58,13 +66,9 @@ const mainNavItems = computed<NavItem[]>(() => {
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent class="bg-[#FFFFFF] dark:bg-[#0B1F3A]">
             <NavMain :items="mainNavItems" />
         </SidebarContent>
-        <SidebarFooter>
-
-            <NavUser />
-        </SidebarFooter>
     </Sidebar>
     <slot />
 </template>

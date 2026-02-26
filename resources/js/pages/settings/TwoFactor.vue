@@ -45,7 +45,9 @@ onUnmounted(() => {
         <h1 class="sr-only">Two-Factor Authentication Settings</h1>
 
         <SettingsLayout>
-            <div class="space-y-6">
+            <div
+                class="space-y-6 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+            >
                 <Heading
                     variant="small"
                     title="Two-Factor Authentication"
@@ -56,9 +58,13 @@ onUnmounted(() => {
                     v-if="!twoFactorEnabled"
                     class="flex flex-col items-start justify-start space-y-4"
                 >
-                    <Badge variant="destructive">Disabled</Badge>
+                    <Badge
+                        variant="destructive"
+                        class="border border-[#E2E8F0] bg-[#EFF6FF] text-[#2563EB] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]"
+                        >Disabled</Badge
+                    >
 
-                    <p class="text-muted-foreground">
+                    <p class="text-[#475569] dark:text-[#9FB3C8]">
                         When you enable two-factor authentication, you will be
                         prompted for a secure pin during login. This pin can be
                         retrieved from a TOTP-supported application on your
@@ -68,6 +74,7 @@ onUnmounted(() => {
                     <div>
                         <Button
                             v-if="hasSetupData"
+                            class="border border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:border-[#2563EB] dark:bg-[#2563EB] dark:text-[#E6F1FF] dark:hover:bg-[#3B82F6]"
                             @click="showSetupModal = true"
                         >
                             <ShieldCheck />Continue Setup
@@ -78,7 +85,11 @@ onUnmounted(() => {
                             @success="showSetupModal = true"
                             #default="{ processing }"
                         >
-                            <Button type="submit" :disabled="processing">
+                            <Button
+                                type="submit"
+                                :disabled="processing"
+                                class="border border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1D4ED8] dark:border-[#2563EB] dark:bg-[#2563EB] dark:text-[#E6F1FF] dark:hover:bg-[#3B82F6]"
+                            >
                                 <ShieldCheck />Enable 2FA</Button
                             ></Form
                         >
@@ -89,9 +100,13 @@ onUnmounted(() => {
                     v-else
                     class="flex flex-col items-start justify-start space-y-4"
                 >
-                    <Badge variant="default">Enabled</Badge>
+                    <Badge
+                        variant="default"
+                        class="border border-[#60A5FA] bg-[#EFF6FF] text-[#2563EB] dark:border-[#2563EB] dark:bg-[#12325B] dark:text-[#E6F1FF]"
+                        >Enabled</Badge
+                    >
 
-                    <p class="text-muted-foreground">
+                    <p class="text-[#475569] dark:text-[#9FB3C8]">
                         With two-factor authentication enabled, you will be
                         prompted for a secure, random pin during login, which
                         you can retrieve from the TOTP-supported application on
