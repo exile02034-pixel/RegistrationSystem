@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
+use App\Services\DocumentConversionService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -19,6 +21,7 @@ class RegistrationController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
+        private readonly DocumentConversionService $conversionService,
     ) {
     }
 
@@ -83,18 +86,29 @@ class RegistrationController extends Controller
                     'size_bytes' => $upload->size_bytes,
                     'created_at' => $upload->created_at?->toDateTimeString(),
                     'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
+                    'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
+                    'can_convert_pdf' => in_array(strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION)), ['doc', 'docx'], true),
                 ]),
             ],
         ]);
     }
 
-    public function downloadUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
+    public function downloadUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
     {
         abort_unless($upload->registration_link_id === $registrationLink->id, 404);
 
-        return response()->download(
-            Storage::disk('public')->path($upload->storage_path),
-            $upload->original_name
-        );
+        $sourcePath = Storage::disk('public')->path($upload->storage_path);
+        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
+        $wantsPdf = $request->query('format') === 'pdf';
+
+        if ($wantsPdf && in_array($extension, ['doc', 'docx'], true)) {
+            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
+
+            if ($pdf !== null) {
+                return response()->download($pdf['path'], $pdf['name'])->deleteFileAfterSend(true);
+            }
+        }
+
+        return response()->download($sourcePath, $upload->original_name);
     }
 }

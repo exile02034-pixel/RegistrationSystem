@@ -8,6 +8,8 @@ type Upload = {
   size_bytes: number
   created_at: string | null
   download_url: string
+  download_pdf_url: string
+  can_convert_pdf: boolean
 }
 
 defineProps<{
@@ -27,6 +29,31 @@ const formatBytes = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+const formatFileType = (upload: Upload) => {
+  const extension = upload.original_name.split('.').pop()?.toLowerCase()
+
+  if (extension === 'pdf') return 'PDF'
+  if (extension === 'doc' || extension === 'docx') return 'DOCX'
+
+  if (upload.mime_type?.includes('pdf')) return 'PDF'
+  if (upload.mime_type?.includes('word') || upload.mime_type?.includes('officedocument')) return 'DOCX'
+
+  return 'FILE'
+}
+
+const formatUploadedDate = (dateString: string | null) => {
+  if (!dateString) return 'n/a'
+
+  const parsed = new Date(dateString)
+  if (Number.isNaN(parsed.getTime())) return dateString
+
+  return parsed.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  })
+}
 </script>
 
 <template>
@@ -39,7 +66,6 @@ const formatBytes = (bytes: number) => {
         <p class="mt-2 text-sm text-gray-600"><strong>Email:</strong> {{ registration.email }}</p>
         <p class="text-sm text-gray-600"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
         <p class="text-sm text-gray-600"><strong>Status:</strong> {{ registration.status }}</p>
-        <p class="text-sm text-gray-600"><strong>Token:</strong> {{ registration.token }}</p>
       </div>
 
       <div class="space-y-3">
@@ -58,11 +84,20 @@ const formatBytes = (bytes: number) => {
             <tbody>
               <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t">
                 <td class="px-4 py-3">{{ upload.original_name }}</td>
-                <td class="px-4 py-3">{{ upload.mime_type ?? 'n/a' }}</td>
+                <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
                 <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
-                <td class="px-4 py-3">{{ upload.created_at }}</td>
+                <td class="px-4 py-3">{{ formatUploadedDate(upload.created_at) }}</td>
                 <td class="px-4 py-3">
-                  <a :href="upload.download_url" class="text-blue-600 hover:underline">Download</a>
+                  <div class="flex items-center gap-3">
+                    <a :href="upload.download_url" class="text-blue-600 hover:underline">Original</a>
+                    <a
+                      v-if="upload.can_convert_pdf"
+                      :href="upload.download_pdf_url"
+                      class="text-green-700 hover:underline"
+                    >
+                      PDF
+                    </a>
+                  </div>
                 </td>
               </tr>
               <tr v-if="!registration.uploads.length">
