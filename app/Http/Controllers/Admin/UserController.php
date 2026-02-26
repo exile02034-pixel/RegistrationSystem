@@ -3,21 +3,49 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\RegistrationLink;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index(){
-       
-        return Inertia::render('admin/users/index',[
-            'users'=>User::where('role', 'user')->get()
+    public function index()
+    {
+        $users = User::query()
+            ->where('role', 'user')
+            ->latest()
+            ->get();
+
+        $latestLinkByEmail = RegistrationLink::query()
+            ->whereIn('email', $users->pluck('email')->filter()->values())
+            ->latest()
+            ->get()
+            ->unique('email')
+            ->keyBy('email');
+
+        return Inertia::render('admin/users/index', [
+            'users' => $users->map(function (User $user) use ($latestLinkByEmail) {
+                $registrationLink = $latestLinkByEmail->get($user->email);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'created_at' => $user->created_at?->toDateTimeString(),
+                    'company_type' => $registrationLink?->company_type,
+                    'registration_show_url' => $registrationLink
+                        ? route('admin.register.show', $registrationLink->id)
+                        : null,
+                ];
+            }),
         ]);
     }
 
-    public function create(){
+    public function create()
+    {
         return Inertia::render('admin/users/create');
     }
 
@@ -33,9 +61,20 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role'=>'user' 
+            'role' => 'user',
         ]);
 
-        return redirect()->route('admin.user.create')->with('success', 'User created successfully');
+        return back()->with('success', 'User created successfully');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->role !== 'user') {
+            return back()->with('error', 'Only client users can be deleted.');
+        }
+
+        $user->delete();
+
+        return back()->with('success', 'User deleted successfully');
     }
 }
