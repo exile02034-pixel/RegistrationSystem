@@ -1,19 +1,52 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue'
-import { Head, Link, router } from '@inertiajs/vue3'
-import { useUserAdmin } from '@/composables/useUserAdmin'
-import { onMounted } from 'vue'
+import { Head, Link, useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { toast } from '@/components/ui/sonner'
 import user from '@/routes/admin/user'
 
-const { form, errors, submit, success } = useUserAdmin()
+type EligibleClient = {
+  email: string
+  company_types: string[]
+}
 
-onMounted(() => {
-  const email = new URLSearchParams(window.location.search).get('email')
+const props = defineProps<{
+  eligibleClients: EligibleClient[]
+}>()
 
-  if (email && !form.email) {
-    form.email = email
-  }
+const form = useForm({
+  name: '',
+  email: props.eligibleClients[0]?.email ?? '',
+  password: '',
+  password_confirmation: '',
 })
+
+const hasEligibleClients = computed(() => props.eligibleClients.length > 0)
+
+const clientLabel = (client: EligibleClient) => {
+  return client.company_types.length
+    ? `${client.email} (${client.company_types.join(', ')})`
+    : client.email
+}
+
+const submit = () => {
+  if (!hasEligibleClients.value) {
+    toast.info('No eligible completed clients are available for account creation.')
+    return
+  }
+
+  form.post(user.store.url(), {
+    preserveScroll: true,
+    onSuccess: () => {
+      form.reset()
+      form.email = props.eligibleClients[0]?.email ?? ''
+      toast.success('User created successfully.')
+    },
+    onError: () => {
+      toast.error('Unable to create user. Please check the form.')
+    },
+  })
+}
 </script>
 
 <template>
@@ -32,10 +65,10 @@ onMounted(() => {
         <div class="flex items-center justify-between">
           <div>
             <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Create User / Client</h1>
-            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">This account can be used to login.</p>
+            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Only clients with completed registrations can be selected.</p>
           </div>
           <Link
-            @click="router.visit(user.index().url)"
+            :href="user.index().url"
             class="inline-flex h-10 items-center justify-center rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] px-4 text-sm font-medium text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
           >
             Back to Users
@@ -43,9 +76,12 @@ onMounted(() => {
         </div>
 
         <div class="max-w-lg rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <div v-if="success" class="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-900/30 dark:text-emerald-300">
-            User has been successfully created.
-          </div>
+          <p
+            v-if="!hasEligibleClients"
+            class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-300"
+          >
+            No completed registrations are available for user creation.
+          </p>
 
           <form class="space-y-4" @submit.prevent="submit">
             <div>
@@ -57,19 +93,21 @@ onMounted(() => {
                 placeholder="John Doe"
                 required
               >
-              <span class="text-sm text-red-500">{{ errors.name }}</span>
+              <span class="text-sm text-red-500">{{ form.errors.name }}</span>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">Email</label>
-              <input
+              <label class="block text-sm font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">Client (Completed)</label>
+              <select
                 v-model="form.email"
-                type="email"
                 class="mt-1 block h-11 w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-sm text-[#0B1F3A] outline-none ring-[#60A5FA] transition focus:ring-2 dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]"
-                placeholder="john@example.com"
-                required
+                :disabled="!hasEligibleClients"
               >
-              <span class="text-sm text-red-500">{{ errors.email }}</span>
+                <option v-for="client in eligibleClients" :key="client.email" :value="client.email">
+                  {{ clientLabel(client) }}
+                </option>
+              </select>
+              <span class="text-sm text-red-500">{{ form.errors.email }}</span>
             </div>
 
             <div>
@@ -81,7 +119,7 @@ onMounted(() => {
                 placeholder="********"
                 required
               >
-              <span class="text-sm text-red-500">{{ errors.password }}</span>
+              <span class="text-sm text-red-500">{{ form.errors.password }}</span>
             </div>
 
             <div>
@@ -93,10 +131,14 @@ onMounted(() => {
                 placeholder="********"
                 required
               >
-              <span class="text-sm text-red-500">{{ errors.password_confirmation }}</span>
+              <span class="text-sm text-red-500">{{ form.errors.password_confirmation }}</span>
             </div>
 
-            <button type="submit" class="w-full rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-white transition hover:bg-[#1D4ED8] dark:hover:bg-[#3B82F6]">
+            <button
+              type="submit"
+              class="w-full rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-white transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-[#3B82F6]"
+              :disabled="!hasEligibleClients || form.processing"
+            >
               Create User
             </button>
           </form>

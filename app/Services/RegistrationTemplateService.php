@@ -12,19 +12,19 @@ class RegistrationTemplateService
 
     private const TEMPLATE_MAP = [
         self::TYPE_CORP => [
-            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'registration_form.docx'],
-            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'treasurer_details.docx'],
-            'company_requirements' => ['path' => 'app/template/Registration Details Regular Corp.docx', 'name' => 'corp_requirements.docx'],
+            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'Client Information Form.docx'],
+            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'TREASURER DETAILS.docx'],
+            'company_requirements' => ['path' => 'app/template/Registration Details Regular Corp.docx', 'name' => 'Registration Details Regular Corp.docx'],
         ],
         self::TYPE_SOLE_PROP => [
-            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'registration_form.docx'],
-            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'treasurer_details.docx'],
-            'company_requirements' => ['path' => 'app/template/Sole Prop Registaration Form.docx', 'name' => 'sole_prop_requirements.docx'],
+            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'Client Information Form.docx'],
+            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'TREASURER DETAILS.docx'],
+            'company_requirements' => ['path' => 'app/template/Sole Prop Registaration Form.docx', 'name' => 'Sole Prop Registaration Form.docx'],
         ],
         self::TYPE_OPC => [
-            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'registration_form.docx'],
-            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'treasurer_details.docx'],
-            'company_requirements' => ['path' => 'app/template/Registration Details Format OPC.docx', 'name' => 'opc_requirements.docx'],
+            'registration_form' => ['path' => 'app/template/Client Information Form.docx', 'name' => 'Client Information Form.docx'],
+            'treasurer_details' => ['path' => 'app/template/TREASURER DETAILS.docx', 'name' => 'TREASURER DETAILS.docx'],
+            'company_requirements' => ['path' => 'app/template/Registration Details Format OPC.docx', 'name' => 'Registration Details Format OPC.docx'],
         ],
     ];
 

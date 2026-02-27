@@ -2,6 +2,7 @@
 import { router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +18,7 @@ import { toast } from '@/components/ui/sonner'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Loader2, Mail, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type RegistrationLink = {
   id: number
@@ -26,6 +26,9 @@ type RegistrationLink = {
   company_type_label: string
   status: string
   uploads_count: number
+  missing_documents_count: number
+  has_missing_documents: boolean
+  follow_up_url: string
   created_at: string | null
   client_url: string
   show_url: string
@@ -59,8 +62,11 @@ const props = defineProps<{
 
 const isModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
+const isFollowUpModalOpen = ref(false)
 const deleting = ref(false)
+const followUpSendingId = ref<number | null>(null)
 const selectedForDelete = ref<RegistrationLink | null>(null)
+const selectedForFollowUp = ref<RegistrationLink | null>(null)
 
 const search = ref(props.filters.search ?? '')
 const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
@@ -167,6 +173,48 @@ const confirmDelete = () => {
     },
   })
 }
+
+const openFollowUpModal = (link: RegistrationLink) => {
+  if (!link.has_missing_documents) {
+    toast.info('No missing documents for this registration.')
+    return
+  }
+
+  selectedForFollowUp.value = link
+  isFollowUpModalOpen.value = true
+}
+
+const sendMissingDocsFollowUp = () => {
+  if (!selectedForFollowUp.value) return
+
+  const link = selectedForFollowUp.value
+  followUpSendingId.value = link.id
+
+  router.post(link.follow_up_url, {}, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success('Follow-up email sent successfully.')
+      isFollowUpModalOpen.value = false
+      selectedForFollowUp.value = null
+    },
+    onError: () => {
+      toast.error('Unable to send follow-up email.')
+    },
+    onFinish: () => {
+      followUpSendingId.value = null
+    },
+  })
+}
+
+const statusBadgeClass = (status: string) => {
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+  if (status === 'incomplete') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+  return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+}
+
+const statusLabel = (status: string) => {
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
 </script>
 
 <template>
@@ -248,6 +296,7 @@ const confirmDelete = () => {
                 <th class="px-4 py-3">Company Type</th>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3">Files Uploaded</th>
+                <th class="px-4 py-3">Missing</th>
                 <th class="px-4 py-3">
                   <button type="button" class="inline-flex items-center gap-1 cursor-pointer" @click="toggleSort">
                     Created
@@ -261,32 +310,58 @@ const confirmDelete = () => {
               <tr v-for="link in links.data" :key="link.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
                 <td class="px-4 py-3">{{ link.email }}</td>
                 <td class="px-4 py-3">{{ link.company_type_label }}</td>
-                <td class="px-4 py-3">{{ link.status }}</td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                    :class="statusBadgeClass(link.status)"
+                  >
+                    {{ statusLabel(link.status) }}
+                  </span>
+                </td>
                 <td class="px-4 py-3">{{ link.uploads_count }}</td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                    :class="link.has_missing_documents ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'"
+                  >
+                    {{ link.missing_documents_count }}
+                  </span>
+                </td>
                 <td class="px-4 py-3">{{ formatDate(link.created_at) }}</td>
                 <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button as="a" :href="link.show_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View">
-                          <Eye />
+                  <div class="flex items-center gap-2">
+                    <Button as="a" :href="link.show_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View Registration">
+                      <Eye class="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button type="button" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="More actions">
+                          <MoreHorizontal class="h-4 w-4" />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>View</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button type="button" size="icon-sm" variant="destructive" class="cursor-pointer" aria-label="Delete Registration" @click="openDeleteModal(link)">
-                          <Trash2 />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete</TooltipContent>
-                    </Tooltip>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="w-56">
+                        <DropdownMenuItem
+                          :disabled="followUpSendingId === link.id || !link.has_missing_documents"
+                          @click="openFollowUpModal(link)"
+                        >
+                          <Loader2 v-if="followUpSendingId === link.id" class="mr-2 h-4 w-4 animate-spin" />
+                          <Mail v-else class="mr-2 h-4 w-4" />
+                          {{ link.has_missing_documents ? 'Send Missing Docs Follow-up' : 'No missing documents' }}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          class="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+                          @click="openDeleteModal(link)"
+                        >
+                          <Trash2 class="mr-2 h-4 w-4" />
+                          Delete Registration
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>
               <tr v-if="!links.data.length">
-                <td colspan="6" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No registrations sent yet.</td>
+                <td colspan="8" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No registrations sent yet.</td>
               </tr>
             </tbody>
           </table>
@@ -309,6 +384,37 @@ const confirmDelete = () => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="deleting" @click="isDeleteModalOpen = false; selectedForDelete = null">Cancel</AlertDialogCancel>
           <AlertDialogAction :disabled="deleting" @click="confirmDelete">Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="isFollowUpModalOpen" @update:open="isFollowUpModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Send Missing Docs Follow-up</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will send a follow-up email to
+            <strong>{{ selectedForFollowUp?.email }}</strong>
+            with the missing document request.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            :disabled="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+            @click="isFollowUpModalOpen = false; selectedForFollowUp = null"
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+            @click="sendMissingDocsFollowUp"
+          >
+            <Loader2
+              v-if="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+              class="mr-2 h-4 w-4 animate-spin"
+            />
+            Send Follow-up
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

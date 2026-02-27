@@ -24,6 +24,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('/registration/send', [RegistrationController::class, 'sendLink'])->name('register.send');
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
         Route::patch('/registration/{registrationLink}/status', [RegistrationController::class, 'updateStatus'])->name('register.status.update');
+        Route::post('/registration/{registrationLink}/follow-up-missing-documents', [RegistrationController::class, 'sendMissingDocumentsFollowUp'])
+            ->name('register.follow-up-missing-documents');
         Route::delete('/registrations/{registrationLink}', [RegistrationController::class, 'destroy'])->name('register.destroy');
         Route::get('/registration/{registrationLink}/uploads/{upload}/download', [RegistrationController::class, 'downloadUpload'])
             ->name('register.uploads.download');

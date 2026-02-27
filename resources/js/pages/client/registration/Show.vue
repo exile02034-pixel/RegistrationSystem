@@ -117,7 +117,10 @@ const submit = () => {
 
         <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <h2 class="font-['Space_Grotesk'] text-xl font-semibold">Upload Completed Files</h2>
-          <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Click Upload Files to stage files first, then click Submit Files to save them.</p>
+          <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+            Click Upload Files to stage files first, then click Submit Files to save them.
+            You can submit the required files now and send any missing documents later if needed.
+          </p>
 
           <form class="mt-4 space-y-4" @submit.prevent="submit">
             <p v-if="form.recentlySuccessful" class="rounded-xl bg-green-100 p-2 text-sm text-green-700">
@@ -128,11 +131,15 @@ const submit = () => {
               ref="fileInput"
               type="file"
               multiple
+              accept=".docx"
               @change="onFileChange"
               class="w-full rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2 text-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]"
             />
             <p v-if="form.errors.files" class="text-sm text-red-600">{{ form.errors.files }}</p>
             <p v-if="form.errors['files.0']" class="text-sm text-red-600">{{ form.errors['files.0'] }}</p>
+            <p class="text-sm text-[#475569] dark:text-[#9FB3C8]">
+              Required files (exact names): {{ templates.map((file) => file.name).join(', ') }}
+            </p>
 
             <div class="grid gap-3 md:grid-cols-2">
               <button
