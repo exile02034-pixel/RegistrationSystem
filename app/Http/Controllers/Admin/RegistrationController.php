@@ -6,20 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
 use App\Models\RegistrationLink;
-use App\Models\RegistrationUpload;
 use App\Models\User;
 use App\Services\ActivityLogService;
-use App\Services\DocumentConversionService;
 use App\Services\NotificationService;
 use App\Services\RegistrationFormService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RegistrationController extends Controller
 {
@@ -27,7 +23,6 @@ class RegistrationController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
         private readonly RegistrationFormService $registrationFormService,
-        private readonly DocumentConversionService $conversionService,
         private readonly NotificationService $notificationService,
         private readonly ActivityLogService $activityLogService,
     ) {}
@@ -204,78 +199,6 @@ class RegistrationController extends Controller
         ]);
 
         return back()->with('success', "Successfully set status to {$status}.");
-    }
-
-    public function downloadUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
-    {
-        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
-
-        $sourcePath = Storage::disk('public')->path($upload->storage_path);
-        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
-        $wantsPdf = $request->query('format') === 'pdf';
-
-        if ($wantsPdf && in_array($extension, ['doc', 'docx'], true)) {
-            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
-
-            if ($pdf !== null) {
-                return response()->download($pdf['path'], $pdf['name'])->deleteFileAfterSend(true);
-            }
-        }
-
-        return response()->download($sourcePath, $upload->original_name);
-    }
-
-    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
-    {
-        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
-
-        $sourcePath = Storage::disk('public')->path($upload->storage_path);
-        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
-        $format = $request->query('format', 'raw');
-        $strict = (bool) $request->boolean('strict');
-
-        if ($format === 'pdf' && in_array($extension, ['doc', 'docx'], true)) {
-            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
-
-            if ($pdf !== null) {
-                return response()->file($pdf['path'])->deleteFileAfterSend(true);
-            }
-
-            abort_if($strict, 422, 'PDF preview is unavailable for this document.');
-        }
-
-        if ($format === 'pdf' && $extension === 'pdf') {
-            return response()->file($sourcePath);
-        }
-
-        if ($format === 'pdf') {
-            abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
-        }
-
-        return response()->file($sourcePath);
-    }
-
-    public function destroyUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): RedirectResponse
-    {
-        abort_unless($upload->registration_link_id === $registrationLink->id, 404);
-
-        $fileName = $upload->original_name;
-        $email = $registrationLink->email;
-        Storage::disk('public')->delete($upload->storage_path);
-        $upload->delete();
-
-        $this->notificationService->notifyAdmins(
-            category: 'registration_file_deleted',
-            title: 'Registration file deleted',
-            message: "File {$fileName} was deleted for {$email}.",
-            actionUrl: route('admin.register.show', $registrationLink->id),
-            meta: [
-                'email' => $email,
-                'file_name' => $fileName,
-            ],
-        );
-
-        return back()->with('success', 'File deleted successfully.');
     }
 
     private function guessClientNameFromEmail(string $email): string

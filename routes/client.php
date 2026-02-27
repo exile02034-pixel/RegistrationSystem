@@ -17,7 +17,7 @@ Route::get('/client-registration/{token}', [RegistrationFormController::class, '
     ->name('client.registration.show');
 
 Route::post('/client-registration/{token}', [RegistrationFormController::class, 'submit'])
-    ->name('client.registration.uploads.store');
+    ->name('client.registration.submit');
 
 Route::get('/client-registration/{token}/thank-you', [RegistrationFormController::class, 'success'])
     ->name('client.registration.thank-you');
