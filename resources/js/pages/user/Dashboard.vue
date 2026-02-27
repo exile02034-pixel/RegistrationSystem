@@ -77,6 +77,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]">
                                 <Link href="/user/files">Open My Files</Link>
                             </Button>
+                            <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]">
+                                <Link href="/notifications">Notifications</Link>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
