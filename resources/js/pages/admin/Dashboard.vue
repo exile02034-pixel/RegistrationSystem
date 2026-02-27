@@ -1,17 +1,32 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
+import ActivityTypeIcon from '@/components/admin/ActivityTypeIcon.vue'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useActivityLogs } from '@/composables/admin/useActivityLogs'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-defineProps<{
+const props = defineProps<{
   stats?: {
     totalUsers: number
     pendingUsers: number
     acceptedUsers: number
     totalUploads: number
   }
+  recentActivities?: Array<{
+    id: number
+    type: string
+    description: string
+    performed_by_name: string | null
+    performed_by_email: string | null
+    performed_by_role: string | null
+    company_type: string | null
+    created_at: string | null
+  }>
 }>()
+
+const { relativeTime, roleLabel } = useActivityLogs(props.recentActivities ?? [])
 </script>
 
 <template>
@@ -78,6 +93,43 @@ defineProps<{
               </Button>
             
             </div>
+          </CardContent>
+        </Card>
+
+        <Card class="rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 dark:border-[#1E3A5F] dark:bg-[#12325B]">
+          <CardHeader class="px-0 pb-2">
+            <CardTitle class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+              Recent Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent class="px-0">
+            <div v-if="!(recentActivities?.length)" class="text-sm text-[#475569] dark:text-[#9FB3C8]">
+              No recent activity yet.
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="activity in recentActivities"
+                :key="activity.id"
+                class="flex items-start justify-between gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+              >
+                <div class="flex items-start gap-3">
+                  <span class="mt-0.5 rounded-full bg-[#EFF6FF] p-2 text-[#2563EB] dark:bg-[#12325B] dark:text-[#93C5FD]">
+                    <ActivityTypeIcon :type="activity.type" class="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p class="text-sm font-medium">{{ activity.description }}</p>
+                    <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">
+                      {{ activity.performed_by_name ?? 'Unknown' }} ({{ activity.performed_by_email ?? 'n/a' }})
+                    </p>
+                    <Badge variant="outline" class="mt-1">{{ roleLabel(activity.performed_by_role) }}</Badge>
+                  </div>
+                </div>
+                <p class="shrink-0 text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ relativeTime(activity.created_at) }}</p>
+              </div>
+            </div>
+            <Button as-child variant="outline" class="mt-3 border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]">
+              <Link href="/admin/activity-logs">View All Activity</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -15,7 +15,7 @@ return new class extends Migration
         $table->id();
         $table->string('email');
         $table->string('token')->unique();
-        $table->enum('status', ['pending', 'completed'])->default('pending');
+        $table->enum('status', ['pending', 'completed', 'incomplete'])->default('pending');
         $table->timestamps();
     });
     }

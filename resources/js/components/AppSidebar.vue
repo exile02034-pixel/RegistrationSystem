@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Folder, LayoutGrid, Users, HomeIcon } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Users, HomeIcon, History } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import NavMain from '@/components/NavMain.vue';
@@ -31,6 +31,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                         { title: 'Registration', href: '/admin/registration', icon: Folder },
 
             { title: 'Users', href: '/admin/user', icon: Users },
+            
 
         ];
     }

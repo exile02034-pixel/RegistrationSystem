@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
+import { Download, FileDown, Trash2, UserPlus } from 'lucide-vue-next'
 import { ref } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,10 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { toast } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
+import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Download, FileDown, Trash2, UserPlus } from 'lucide-vue-next'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 type Upload = {
   id: number
@@ -44,6 +44,9 @@ const props = defineProps<{
 const isDeleteModalOpen = ref(false)
 const deleting = ref(false)
 const selectedUploadForDelete = ref<Upload | null>(null)
+const statusForm = useForm({
+  status: props.registration.status as 'pending' | 'incomplete' | 'completed',
+})
 
 const openDeleteModal = (upload: Upload) => {
   selectedUploadForDelete.value = upload
@@ -68,6 +71,18 @@ const confirmDelete = () => {
     onFinish: () => {
       deleting.value = false
       isDeleteModalOpen.value = false
+    },
+  })
+}
+
+const updateStatus = () => {
+  statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success(`Successfully set the status to ${statusForm.status}.`)
+    },
+    onError: () => {
+      toast.error('Unable to update status.')
     },
   })
 }
@@ -139,7 +154,23 @@ const formatUploadedDate = (dateString: string | null) => {
           </div>
           <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
           <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
-          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Status:</strong> {{ registration.status }}</p>
+          <div class="mt-3 flex flex-wrap items-end gap-2">
+            <div class="space-y-1">
+              <label class="text-sm me-3 font-medium text-[#475569] dark:text-[#9FB3C8]">Status</label>
+              <select
+                v-model="statusForm.status"
+                class="h-9 rounded-md border border-[#E2E8F0] bg-[#FFFFFF] px-2 text-sm text-[#0B1F3A] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]"
+              >
+                <option value="pending">Pending</option>
+                <option value="incomplete">Incomplete</option>
+                <option value="completed">Completed</option>
+              </select>
+              <p v-if="statusForm.errors.status" class="text-xs text-red-600">{{ statusForm.errors.status }}</p>
+            </div>
+            <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="updateStatus">
+              Status
+            </Button>
+          </div>
         </div>
 
         <div class="space-y-3">
