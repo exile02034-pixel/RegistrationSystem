@@ -129,7 +129,7 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
               <p v-if="statusForm.errors.status" class="text-xs text-red-600">{{ statusForm.errors.status }}</p>
             </div>
             <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="updateStatus">
-              Status
+              Save
             </Button>
           </div>
         </div>
