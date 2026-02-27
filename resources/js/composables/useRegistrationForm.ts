@@ -1,5 +1,5 @@
-import { computed, ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
 
 type FormField = {
@@ -138,12 +138,13 @@ export const useRegistrationForm = (formSchema: FormSection[], submitUrl: string
     const errors: Record<string, string> = {
       ...(clientErrors.value[sectionName] ?? {}),
     }
+    const serverErrors = form.errors as Record<string, string>
 
-    Object.keys(form.errors).forEach((key) => {
+    Object.keys(serverErrors).forEach((key) => {
       const prefix = `sections.${sectionName}.`
 
       if (key.startsWith(prefix)) {
-        errors[key.replace(prefix, '')] = form.errors[key]
+        errors[key.replace(prefix, '')] = serverErrors[key]
       }
     })
 
