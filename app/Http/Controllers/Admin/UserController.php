@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Models\User;
@@ -222,6 +223,29 @@ class UserController extends Controller
                     ])->values(),
             ],
             'uploads' => $uploads,
+            'activities' => ActivityLog::query()
+                ->where(function ($query) use ($user) {
+                    $query
+                        ->where('performed_by', $user->id)
+                        ->orWhere('performed_by_email', $user->email);
+                })
+                ->whereIn('type', ['user.files.submitted', 'client.registration.submitted'])
+                ->latest()
+                ->limit(20)
+                ->get()
+                ->map(function (ActivityLog $log) {
+                    $metadata = is_array($log->metadata) ? $log->metadata : [];
+
+                    return [
+                        'id' => $log->id,
+                        'type' => $log->type,
+                        'description' => $log->description,
+                        'created_at' => $log->created_at?->toDateTimeString(),
+                        'files_count' => isset($metadata['files_count']) ? (int) $metadata['files_count'] : null,
+                        'filenames' => isset($metadata['filenames']) && is_array($metadata['filenames']) ? array_values($metadata['filenames']) : [],
+                    ];
+                })
+                ->values(),
         ]);
     }
 

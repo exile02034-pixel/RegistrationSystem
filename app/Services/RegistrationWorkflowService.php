@@ -6,6 +6,7 @@ use App\Mail\ClientUploadReceivedMail;
 use App\Mail\RegistrationLinkMail;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -44,10 +45,11 @@ class RegistrationWorkflowService
     /**
      * @param  array<int, UploadedFile>  $files
      */
-    public function storeClientUploads(RegistrationLink $registrationLink, array $files): void
+    public function storeClientUploads(RegistrationLink $registrationLink, array $files, ?User $performedBy = null): void
     {
         $uploadedCount = 0;
         $uploadedFilenames = [];
+        $uploadedFileTypes = [];
 
         foreach ($files as $file) {
             $storedName = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
@@ -66,6 +68,7 @@ class RegistrationWorkflowService
 
             $uploadedCount++;
             $uploadedFilenames[] = $originalName;
+            $uploadedFileTypes[] = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
         }
 
         Mail::to($registrationLink->email)->send(new ClientUploadReceivedMail(
@@ -75,19 +78,27 @@ class RegistrationWorkflowService
 
         $companyTypeLabel = $this->templateService->labelFor($registrationLink->company_type);
         $guestName = $this->guessClientNameFromEmail($registrationLink->email);
+        $isAuthenticatedUserUpload = $performedBy !== null && $performedBy->role === 'user';
+        $fileSummary = implode(', ', array_slice($uploadedFilenames, 0, 3));
+        $hasMore = count($uploadedFilenames) > 3;
+        $fileSummaryText = $fileSummary !== '' ? " Files: {$fileSummary}".($hasMore ? ', ...' : '') : '';
 
         $this->activityLogService->log(
-            type: 'client.registration.submitted',
-            description: "{$guestName} ({$registrationLink->email}) submitted a registration for {$companyTypeLabel}",
-            guestEmail: $registrationLink->email,
-            guestName: $guestName,
-            role: 'client',
+            type: $isAuthenticatedUserUpload ? 'user.files.submitted' : 'client.registration.submitted',
+            description: $isAuthenticatedUserUpload
+                ? "{$performedBy->name} ({$performedBy->email}) submitted file(s) for {$companyTypeLabel}.{$fileSummaryText}"
+                : "{$guestName} ({$registrationLink->email}) submitted a registration for {$companyTypeLabel}.{$fileSummaryText}",
+            performedBy: $performedBy,
+            guestEmail: $isAuthenticatedUserUpload ? null : $registrationLink->email,
+            guestName: $isAuthenticatedUserUpload ? null : $guestName,
+            role: $isAuthenticatedUserUpload ? 'user' : 'client',
             metadata: [
                 'registration_id' => $registrationLink->id,
                 'company_type' => $registrationLink->company_type,
                 'company_type_label' => $companyTypeLabel,
                 'filenames' => $uploadedFilenames,
                 'files_count' => $uploadedCount,
+                'file_types' => array_values(array_unique(array_filter($uploadedFileTypes))),
             ],
         );
     }

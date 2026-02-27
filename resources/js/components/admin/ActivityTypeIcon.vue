@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const icon = computed(() => {
   if (props.type === 'client.registration.submitted') return FileUp
+  if (props.type === 'user.files.submitted') return FileUp
   if (props.type === 'admin.user.created') return UserPlus
   if (props.type === 'admin.user.deleted' || props.type === 'admin.registration.deleted') return Trash2
   if (props.type.includes('company_type')) return Building2

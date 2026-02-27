@@ -10,7 +10,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editProfile } from '@/routes/profile';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
                 </span>
             </button>
             <Link
-                :href="editAppearance()"
+                :href="editProfile()"
                 class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:hover:bg-[#0F2747]"
             >
                 <Settings class="size-4" />
