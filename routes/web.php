@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Illuminate\Http\Request;
-use App\Http\Controllers\User\DashboardController as UserDashboardController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -26,19 +25,7 @@ Route::get('/dashboard', function (Request $request) {
     };
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware(['auth', 'verified', 'role:user'])
-    ->prefix('user')
-    ->name('user.')
-    ->group(function () {
-        Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
-        Route::get('/files', [UserDashboardController::class, 'files'])->name('files');
-        Route::get('/uploads/print-batch', [UserDashboardController::class, 'printBatch'])->name('uploads.print-batch');
-        Route::get('/uploads/print-batch/file/{token}', [UserDashboardController::class, 'printBatchFile'])->name('uploads.print-batch.file');
-        Route::get('/uploads/{upload}/view', [UserDashboardController::class, 'viewUpload'])->name('uploads.view');
-        Route::get('/uploads/{upload}/download', [UserDashboardController::class, 'downloadUpload'])->name('uploads.download');
-        Route::get('/uploads/{upload}/print', [UserDashboardController::class, 'printUpload'])->name('uploads.print');
-    });
-
 require __DIR__.'/admin.php';
+require __DIR__.'/user.php';
 require __DIR__.'/client.php';
 require __DIR__.'/settings.php';
