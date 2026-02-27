@@ -44,11 +44,27 @@ const props = defineProps<{
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
 })
+const followUpForm = useForm({})
+const createUserForm = useForm({
+  name: '',
+  email: props.registration.email,
+  password: '',
+  password_confirmation: '',
+})
+const requiredCount = computed(() => props.registration.required_documents.length)
+const missingCount = computed(() => props.registration.missing_documents.length)
+const submittedCount = computed(() => requiredCount.value - missingCount.value)
+const canCreateUser = computed(() => props.registration.status === 'completed')
+const completionPercent = computed(() => {
+  if (requiredCount.value === 0) return 0
+  return Math.round((submittedCount.value / requiredCount.value) * 100)
+})
 
 const updateStatus = () => {
   statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
     preserveScroll: true,
     onSuccess: () => {
+      isStatusConfirmModalOpen.value = false
       toast.success(`Successfully set the status to ${statusForm.status}.`)
     },
     onError: () => {
@@ -65,6 +81,14 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
 
   return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
 }
+
+const statusBadgeClass = computed(() => {
+  if (statusForm.status === 'completed') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+  if (statusForm.status === 'incomplete') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+  return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+})
+
+const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + statusForm.status.slice(1))
 </script>
 
 <template>
@@ -115,6 +139,21 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
           </div>
           <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
           <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
+          <div class="mt-1">
+            <span
+              class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+              :class="statusBadgeClass"
+            >
+              {{ statusLabel }}
+            </span>
+          </div>
+          <p
+            v-if="!canCreateUser"
+            class="mt-1 text-sm text-amber-700 dark:text-amber-300"
+          >
+            Complete this registration first. User creation is enabled only when status is set to Completed.
+          </p>
+          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Required Files:</strong> {{ registration.required_documents.join(', ') }}</p>
           <div class="mt-3 flex flex-wrap items-end gap-2">
             <div class="space-y-1">
               <label class="text-sm me-3 font-medium text-[#475569] dark:text-[#9FB3C8]">Status</label>
@@ -128,9 +167,66 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
               </select>
               <p v-if="statusForm.errors.status" class="text-xs text-red-600">{{ statusForm.errors.status }}</p>
             </div>
-            <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="updateStatus">
-              Status
+            <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="onClickSaveStatus">
+              Save
             </Button>
+            <Button
+              type="button"
+              :disabled="followUpForm.processing || !registration.has_missing_documents"
+              class="cursor-pointer bg-amber-600 text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+              @click="openFollowUpModal"
+            >
+              <Mail class="mr-2 h-4 w-4" />
+              Send Missing Docs Follow-up
+            </Button>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-[#DBEAFE] bg-[#EFF6FF] p-3 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
+            <div class="flex items-center justify-between text-sm">
+              <p class="font-medium text-[#1E3A8A] dark:text-[#BFDBFE]">
+                Document Completion: {{ submittedCount }}/{{ requiredCount }}
+              </p>
+              <p class="font-semibold text-[#1E3A8A] dark:text-[#BFDBFE]">{{ completionPercent }}%</p>
+            </div>
+            <div class="mt-2 h-2 rounded-full bg-[#BFDBFE] dark:bg-[#1E3A5F]">
+              <div
+                class="h-2 rounded-full bg-[#2563EB] transition-all"
+                :style="{ width: `${completionPercent}%` }"
+              />
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+            <div class="flex items-center justify-between">
+              <p class="font-medium">Missing Files</p>
+              <span class="inline-flex items-center rounded-full border border-amber-400 px-2 py-0.5 text-xs font-semibold">
+                {{ missingCount }} missing
+              </span>
+            </div>
+
+            <ul class="mt-2 space-y-2">
+              <li
+                v-for="requiredFile in registration.required_documents"
+                :key="requiredFile"
+                class="flex items-center justify-between rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-800 dark:bg-amber-950/20"
+              >
+                <span class="truncate pr-2">{{ requiredFile }}</span>
+                <span
+                  v-if="registration.missing_documents.includes(requiredFile)"
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                >
+                  <AlertTriangle class="h-3.5 w-3.5" />
+                  Missing
+                </span>
+                <span
+                  v-else
+                  class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                >
+                  <CheckCircle2 class="h-3.5 w-3.5" />
+                  Submitted
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
 

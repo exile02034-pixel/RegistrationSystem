@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Mail\MissingDocumentsFollowUpMail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
@@ -195,6 +196,47 @@ class RegistrationController extends Controller
         ]);
     }
 
+    public function sendMissingDocumentsFollowUp(Request $request, RegistrationLink $registrationLink): RedirectResponse
+    {
+        $missingTemplates = $this->missingTemplates($registrationLink);
+
+        if (count($missingTemplates) === 0) {
+            return back()->with('success', 'No missing documents. Follow-up email was not sent.');
+        }
+
+        Mail::to($registrationLink->email)->send(new MissingDocumentsFollowUpMail(
+            companyTypeLabel: $this->templateService->labelFor($registrationLink->company_type),
+            uploadUrl: route('client.registration.show', $registrationLink->token),
+            missingDocuments: array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            missingAttachments: $missingTemplates,
+        ));
+
+        $this->notificationService->notifyAdmins(
+            category: 'registration_missing_documents_follow_up_sent',
+            title: 'Missing documents follow-up sent',
+            message: "A follow-up email was sent to {$registrationLink->email}.",
+            actionUrl: route('admin.register.show', $registrationLink->id),
+            meta: [
+                'email' => $registrationLink->email,
+                'registration_link_id' => $registrationLink->id,
+                'missing_documents' => array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            ],
+        );
+
+        $this->activityLogService->log(
+            type: 'admin.registration.missing_documents.follow_up_sent',
+            description: "Admin sent missing documents follow-up to {$registrationLink->email}.",
+            performedBy: $request->user(),
+            metadata: [
+                'registration_id' => $registrationLink->id,
+                'email' => $registrationLink->email,
+                'missing_documents' => array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            ],
+        );
+
+        return back()->with('success', 'Follow-up email sent successfully.');
+    }
+
     public function updateStatus(UpdateRegistrationStatusRequest $request, RegistrationLink $registrationLink): RedirectResponse
     {
         $status = $request->string('status')->toString();
@@ -225,34 +267,23 @@ class RegistrationController extends Controller
         return response()->download($sourcePath, $upload->original_name);
     }
 
-    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
+    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse|HttpResponse
     {
         abort_unless($upload->registration_link_id === $registrationLink->id, 404);
 
         $sourcePath = Storage::disk('public')->path($upload->storage_path);
-        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
         $format = $request->query('format', 'raw');
-        $strict = (bool) $request->boolean('strict');
-
-        if ($format === 'pdf' && in_array($extension, ['doc', 'docx'], true)) {
-            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
-
-            if ($pdf !== null) {
-                return response()->file($pdf['path'])->deleteFileAfterSend(true);
-            }
-
-            abort_if($strict, 422, 'PDF preview is unavailable for this document.');
+        if ($format !== 'pdf') {
+            return response('Only PDF preview is supported for file viewing.', 422);
         }
 
-        if ($format === 'pdf' && $extension === 'pdf') {
-            return response()->file($sourcePath);
+        $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
+
+        if ($pdf === null) {
+            return response('PDF preview could not be generated for this file.', 422);
         }
 
-        if ($format === 'pdf') {
-            abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
-        }
-
-        return response()->file($sourcePath);
+        return response()->file($pdf['path'])->deleteFileAfterSend(true);
     }
 
     public function destroyUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): RedirectResponse
@@ -284,5 +315,20 @@ class RegistrationController extends Controller
         $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
 
         return $normalized !== '' ? ucwords($normalized) : $email;
+    }
+
+    /**
+     * @return array<int, array{path: string, name: string}>
+     */
+    private function missingTemplates(RegistrationLink $registrationLink): array
+    {
+        $uploadedNames = $registrationLink->uploads
+            ->map(fn (RegistrationUpload $upload) => $upload->original_name)
+            ->all();
+
+        return array_values(array_filter(
+            $this->templateService->templatesFor($registrationLink->company_type),
+            fn (array $template) => ! in_array($template['name'], $uploadedNames, true),
+        ));
     }
 }

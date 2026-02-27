@@ -14,6 +14,7 @@ use App\Services\UserFormSubmissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -96,6 +97,7 @@ class UserController extends Controller
 
         return Inertia::render('admin/users/index', [
             'users' => $users,
+            'eligibleClients' => $this->eligibleClients(),
             'filters' => [
                 'search' => $search,
                 'sort' => $sort,
@@ -298,5 +300,34 @@ class UserController extends Controller
         );
 
         return back()->with('success', 'User deleted successfully');
+    }
+
+    /**
+     * @return array<int, array{email: string, company_types: array<int, string>}>
+     */
+    private function eligibleClients(): array
+    {
+        return RegistrationLink::query()
+            ->where('status', 'completed')
+            ->whereNotIn('email', User::query()->where('role', 'user')->select('email'))
+            ->get(['email', 'company_type'])
+            ->groupBy('email')
+            ->map(function ($links, string $email): array {
+                $companyTypes = collect($links)
+                    ->pluck('company_type')
+                    ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
+                    ->unique()
+                    ->values()
+                    ->map(fn (string $type) => $this->templateService->labelFor($type))
+                    ->all();
+
+                return [
+                    'email' => $email,
+                    'company_types' => $companyTypes,
+                ];
+            })
+            ->sortBy('email')
+            ->values()
+            ->all();
     }
 }

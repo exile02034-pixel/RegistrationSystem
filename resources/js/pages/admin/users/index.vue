@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label'
 import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
@@ -54,8 +55,14 @@ type Filters = {
   company_type: '' | 'opc' | 'sole_prop' | 'corp'
 }
 
+type EligibleClient = {
+  email: string
+  company_types: string[]
+}
+
 const props = defineProps<{
   users: PaginatedUsers
+  eligibleClients: EligibleClient[]
   filters: Filters
 }>()
 
@@ -73,10 +80,11 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = useForm({
   name: '',
-  email: '',
+  email: props.eligibleClients[0]?.email ?? '',
   password: '',
   password_confirmation: '',
 })
+const hasEligibleClients = computed(() => props.eligibleClients.length > 0)
 
 const initials = (name: string) =>
   name
@@ -153,10 +161,16 @@ const sortIcon = computed(() => {
 })
 
 const submit = () => {
+  if (!hasEligibleClients.value) {
+    toast.info('No eligible completed clients are available for account creation.')
+    return
+  }
+
   form.post('/admin/user', {
     preserveScroll: true,
     onSuccess: () => {
       form.reset()
+      form.email = props.eligibleClients[0]?.email ?? ''
       isCreateModalOpen.value = false
       toast.success('User created successfully', {
         description: 'The new client account is ready to use.',
@@ -198,6 +212,12 @@ const confirmDelete = () => {
     },
   })
 }
+
+const clientLabel = (client: EligibleClient) => {
+  return client.company_types.length
+    ? `${client.email} (${client.company_types.join(', ')})`
+    : client.email
+}
 </script>
 
 <template>
@@ -230,14 +250,28 @@ const confirmDelete = () => {
               </DialogHeader>
 
               <div class="space-y-4">
+                <p
+                  v-if="!hasEligibleClients"
+                  class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-300"
+                >
+                  No completed registrations are available for user creation.
+                </p>
                 <div class="space-y-2">
                   <Label>Name</Label>
                   <Input v-model="form.name" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
                   <p v-if="form.errors.name" class="text-red-500 text-sm">{{ form.errors.name }}</p>
                 </div>
                 <div class="space-y-2">
-                  <Label>Email</Label>
-                  <Input v-model="form.email" type="email" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+                  <Label>Client (Completed)</Label>
+                  <select
+                    v-model="form.email"
+                    class="h-10 w-full rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-sm text-[#0B1F3A] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF]"
+                    :disabled="!hasEligibleClients"
+                  >
+                    <option v-for="client in eligibleClients" :key="client.email" :value="client.email">
+                      {{ clientLabel(client) }}
+                    </option>
+                  </select>
                   <p v-if="form.errors.email" class="text-red-500 text-sm">{{ form.errors.email }}</p>
                 </div>
                 <div class="space-y-2">
@@ -251,7 +285,14 @@ const confirmDelete = () => {
                 </div>
                 <div class="flex justify-end gap-2">
                   <button type="button" class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] px-4 py-2 text-sm text-[#0B1F3A] transition hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]" @click="isCreateModalOpen = false">Cancel</button>
-                  <button type="button" class="rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-sm text-white transition hover:bg-[#1D4ED8] dark:hover:bg-[#3B82F6]" @click="submit">Create User</button>
+                  <button
+                    type="button"
+                    class="rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-sm text-white transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-[#3B82F6]"
+                    :disabled="!hasEligibleClients"
+                    @click="submit"
+                  >
+                    Create User
+                  </button>
                 </div>
               </div>
             </DialogContent>

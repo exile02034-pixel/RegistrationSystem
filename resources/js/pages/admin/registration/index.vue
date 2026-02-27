@@ -2,6 +2,7 @@
 import { router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,8 +66,11 @@ const props = defineProps<{
 
 const isModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
+const isFollowUpModalOpen = ref(false)
 const deleting = ref(false)
+const followUpSendingId = ref<number | null>(null)
 const selectedForDelete = ref<RegistrationLink | null>(null)
+const selectedForFollowUp = ref<RegistrationLink | null>(null)
 
 const search = ref(props.filters.search ?? '')
 const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
@@ -279,11 +283,14 @@ const statusClass = (status: string) => {
                 <td class="px-4 py-3">{{ link.form_submitted ? 'Submitted' : 'Pending' }}</td>
                 <td class="px-4 py-3">{{ formatDate(link.created_at) }}</td>
                 <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button as="a" :href="link.show_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View">
-                          <Eye />
+                  <div class="flex items-center gap-2">
+                    <Button as="a" :href="link.show_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View Registration">
+                      <Eye class="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button type="button" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="More actions">
+                          <MoreHorizontal class="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>View</TooltipContent>
@@ -305,7 +312,7 @@ const statusClass = (status: string) => {
                 </td>
               </tr>
               <tr v-if="!links.data.length">
-                <td colspan="6" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No registrations sent yet.</td>
+                <td colspan="8" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No registrations sent yet.</td>
               </tr>
             </tbody>
           </table>
@@ -328,6 +335,37 @@ const statusClass = (status: string) => {
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="deleting" @click="isDeleteModalOpen = false; selectedForDelete = null">Cancel</AlertDialogCancel>
           <AlertDialogAction :disabled="deleting" @click="confirmDelete">Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="isFollowUpModalOpen" @update:open="isFollowUpModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Send Missing Docs Follow-up</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will send a follow-up email to
+            <strong>{{ selectedForFollowUp?.email }}</strong>
+            with the missing document request.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            :disabled="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+            @click="isFollowUpModalOpen = false; selectedForFollowUp = null"
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            :disabled="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+            @click="sendMissingDocsFollowUp"
+          >
+            <Loader2
+              v-if="selectedForFollowUp !== null && followUpSendingId === selectedForFollowUp.id"
+              class="mr-2 h-4 w-4 animate-spin"
+            />
+            Send Follow-up
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
