@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Models\User;
+use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class UserController extends Controller
 {
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
+        private readonly NotificationService $notificationService,
     ) {
     }
 
@@ -112,12 +114,23 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => 'user',
         ]);
+
+        $this->notificationService->notifyAdmins(
+            category: 'user_created',
+            title: 'User created',
+            message: "User {$user->name} ({$user->email}) was created.",
+            actionUrl: route('admin.user.show', $user->id),
+            meta: [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ],
+        );
 
         return back()->with('success', 'User created successfully');
     }
@@ -182,7 +195,17 @@ class UserController extends Controller
             return back()->with('error', 'Only client users can be deleted.');
         }
 
+        $deletedName = $user->name;
+        $deletedEmail = $user->email;
         $user->delete();
+
+        $this->notificationService->notifyAdmins(
+            category: 'user_deleted',
+            title: 'User deleted',
+            message: "User {$deletedName} ({$deletedEmail}) was deleted.",
+            actionUrl: route('admin.user.index'),
+            meta: ['email' => $deletedEmail],
+        );
 
         return back()->with('success', 'User deleted successfully');
     }

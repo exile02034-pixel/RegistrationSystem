@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { toast } from '@/components/ui/sonner'
 
 type TemplateFile = {
   key: string
@@ -62,6 +63,10 @@ const submit = () => {
       if (fileInput.value) {
         fileInput.value.value = ''
       }
+      toast.success('Files uploaded successfully.')
+    },
+    onError: () => {
+      toast.error('Unable to upload files. Please try again.')
     },
   })
 }
