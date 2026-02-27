@@ -85,9 +85,7 @@ const formatDate = (value: string | null) => {
 
       <div class="rounded-xl border bg-white p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]">
         <h2 class="mb-3 text-xl font-semibold">Company Types</h2>
-        <p class="mb-3 text-xs text-gray-500 dark:text-[#9FB3C8]">
-          Auto-derived from registration records by matching this user email. Duplicates are removed.
-        </p>
+        
         <div class="flex flex-wrap gap-3">
           <Badge v-for="type in user.company_types" :key="type.value">{{ type.label }}</Badge>
           <p v-if="!user.company_types.length" class="text-sm text-gray-500 dark:text-[#9FB3C8]">
