@@ -8,6 +8,9 @@ type ActivityLogItem = {
   performed_by_email: string | null
   performed_by_role: string | null
   company_type: string | null
+  files_count?: number | null
+  filenames?: string[]
+  file_types?: string[]
   created_at: string | null
 }
 
@@ -46,6 +49,7 @@ export const useActivityLogs = (logs: ActivityLogItem[]) => {
 
   const roleLabel = (role: string | null) => {
     if (role === 'admin') return 'Admin'
+    if (role === 'user') return 'User'
     if (role === 'client') return 'Client'
     return 'Unknown'
   }

@@ -22,7 +22,7 @@ class ActivityLogService
             'performed_by' => $performedBy?->id,
             'performed_by_email' => $performedBy?->email ?? $guestEmail,
             'performed_by_name' => $performedBy?->name ?? $guestName,
-            'performed_by_role' => $performedBy ? 'admin' : $role,
+            'performed_by_role' => $performedBy?->role ?? $role,
             'metadata' => $metadata,
         ]);
     }

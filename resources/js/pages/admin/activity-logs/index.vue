@@ -15,6 +15,9 @@ type ActivityLogItem = {
   performed_by_email: string | null
   performed_by_role: string | null
   company_type: string | null
+  files_count: number | null
+  filenames: string[]
+  file_types: string[]
   created_at: string | null
 }
 
@@ -85,6 +88,21 @@ const reload = (page: number) => {
                     <div class="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{{ roleLabel(log.performed_by_role) }}</Badge>
                       <Badge v-if="log.company_type" variant="outline">{{ companyTypeLabel(log.company_type) }}</Badge>
+                      <Badge v-if="log.files_count" variant="outline">{{ log.files_count }} file(s)</Badge>
+                    </div>
+                    <div v-if="log.file_types?.length" class="flex flex-wrap items-center gap-2 pt-1">
+                      <Badge
+                        v-for="fileType in log.file_types"
+                        :key="`type-${log.id}-${fileType}`"
+                        variant="outline"
+                      >
+                        {{ fileType.toUpperCase() }}
+                      </Badge>
+                    </div>
+                    <div v-if="log.filenames?.length" class="pt-1">
+                      <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">
+                        Files: {{ log.filenames.join(', ') }}
+                      </p>
                     </div>
                   </div>
                 </div>

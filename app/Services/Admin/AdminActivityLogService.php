@@ -41,6 +41,9 @@ class AdminActivityLogService
             'performed_by_email' => $log->performed_by_email,
             'performed_by_role' => $log->performed_by_role,
             'company_type' => $metadata['company_type'] ?? null,
+            'files_count' => isset($metadata['files_count']) ? (int) $metadata['files_count'] : null,
+            'filenames' => isset($metadata['filenames']) && is_array($metadata['filenames']) ? array_values($metadata['filenames']) : [],
+            'file_types' => isset($metadata['file_types']) && is_array($metadata['file_types']) ? array_values($metadata['file_types']) : [],
             'metadata' => $metadata,
             'created_at' => $log->created_at?->toIso8601String(),
         ];
