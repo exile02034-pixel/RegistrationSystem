@@ -43,7 +43,7 @@ defineProps<{
                         :href="home()"
                         class="inline-flex items-center rounded-full border border-[#60A5FA] bg-[#EFF6FF] px-3 py-1 text-xs font-medium tracking-wide text-[#2563EB] dark:border-[#2563EB] dark:bg-[#0F2747] dark:text-[#E6F1FF]"
                     >
-                        RegistrarFlow Portal
+                        RegistrationSystem Portal
                     </Link>
                     <h1 class="text-3xl font-semibold leading-tight text-[#0B1F3A] sm:text-5xl dark:text-[#E6F1FF]">
                         Secure login for Registrar and Client access.

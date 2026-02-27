@@ -196,6 +196,8 @@ class RegistrationController extends Controller
                     'mime_type' => $upload->mime_type,
                     'size_bytes' => $upload->size_bytes,
                     'created_at' => $upload->created_at?->toDateTimeString(),
+                    'view_url' => route('admin.register.uploads.view', [$registrationLink->id, $upload->id]),
+                    'view_pdf_url' => route('admin.register.uploads.view', [$registrationLink->id, $upload->id]).'?format=pdf',
                     'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
                     'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
                     'delete_url' => route('admin.register.uploads.destroy', [$registrationLink->id, $upload->id]),
@@ -248,21 +250,38 @@ class RegistrationController extends Controller
             $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
 
             if ($pdf !== null) {
-                return response()->file($pdf['path'])->deleteFileAfterSend(true);
+                $pdfName = $pdf['name'] ?? pathinfo($pdf['path'], PATHINFO_BASENAME);
+                $safePdfName = str_replace('"', '', $pdfName);
+
+                return response()->file($pdf['path'], [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => "inline; filename=\"{$safePdfName}\"",
+                ])->deleteFileAfterSend(true);
             }
 
             abort_if($strict, 422, 'PDF preview is unavailable for this document.');
         }
 
         if ($format === 'pdf' && $extension === 'pdf') {
-            return response()->file($sourcePath);
+            $safeName = str_replace('"', '', $upload->original_name);
+
+            return response()->file($sourcePath, [
+                'Content-Type' => $upload->mime_type ?: 'application/pdf',
+                'Content-Disposition' => "inline; filename=\"{$safeName}\"",
+            ]);
         }
 
         if ($format === 'pdf') {
             abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
         }
 
-        return response()->file($sourcePath);
+        $safeName = str_replace('"', '', $upload->original_name);
+        $mimeType = $upload->mime_type ?: (mime_content_type($sourcePath) ?: 'application/octet-stream');
+
+        return response()->file($sourcePath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => "inline; filename=\"{$safeName}\"",
+        ]);
     }
 
     public function destroyUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): RedirectResponse

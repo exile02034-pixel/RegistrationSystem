@@ -43,7 +43,7 @@ const dashboardHref = computed(() => {
         <div class="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-8 lg:py-10">
             <header class="flex items-center justify-between rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] px-5 py-4 backdrop-blur dark:border-[#1E3A5F] dark:bg-[#0B1F3A]">
                 <div>
-                    <p class="font-['Space_Grotesk'] text-lg font-semibold tracking-wide text-[#0B1F3A] dark:text-[#E6F1FF]">RegistrarFlow</p>
+                    <p class="font-['Space_Grotesk'] text-lg font-semibold tracking-wide text-[#0B1F3A] dark:text-[#E6F1FF]">RegistrationSystem</p>
                     <p class="font-['Public_Sans'] text-xs text-[#475569] dark:text-[#9FB3C8]">Role-based client document management</p>
                 </div>
 
@@ -103,11 +103,11 @@ const dashboardHref = computed(() => {
                     <div class="space-y-3">
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 1</p>
-                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar creates a client account and profile.</p>
+                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar sends forms and instructions through email.</p>
                         </div>
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 2</p>
-                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar sends forms and instructions through email.</p>
+                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar creates a client account and profile.</p>
                         </div>
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 3</p>

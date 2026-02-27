@@ -23,6 +23,8 @@ type Upload = {
   mime_type: string | null
   size_bytes: number
   created_at: string | null
+  view_url: string
+  view_pdf_url: string
   download_url: string
   download_pdf_url: string
   delete_url: string
@@ -188,7 +190,16 @@ const formatUploadedDate = (dateString: string | null) => {
             </thead>
             <tbody>
               <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
-                <td class="px-4 py-3">{{ upload.original_name }}</td>
+                <td class="px-4 py-3">
+                  <a
+                    :href="upload.can_convert_pdf ? upload.view_pdf_url : upload.view_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="font-medium text-[#2563EB] underline-offset-2 hover:underline dark:text-[#60A5FA]"
+                  >
+                    {{ upload.original_name }}
+                  </a>
+                </td>
                 <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
                 <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
                 <td class="px-4 py-3">{{ formatUploadedDate(upload.created_at) }}</td>
