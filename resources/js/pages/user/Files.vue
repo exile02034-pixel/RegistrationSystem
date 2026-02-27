@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
+import { Download, Eye, FileText, Printer } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Input } from '@/components/ui/input'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Download, Eye, FileText, Printer } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
 
 type UploadItem = {
   id: number
   original_name: string
   size_bytes: number | null
   submitted_at: string | null
+  company_type: string
   view_raw_url: string
   preview_pdf_url: string
   download_original_url: string
@@ -24,7 +24,6 @@ type UploadItem = {
 }
 
 type Filters = {
-  search: string
   sort: 'created_at'
   direction: 'asc' | 'desc'
 }
@@ -42,22 +41,49 @@ const breadcrumbs: BreadcrumbItem[] = [
   },
 ]
 
-const search = ref(props.filters.search ?? '')
-const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
 const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc')
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const currentUploads = computed(() => props.uploads)
+const companyTypes = [
+  { value: 'opc', label: 'OPC' },
+  { value: 'sole_prop', label: 'Proprietorship' },
+  { value: 'corp', label: 'Regular Corporation' },
+] as const
+
+const groupedUploads = computed(() => {
+  return props.uploads.reduce<Record<string, UploadItem[]>>((acc, upload) => {
+    if (!acc[upload.company_type]) {
+      acc[upload.company_type] = []
+    }
+
+    acc[upload.company_type].push(upload)
+    return acc
+  }, {})
+})
+
+const uploadGroups = computed(() => {
+  const groups = companyTypes
+    .map((type) => ({
+      value: type.value,
+      label: type.label,
+      uploads: groupedUploads.value[type.value] ?? [],
+    }))
+    .filter((group) => group.uploads.length > 0)
+
+  const otherGroups = Object.entries(groupedUploads.value)
+    .filter(([key, uploads]) => !companyTypes.some((type) => type.value === key) && uploads.length > 0)
+    .map(([key, uploads]) => ({
+      value: key,
+      label: key.replaceAll('_', ' ').trim() || 'N/A',
+      uploads,
+    }))
+
+  return [...groups, ...otherGroups]
+})
 
 const buildQuery = () => {
   const query: Record<string, string | number> = {
-    search: search.value.trim(),
-    sort: sort.value,
+    sort: props.filters.sort ?? 'created_at',
     direction: direction.value,
-  }
-
-  if (!query.search) {
-    delete query.search
   }
 
   return query
@@ -71,20 +97,11 @@ const reload = () => {
   })
 }
 
-watch(search, () => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => reload(), 300)
-})
-
-const toggleSort = () => {
-  direction.value = direction.value === 'asc' ? 'desc' : 'asc'
+const setDirection = (nextDirection: 'asc' | 'desc') => {
+  if (direction.value === nextDirection) return
+  direction.value = nextDirection
   reload()
 }
-
-const sortIcon = computed(() => {
-  if (sort.value !== 'created_at') return ChevronsUpDown
-  return direction.value === 'asc' ? ChevronUp : ChevronDown
-})
 
 const microsoftViewerUrl = (rawUrl: string) => {
   const encoded = encodeURIComponent(rawUrl)
@@ -131,35 +148,30 @@ const downloadUrl = (upload: UploadItem) => {
 
 const selectedIds = ref<number[]>([])
 
-const allSelected = computed(() => {
-  return currentUploads.value.length > 0 && selectedIds.value.length === currentUploads.value.length
-})
+const isGroupSelected = (uploads: UploadItem[]) => {
+  return uploads.length > 0 && uploads.every((upload) => selectedIds.value.includes(upload.id))
+}
 
-const toggleAll = (checked: boolean) => {
-  selectedIds.value = checked ? currentUploads.value.map((upload) => upload.id) : []
+const toggleGroup = (checked: boolean, uploads: UploadItem[]) => {
+  const ids = uploads.map((upload) => upload.id)
+
+  if (checked) {
+    const next = new Set(selectedIds.value)
+    ids.forEach((id) => next.add(id))
+    selectedIds.value = Array.from(next)
+    return
+  }
+
+  selectedIds.value = selectedIds.value.filter((id) => !ids.includes(id))
 }
 
 const selectedUploads = computed(() => {
-  return currentUploads.value.filter((upload) => selectedIds.value.includes(upload.id))
+  return props.uploads.filter((upload) => selectedIds.value.includes(upload.id))
 })
 
 const printSelected = () => {
   const printable = selectedUploads.value.filter((upload) => upload.can_convert_pdf || upload.is_pdf)
   const skipped = selectedUploads.value.length - printable.length
-
-  if (printable.length > 0) {
-    const ids = printable.map((upload) => upload.id).join(',')
-    window.open(`${props.batchPrintBaseUrl}?ids=${encodeURIComponent(ids)}`, '_blank')
-  }
-
-  if (skipped > 0) {
-    window.alert(`${skipped} file(s) were skipped because PDF printing is unavailable.`)
-  }
-}
-
-const printAll = () => {
-  const printable = currentUploads.value.filter((upload) => upload.can_convert_pdf || upload.is_pdf)
-  const skipped = currentUploads.value.length - printable.length
 
   if (printable.length > 0) {
     const ids = printable.map((upload) => upload.id).join(',')
@@ -191,24 +203,50 @@ const printAll = () => {
               My Files
             </CardTitle>
           </CardHeader>
-          <CardContent class="px-0">
-            <div class="grid gap-3 md:grid-cols-2">
-              <Input v-model="search" placeholder="Search by filename..." />
-              <button
-                type="button"
-                class="inline-flex h-9 items-center justify-center gap-1 rounded-md border bg-background px-3 text-sm cursor-pointer"
-                @click="toggleSort"
-              >
-                Sort by Date
-                <component :is="sortIcon" class="h-4 w-4" />
-              </button>
-            </div>
-          </CardContent>
+          <CardContent class="px-0" />
         </Card>
 
-        <Card class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
+        <div
+          v-if="!uploadGroups.length"
+          class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 text-center text-sm text-[#475569] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#9FB3C8]"
+        >
+          No files found yet.
+        </div>
+
+        <Card
+          v-for="group in uploadGroups"
+          :key="group.value"
+          class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]"
+        >
+          <CardHeader class="pb-2">
+            <CardTitle class="text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+              {{ group.label }}
+            </CardTitle>
+          </CardHeader>
           <CardContent class="p-0">
-            <div class="flex items-center justify-end gap-2 border-b border-[#E2E8F0] p-3 dark:border-[#1E3A5F]">
+            <div class="flex items-center justify-between gap-2 border-b border-[#E2E8F0] p-3 dark:border-[#1E3A5F]">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-[#475569] dark:text-[#9FB3C8]">Sort by date</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-7 px-2 text-xs"
+                  :class="direction === 'desc' ? 'border-[#2563EB] text-[#2563EB] dark:border-[#60A5FA] dark:text-[#93C5FD]' : ''"
+                  @click="setDirection('desc')"
+                >
+                  Newest
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-7 px-2 text-xs"
+                  :class="direction === 'asc' ? 'border-[#2563EB] text-[#2563EB] dark:border-[#60A5FA] dark:text-[#93C5FD]' : ''"
+                  @click="setDirection('asc')"
+                >
+                  Oldest
+                </Button>
+              </div>
+              <div class="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button variant="outline" size="icon-sm" class="cursor-pointer" :disabled="selectedIds.length === 0" aria-label="Print Selected" @click="printSelected">
@@ -217,20 +255,17 @@ const printAll = () => {
                 </TooltipTrigger>
                 <TooltipContent>Print Selected</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="outline" size="icon-sm" class="cursor-pointer" :disabled="currentUploads.length === 0" aria-label="Print All" @click="printAll">
-                    <Printer />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Print All</TooltipContent>
-              </Tooltip>
+              </div>
             </div>
             <table class="min-w-full divide-y divide-[#E2E8F0] text-sm dark:divide-[#1E3A5F]">
               <thead class="bg-[#EFF6FF] text-left dark:bg-[#0F2747]">
                 <tr>
                   <th class="px-4 py-3">
-                    <input type="checkbox" :checked="allSelected" @change="toggleAll(($event.target as HTMLInputElement).checked)">
+                    <input
+                      type="checkbox"
+                      :checked="isGroupSelected(group.uploads)"
+                      @change="toggleGroup(($event.target as HTMLInputElement).checked, group.uploads)"
+                    >
                   </th>
                   <th class="px-4 py-3">File</th>
                   <th class="px-4 py-3">Size</th>
@@ -239,7 +274,7 @@ const printAll = () => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-[#E2E8F0] dark:divide-[#1E3A5F]">
-                <tr v-for="upload in currentUploads" :key="upload.id">
+                <tr v-for="upload in group.uploads" :key="upload.id">
                   <td class="px-4 py-3">
                     <input v-model="selectedIds" type="checkbox" :value="upload.id">
                   </td>
@@ -279,11 +314,6 @@ const printAll = () => {
                         <TooltipContent>Download DOCX</TooltipContent>
                       </Tooltip>
                     </div>
-                  </td>
-                </tr>
-                <tr v-if="!currentUploads.length">
-                  <td colspan="5" class="px-4 py-6 text-center text-[#475569] dark:text-[#9FB3C8]">
-                    No files found yet.
                   </td>
                 </tr>
               </tbody>
