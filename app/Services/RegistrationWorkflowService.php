@@ -14,8 +14,10 @@ use ZipArchive;
 
 class RegistrationWorkflowService
 {
-    public function __construct(private readonly RegistrationTemplateService $templateService)
-    {
+    public function __construct(
+        private readonly RegistrationTemplateService $templateService,
+        private readonly ActivityLogService $activityLogService,
+    ) {
     }
 
     public function createRegistrationLinkAndSend(string $email, string $companyType): RegistrationLink
@@ -45,14 +47,16 @@ class RegistrationWorkflowService
     public function storeClientUploads(RegistrationLink $registrationLink, array $files): void
     {
         $uploadedCount = 0;
+        $uploadedFilenames = [];
 
         foreach ($files as $file) {
             $storedName = Str::uuid()->toString().'.'.$file->getClientOriginalExtension();
             $storagePath = $file->storeAs('client-uploads/'.$registrationLink->token, $storedName, 'public');
+            $originalName = $file->getClientOriginalName();
 
             RegistrationUpload::create([
                 'registration_link_id' => $registrationLink->id,
-                'original_name' => $file->getClientOriginalName(),
+                'original_name' => $originalName,
                 'stored_name' => $storedName,
                 'storage_path' => $storagePath,
                 'mime_type' => $file->getMimeType(),
@@ -61,14 +65,31 @@ class RegistrationWorkflowService
             ]);
 
             $uploadedCount++;
+            $uploadedFilenames[] = $originalName;
         }
-
-        $registrationLink->update(['status' => 'completed']);
 
         Mail::to($registrationLink->email)->send(new ClientUploadReceivedMail(
             companyTypeLabel: $this->templateService->labelFor($registrationLink->company_type),
             filesCount: $uploadedCount,
         ));
+
+        $companyTypeLabel = $this->templateService->labelFor($registrationLink->company_type);
+        $guestName = $this->guessClientNameFromEmail($registrationLink->email);
+
+        $this->activityLogService->log(
+            type: 'client.registration.submitted',
+            description: "{$guestName} ({$registrationLink->email}) submitted a registration for {$companyTypeLabel}",
+            guestEmail: $registrationLink->email,
+            guestName: $guestName,
+            role: 'client',
+            metadata: [
+                'registration_id' => $registrationLink->id,
+                'company_type' => $registrationLink->company_type,
+                'company_type_label' => $companyTypeLabel,
+                'filenames' => $uploadedFilenames,
+                'files_count' => $uploadedCount,
+            ],
+        );
     }
 
     private function extractText(UploadedFile $file, string $storagePath): ?string
@@ -94,5 +115,13 @@ class RegistrationWorkflowService
         $text = trim(preg_replace('/\s+/', ' ', strip_tags($documentXml)) ?? '');
 
         return $text !== '' ? $text : null;
+    }
+
+    private function guessClientNameFromEmail(string $email): string
+    {
+        $localPart = explode('@', $email)[0] ?? $email;
+        $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
+
+        return $normalized !== '' ? ucwords($normalized) : $email;
     }
 }

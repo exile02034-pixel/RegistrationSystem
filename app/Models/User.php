@@ -64,4 +64,9 @@ class User extends Authenticatable
         return $this->hasMany(RegistrationLink::class, 'email', 'email');
     }
 
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'performed_by');
+    }
+
 }

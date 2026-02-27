@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,7 @@ class UserController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly NotificationService $notificationService,
+        private readonly ActivityLogService $activityLogService,
     ) {
     }
 
@@ -132,6 +134,40 @@ class UserController extends Controller
             ],
         );
 
+        $this->activityLogService->log(
+            type: 'admin.user.created',
+            description: "Admin created user {$user->name} ({$user->email})",
+            performedBy: $request->user(),
+            metadata: [
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ],
+        );
+
+        $assignedTypeValues = RegistrationLink::query()
+            ->where('email', $user->email)
+            ->where('status', 'completed')
+            ->pluck('company_type')
+            ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
+            ->unique()
+            ->take(3)
+            ->values();
+
+        foreach ($assignedTypeValues as $type) {
+            $this->activityLogService->log(
+                type: 'admin.user.company_type.assigned',
+                description: "Admin assigned {$this->templateService->labelFor($type)} to {$user->name} ({$user->email})",
+                performedBy: $request->user(),
+                metadata: [
+                    'user_id' => $user->id,
+                    'user_email' => $user->email,
+                    'user_name' => $user->name,
+                    'company_type' => $type,
+                    'company_type_label' => $this->templateService->labelFor($type),
+                ],
+            );
+        }
+
         return back()->with('success', 'User created successfully');
     }
 
@@ -189,14 +225,24 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(Request $request, User $user): RedirectResponse
     {
         if ($user->role !== 'user') {
             return back()->with('error', 'Only client users can be deleted.');
         }
 
+        $assignedTypeValues = RegistrationLink::query()
+            ->where('email', $user->email)
+            ->where('status', 'completed')
+            ->pluck('company_type')
+            ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
+            ->unique()
+            ->take(3)
+            ->values();
+
         $deletedName = $user->name;
         $deletedEmail = $user->email;
+        $deletedId = $user->id;
         $user->delete();
 
         $this->notificationService->notifyAdmins(
@@ -205,6 +251,32 @@ class UserController extends Controller
             message: "User {$deletedName} ({$deletedEmail}) was deleted.",
             actionUrl: route('admin.user.index'),
             meta: ['email' => $deletedEmail],
+        );
+
+        foreach ($assignedTypeValues as $type) {
+            $this->activityLogService->log(
+                type: 'admin.user.company_type.removed',
+                description: "Admin removed {$this->templateService->labelFor($type)} from {$deletedName} ({$deletedEmail})",
+                performedBy: $request->user(),
+                metadata: [
+                    'deleted_user_id' => $deletedId,
+                    'deleted_user_email' => $deletedEmail,
+                    'deleted_user_name' => $deletedName,
+                    'company_type' => $type,
+                    'company_type_label' => $this->templateService->labelFor($type),
+                ],
+            );
+        }
+
+        $this->activityLogService->log(
+            type: 'admin.user.deleted',
+            description: "Admin deleted user {$deletedName} ({$deletedEmail})",
+            performedBy: $request->user(),
+            metadata: [
+                'deleted_user_id' => $deletedId,
+                'deleted_user_email' => $deletedEmail,
+                'deleted_user_name' => $deletedName,
+            ],
         );
 
         return back()->with('success', 'User deleted successfully');

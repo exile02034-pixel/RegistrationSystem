@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
+use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
+use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\DocumentConversionService;
 use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
@@ -24,6 +27,7 @@ class RegistrationController extends Controller
         private readonly RegistrationWorkflowService $workflowService,
         private readonly DocumentConversionService $conversionService,
         private readonly NotificationService $notificationService,
+        private readonly ActivityLogService $activityLogService,
     ) {
     }
 
@@ -119,9 +123,18 @@ class RegistrationController extends Controller
         return back()->with('success', 'Registration email sent successfully.');
     }
 
-    public function destroy(RegistrationLink $registrationLink): RedirectResponse
+    public function destroy(Request $request, RegistrationLink $registrationLink): RedirectResponse
     {
         $email = $registrationLink->email;
+        $companyType = $registrationLink->company_type;
+        $companyTypeLabel = $this->templateService->labelFor($companyType);
+        $registrationId = $registrationLink->id;
+        $clientName = $this->guessClientNameFromEmail($email);
+        $linkedUser = User::query()
+            ->where('role', 'user')
+            ->where('email', $email)
+            ->first();
+
         $registrationLink->delete();
 
         $this->notificationService->notifyAdmins(
@@ -131,6 +144,34 @@ class RegistrationController extends Controller
             actionUrl: route('admin.register.index'),
             meta: ['email' => $email],
         );
+
+        $this->activityLogService->log(
+            type: 'admin.registration.deleted',
+            description: "Admin deleted registration of {$clientName} ({$email}) - {$companyTypeLabel}",
+            performedBy: $request->user(),
+            metadata: [
+                'registration_id' => $registrationId,
+                'email' => $email,
+                'company_type' => $companyType,
+                'company_type_label' => $companyTypeLabel,
+            ],
+        );
+
+        if ($linkedUser && in_array($companyType, ['corp', 'sole_prop', 'opc'], true)) {
+            $this->activityLogService->log(
+                type: 'admin.user.company_type.removed',
+                description: "Admin removed {$companyTypeLabel} from {$linkedUser->name} ({$linkedUser->email})",
+                performedBy: $request->user(),
+                metadata: [
+                    'user_id' => $linkedUser->id,
+                    'user_email' => $linkedUser->email,
+                    'user_name' => $linkedUser->name,
+                    'company_type' => $companyType,
+                    'company_type_label' => $companyTypeLabel,
+                    'registration_id' => $registrationId,
+                ],
+            );
+        }
 
         return redirect()
             ->route('admin.register.index')
@@ -162,6 +203,17 @@ class RegistrationController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    public function updateStatus(UpdateRegistrationStatusRequest $request, RegistrationLink $registrationLink): RedirectResponse
+    {
+        $status = $request->string('status')->toString();
+
+        $registrationLink->update([
+            'status' => $status,
+        ]);
+
+        return back()->with('success', "Successfully set status to {$status}.");
     }
 
     public function downloadUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
@@ -234,5 +286,13 @@ class RegistrationController extends Controller
         );
 
         return back()->with('success', 'File deleted successfully.');
+    }
+
+    private function guessClientNameFromEmail(string $email): string
+    {
+        $localPart = explode('@', $email)[0] ?? $email;
+        $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
+
+        return $normalized !== '' ? ucwords($normalized) : $email;
     }
 }
