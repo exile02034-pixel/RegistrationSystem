@@ -80,7 +80,7 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'registration_link_id' => ['required', 'integer'],
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['required', 'file', 'max:10240', 'mimes:doc,docx,pdf,jpg,jpeg,png'],
+            'files.*' => ['required', 'file', 'max:10240', 'mimes:docx'],
         ]);
 
         $registrationLink = RegistrationLink::query()
@@ -89,6 +89,26 @@ class DashboardController extends Controller
             ->firstOrFail();
 
         $files = $request->file('files') ?? [];
+        $expectedNames = collect($this->templateService->templatesFor($registrationLink->company_type))
+            ->pluck('name')
+            ->all();
+
+        $uploadedNames = collect($files)
+            ->map(fn ($file) => $file->getClientOriginalName())
+            ->values()
+            ->all();
+
+        if (count(array_unique($uploadedNames)) !== count($uploadedNames)) {
+            return back()->withErrors(['files' => 'Please upload each template file only once.']);
+        }
+
+        $invalidNames = array_values(array_diff($uploadedNames, $expectedNames));
+
+        if ($invalidNames !== []) {
+            return back()->withErrors([
+                'files' => 'Please upload only the official template files without renaming them.',
+            ]);
+        }
 
         $this->workflowService->storeClientUploads($registrationLink, $files, $user);
 

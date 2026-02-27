@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Mail\MissingDocumentsFollowUpMail;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
@@ -15,6 +16,7 @@ use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -39,6 +41,7 @@ class RegistrationController extends Controller
         $companyType = request('company_type');
 
         $links = RegistrationLink::query()
+            ->with(['uploads:id,registration_link_id,original_name'])
             ->withCount('uploads')
             ->when(in_array($companyType, ['corp', 'sole_prop', 'opc'], true), function ($query) use ($companyType) {
                 $query->where('company_type', $companyType);
@@ -67,7 +70,10 @@ class RegistrationController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $links->setCollection($links->getCollection()->map(fn (RegistrationLink $link) => [
+        $links->setCollection($links->getCollection()->map(function (RegistrationLink $link): array {
+            $missingTemplates = $this->missingTemplates($link);
+
+            return [
                 'id' => $link->id,
                 'email' => $link->email,
                 'company_type' => $link->company_type,
@@ -75,10 +81,14 @@ class RegistrationController extends Controller
                 'status' => $link->status,
                 'token' => $link->token,
                 'uploads_count' => $link->uploads_count,
+                'missing_documents_count' => count($missingTemplates),
+                'has_missing_documents' => count($missingTemplates) > 0,
+                'follow_up_url' => route('admin.register.follow-up-missing-documents', $link->id),
                 'created_at' => $link->created_at?->toDateTimeString(),
                 'client_url' => route('client.registration.show', $link->token),
                 'show_url' => route('admin.register.show', $link->id),
-            ]));
+            ];
+        }));
 
         return Inertia::render('admin/registration/index', [
             'links' => $links,
@@ -181,21 +191,29 @@ class RegistrationController extends Controller
     public function show(RegistrationLink $registrationLink): Response
     {
         $registrationLink->load('uploads');
+        $requiredTemplates = array_values($this->templateService->templatesFor($registrationLink->company_type));
+        $missingTemplates = $this->missingTemplates($registrationLink);
 
         return Inertia::render('admin/registration/show', [
             'registration' => [
                 'id' => $registrationLink->id,
                 'email' => $registrationLink->email,
                 'token' => $registrationLink->token,
+                'company_type' => $registrationLink->company_type,
                 'company_type_label' => $this->templateService->labelFor($registrationLink->company_type),
                 'status' => $registrationLink->status,
                 'created_at' => $registrationLink->created_at?->toDateTimeString(),
+                'required_documents' => array_values(array_map(fn (array $template) => $template['name'], $requiredTemplates)),
+                'missing_documents' => array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+                'has_missing_documents' => count($missingTemplates) > 0,
+                'follow_up_url' => route('admin.register.follow-up-missing-documents', $registrationLink->id),
                 'uploads' => $registrationLink->uploads->map(fn (RegistrationUpload $upload) => [
                     'id' => $upload->id,
                     'original_name' => $upload->original_name,
                     'mime_type' => $upload->mime_type,
                     'size_bytes' => $upload->size_bytes,
                     'created_at' => $upload->created_at?->toDateTimeString(),
+                    'view_pdf_url' => route('admin.register.uploads.view', [$registrationLink->id, $upload->id]).'?format=pdf&strict=1',
                     'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
                     'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
                     'delete_url' => route('admin.register.uploads.destroy', [$registrationLink->id, $upload->id]),
@@ -203,6 +221,47 @@ class RegistrationController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    public function sendMissingDocumentsFollowUp(Request $request, RegistrationLink $registrationLink): RedirectResponse
+    {
+        $missingTemplates = $this->missingTemplates($registrationLink);
+
+        if (count($missingTemplates) === 0) {
+            return back()->with('success', 'No missing documents. Follow-up email was not sent.');
+        }
+
+        Mail::to($registrationLink->email)->send(new MissingDocumentsFollowUpMail(
+            companyTypeLabel: $this->templateService->labelFor($registrationLink->company_type),
+            uploadUrl: route('client.registration.show', $registrationLink->token),
+            missingDocuments: array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            missingAttachments: $missingTemplates,
+        ));
+
+        $this->notificationService->notifyAdmins(
+            category: 'registration_missing_documents_follow_up_sent',
+            title: 'Missing documents follow-up sent',
+            message: "A follow-up email was sent to {$registrationLink->email}.",
+            actionUrl: route('admin.register.show', $registrationLink->id),
+            meta: [
+                'email' => $registrationLink->email,
+                'registration_link_id' => $registrationLink->id,
+                'missing_documents' => array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            ],
+        );
+
+        $this->activityLogService->log(
+            type: 'admin.registration.missing_documents.follow_up_sent',
+            description: "Admin sent missing documents follow-up to {$registrationLink->email}.",
+            performedBy: $request->user(),
+            metadata: [
+                'registration_id' => $registrationLink->id,
+                'email' => $registrationLink->email,
+                'missing_documents' => array_values(array_map(fn (array $template) => $template['name'], $missingTemplates)),
+            ],
+        );
+
+        return back()->with('success', 'Follow-up email sent successfully.');
     }
 
     public function updateStatus(UpdateRegistrationStatusRequest $request, RegistrationLink $registrationLink): RedirectResponse
@@ -244,22 +303,20 @@ class RegistrationController extends Controller
         $format = $request->query('format', 'raw');
         $strict = (bool) $request->boolean('strict');
 
-        if ($format === 'pdf' && in_array($extension, ['doc', 'docx'], true)) {
+        if ($format === 'pdf' && $extension === 'pdf') {
+            return response()->file($sourcePath);
+        }
+
+        if ($format === 'pdf') {
             $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
 
             if ($pdf !== null) {
                 return response()->file($pdf['path'])->deleteFileAfterSend(true);
             }
 
-            abort_if($strict, 422, 'PDF preview is unavailable for this document.');
-        }
-
-        if ($format === 'pdf' && $extension === 'pdf') {
-            return response()->file($sourcePath);
-        }
-
-        if ($format === 'pdf') {
-            abort_if($strict, 422, 'PDF preview is unavailable for this file type.');
+            if ($strict) {
+                return response('PDF preview is unavailable for this file type.', 422);
+            }
         }
 
         return response()->file($sourcePath);
@@ -294,5 +351,20 @@ class RegistrationController extends Controller
         $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
 
         return $normalized !== '' ? ucwords($normalized) : $email;
+    }
+
+    /**
+     * @return array<int, array{path: string, name: string}>
+     */
+    private function missingTemplates(RegistrationLink $registrationLink): array
+    {
+        $uploadedNames = $registrationLink->uploads
+            ->map(fn (RegistrationUpload $upload) => $upload->original_name)
+            ->all();
+
+        return array_values(array_filter(
+            $this->templateService->templatesFor($registrationLink->company_type),
+            fn (array $template) => ! in_array($template['name'], $uploadedNames, true),
+        ));
     }
 }

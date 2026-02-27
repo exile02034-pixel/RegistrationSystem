@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { Download, FileDown, Trash2, UserPlus } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { AlertTriangle, CheckCircle2, Download, FileDown, Loader2, Mail, MoreHorizontal, Trash2, UserPlus } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -23,6 +27,7 @@ type Upload = {
   mime_type: string | null
   size_bytes: number
   created_at: string | null
+  view_pdf_url: string
   download_url: string
   download_pdf_url: string
   delete_url: string
@@ -34,18 +39,40 @@ const props = defineProps<{
     id: number
     email: string
     token: string
+    company_type: 'corp' | 'sole_prop' | 'opc'
     company_type_label: string
     status: string
     created_at: string | null
+    required_documents: string[]
+    missing_documents: string[]
+    has_missing_documents: boolean
+    follow_up_url: string
     uploads: Upload[]
   }
 }>()
 
 const isDeleteModalOpen = ref(false)
+const isFollowUpModalOpen = ref(false)
+const isCreateUserModalOpen = ref(false)
 const deleting = ref(false)
 const selectedUploadForDelete = ref<Upload | null>(null)
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
+})
+const followUpForm = useForm({})
+const createUserForm = useForm({
+  name: '',
+  email: props.registration.email,
+  password: '',
+  password_confirmation: '',
+})
+const requiredCount = computed(() => props.registration.required_documents.length)
+const missingCount = computed(() => props.registration.missing_documents.length)
+const submittedCount = computed(() => requiredCount.value - missingCount.value)
+const canCreateUser = computed(() => props.registration.status === 'completed')
+const completionPercent = computed(() => {
+  if (requiredCount.value === 0) return 0
+  return Math.round((submittedCount.value / requiredCount.value) * 100)
 })
 
 const openDeleteModal = (upload: Upload) => {
@@ -87,6 +114,57 @@ const updateStatus = () => {
   })
 }
 
+const openFollowUpModal = () => {
+  if (!props.registration.has_missing_documents) {
+    toast.info('No missing documents to follow up.')
+    return
+  }
+
+  isFollowUpModalOpen.value = true
+}
+
+const openCreateUserModal = () => {
+  if (!canCreateUser.value) {
+    toast.info('Set status to Completed before creating a user.')
+    return
+  }
+
+  createUserForm.reset('name', 'password', 'password_confirmation')
+  createUserForm.clearErrors()
+  createUserForm.email = props.registration.email
+  isCreateUserModalOpen.value = true
+}
+
+const createUser = () => {
+  createUserForm.post('/admin/user', {
+    preserveScroll: true,
+    onSuccess: () => {
+      createUserForm.reset('name', 'password', 'password_confirmation')
+      createUserForm.email = props.registration.email
+      isCreateUserModalOpen.value = false
+      toast.success('User created successfully.')
+    },
+    onError: () => {
+      toast.error('Unable to create user.')
+    },
+  })
+}
+
+const sendMissingDocumentsFollowUp = () => {
+  if (!props.registration.has_missing_documents) return
+
+  followUpForm.post(props.registration.follow_up_url, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success('Follow-up email sent successfully.')
+      isFollowUpModalOpen.value = false
+    },
+    onError: () => {
+      toast.error('Unable to send follow-up email.')
+    },
+  })
+}
+
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -117,6 +195,14 @@ const formatUploadedDate = (dateString: string | null) => {
     day: '2-digit',
   })
 }
+
+const statusBadgeClass = computed(() => {
+  if (statusForm.status === 'completed') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
+  if (statusForm.status === 'incomplete') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+  return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+})
+
+const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + statusForm.status.slice(1))
 </script>
 
 <template>
@@ -139,21 +225,39 @@ const formatUploadedDate = (dateString: string | null) => {
             <Tooltip>
               <TooltipTrigger as-child>
                 <Button
-                  as="a"
-                  :href="`/admin/user/create?email=${encodeURIComponent(registration.email)}`"
+                  type="button"
                   size="icon-sm"
-                  class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+                  :class="canCreateUser ? 'cursor-pointer bg-blue-600 text-white hover:bg-blue-700' : 'cursor-not-allowed bg-slate-300 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+                  :disabled="!canCreateUser"
                   aria-label="Create User"
+                  @click="openCreateUserModal"
                 >
                   <UserPlus />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Create User</TooltipContent>
+              <TooltipContent>
+                {{ canCreateUser ? 'Create User' : 'Set status to Completed before creating a user' }}
+              </TooltipContent>
             </Tooltip>
           </div>
           </div>
           <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
           <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
+          <div class="mt-1">
+            <span
+              class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+              :class="statusBadgeClass"
+            >
+              {{ statusLabel }}
+            </span>
+          </div>
+          <p
+            v-if="!canCreateUser"
+            class="mt-1 text-sm text-amber-700 dark:text-amber-300"
+          >
+            Complete this registration first. User creation is enabled only when status is set to Completed.
+          </p>
+          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Required Files:</strong> {{ registration.required_documents.join(', ') }}</p>
           <div class="mt-3 flex flex-wrap items-end gap-2">
             <div class="space-y-1">
               <label class="text-sm me-3 font-medium text-[#475569] dark:text-[#9FB3C8]">Status</label>
@@ -168,8 +272,65 @@ const formatUploadedDate = (dateString: string | null) => {
               <p v-if="statusForm.errors.status" class="text-xs text-red-600">{{ statusForm.errors.status }}</p>
             </div>
             <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="updateStatus">
-              Status
+              Save
             </Button>
+            <Button
+              type="button"
+              :disabled="followUpForm.processing || !registration.has_missing_documents"
+              class="cursor-pointer bg-amber-600 text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+              @click="openFollowUpModal"
+            >
+              <Mail class="mr-2 h-4 w-4" />
+              Send Missing Docs Follow-up
+            </Button>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-[#DBEAFE] bg-[#EFF6FF] p-3 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
+            <div class="flex items-center justify-between text-sm">
+              <p class="font-medium text-[#1E3A8A] dark:text-[#BFDBFE]">
+                Document Completion: {{ submittedCount }}/{{ requiredCount }}
+              </p>
+              <p class="font-semibold text-[#1E3A8A] dark:text-[#BFDBFE]">{{ completionPercent }}%</p>
+            </div>
+            <div class="mt-2 h-2 rounded-full bg-[#BFDBFE] dark:bg-[#1E3A5F]">
+              <div
+                class="h-2 rounded-full bg-[#2563EB] transition-all"
+                :style="{ width: `${completionPercent}%` }"
+              />
+            </div>
+          </div>
+
+          <div class="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+            <div class="flex items-center justify-between">
+              <p class="font-medium">Missing Files</p>
+              <span class="inline-flex items-center rounded-full border border-amber-400 px-2 py-0.5 text-xs font-semibold">
+                {{ missingCount }} missing
+              </span>
+            </div>
+
+            <ul class="mt-2 space-y-2">
+              <li
+                v-for="requiredFile in registration.required_documents"
+                :key="requiredFile"
+                class="flex items-center justify-between rounded-md border border-amber-200 bg-white px-2 py-1.5 dark:border-amber-800 dark:bg-amber-950/20"
+              >
+                <span class="truncate pr-2">{{ requiredFile }}</span>
+                <span
+                  v-if="registration.missing_documents.includes(requiredFile)"
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                >
+                  <AlertTriangle class="h-3.5 w-3.5" />
+                  Missing
+                </span>
+                <span
+                  v-else
+                  class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                >
+                  <CheckCircle2 class="h-3.5 w-3.5" />
+                  Submitted
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -188,7 +349,16 @@ const formatUploadedDate = (dateString: string | null) => {
             </thead>
             <tbody>
               <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
-                <td class="px-4 py-3">{{ upload.original_name }}</td>
+                <td class="px-4 py-3">
+                  <a
+                    :href="upload.view_pdf_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-[#2563EB] hover:underline dark:text-[#60A5FA]"
+                  >
+                    {{ upload.original_name }}
+                  </a>
+                </td>
                 <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
                 <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
                 <td class="px-4 py-3">{{ formatUploadedDate(upload.created_at) }}</td>
@@ -209,36 +379,40 @@ const formatUploadedDate = (dateString: string | null) => {
                       </TooltipTrigger>
                       <TooltipContent>Download Original</TooltipContent>
                     </Tooltip>
-                    <Tooltip v-if="upload.can_convert_pdf">
-                      <TooltipTrigger as-child>
-                        <Button
-                          as="a"
-                          :href="upload.download_pdf_url"
-                          size="icon-sm"
-                          variant="outline"
-                          class="cursor-pointer"
-                          aria-label="Download PDF"
-                        >
-                          <FileDown />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Download PDF</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
                         <Button
                           type="button"
                           size="icon-sm"
-                          variant="destructive"
+                          variant="outline"
                           class="cursor-pointer"
-                          aria-label="Delete File"
+                          aria-label="More file actions"
+                        >
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="w-44">
+                        <DropdownMenuItem
+                          v-if="upload.can_convert_pdf"
+                          as-child
+                        >
+                          <a
+                            :href="upload.download_pdf_url"
+                            class="flex w-full items-center gap-2"
+                          >
+                            <FileDown class="h-4 w-4" />
+                            Download PDF
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          class="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
                           @click="openDeleteModal(upload)"
                         >
-                          <Trash2 />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete File</TooltipContent>
-                    </Tooltip>
+                          <Trash2 class="h-4 w-4" />
+                          Delete File
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>
@@ -269,6 +443,92 @@ const formatUploadedDate = (dateString: string | null) => {
           </AlertDialogCancel>
           <AlertDialogAction :disabled="deleting" @click="confirmDelete">
             Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <Dialog :open="isCreateUserModalOpen" @update:open="isCreateUserModalOpen = $event">
+      <DialogContent class="sm:max-w-lg dark:border-[#1E3A5F] dark:bg-[#12325B]">
+        <DialogHeader>
+          <DialogTitle>Create User / Client</DialogTitle>
+        </DialogHeader>
+
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <Label>Name</Label>
+            <Input v-model="createUserForm.name" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+            <p v-if="createUserForm.errors.name" class="text-sm text-red-500">{{ createUserForm.errors.name }}</p>
+          </div>
+          <div class="space-y-2">
+            <Label>Email</Label>
+            <Input
+              v-model="createUserForm.email"
+              type="email"
+              readonly
+              class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]"
+            />
+            <p v-if="createUserForm.errors.email" class="text-sm text-red-500">{{ createUserForm.errors.email }}</p>
+          </div>
+          <div class="space-y-2">
+            <Label>Password</Label>
+            <Input v-model="createUserForm.password" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+            <p v-if="createUserForm.errors.password" class="text-sm text-red-500">{{ createUserForm.errors.password }}</p>
+          </div>
+          <div class="space-y-2">
+            <Label>Confirm Password</Label>
+            <Input v-model="createUserForm.password_confirmation" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button
+              type="button"
+              class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] px-4 py-2 text-sm text-[#0B1F3A] transition hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
+              :disabled="createUserForm.processing"
+              @click="isCreateUserModalOpen = false"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-sm text-white transition hover:bg-[#1D4ED8] disabled:opacity-50 dark:hover:bg-[#3B82F6]"
+              :disabled="createUserForm.processing"
+              @click="createUser"
+            >
+              Create User
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog :open="isFollowUpModalOpen" @update:open="isFollowUpModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Send Follow-up Email</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will send a polite follow-up email to {{ registration.email }} with the missing document list and attached template files below.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div class="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+          <p class="font-medium">Files To Include In Follow-up</p>
+          <ul class="space-y-1">
+            <li
+              v-for="fileName in registration.missing_documents"
+              :key="fileName"
+              class="rounded-md border border-amber-200 bg-white px-2 py-1 dark:border-amber-800 dark:bg-amber-950/20"
+            >
+              {{ fileName }}
+            </li>
+          </ul>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="followUpForm.processing">Cancel</AlertDialogCancel>
+          <AlertDialogAction :disabled="followUpForm.processing" @click="sendMissingDocumentsFollowUp">
+            <Loader2 v-if="followUpForm.processing" class="mr-2 h-4 w-4 animate-spin" />
+            <Mail v-else class="mr-2 h-4 w-4" />
+            Send Follow-up
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
