@@ -1,32 +1,31 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3'
-import { Download, FileDown, Trash2, UserPlus } from 'lucide-vue-next'
-import { ref } from 'vue'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { useForm } from '@inertiajs/vue3'
+import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import FormPdfList from '@/components/forms/FormPdfList.vue'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
 
-type Upload = {
+type SubmittedField = {
+  name: string
+  label: string
+  value: string | null
+}
+
+type SubmittedSection = {
+  name: string
+  label: string
+  fields: SubmittedField[]
+}
+
+type FormSubmission = {
   id: number
-  original_name: string
-  mime_type: string | null
-  size_bytes: number
-  created_at: string | null
-  download_url: string
-  download_pdf_url: string
-  delete_url: string
-  can_convert_pdf: boolean
+  email?: string
+  status: 'pending' | 'incomplete' | 'completed'
+  submitted_at: string | null
+  sections: SubmittedSection[]
 }
 
 const props = defineProps<{
@@ -34,46 +33,17 @@ const props = defineProps<{
     id: number
     email: string
     token: string
+    company_type: 'opc' | 'sole_prop' | 'corp'
     company_type_label: string
     status: string
     created_at: string | null
-    uploads: Upload[]
+    form_submission: FormSubmission | null
   }
 }>()
 
-const isDeleteModalOpen = ref(false)
-const deleting = ref(false)
-const selectedUploadForDelete = ref<Upload | null>(null)
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
 })
-
-const openDeleteModal = (upload: Upload) => {
-  selectedUploadForDelete.value = upload
-  isDeleteModalOpen.value = true
-}
-
-const confirmDelete = () => {
-  if (!selectedUploadForDelete.value) return
-
-  router.delete(selectedUploadForDelete.value.delete_url, {
-    preserveScroll: true,
-    onStart: () => {
-      deleting.value = true
-    },
-    onSuccess: () => {
-      toast.success('Deleted successfully.')
-      selectedUploadForDelete.value = null
-    },
-    onError: () => {
-      toast.error('Unable to delete file.')
-    },
-    onFinish: () => {
-      deleting.value = false
-      isDeleteModalOpen.value = false
-    },
-  })
-}
 
 const updateStatus = () => {
   statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
@@ -87,35 +57,13 @@ const updateStatus = () => {
   })
 }
 
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+const canCreateUser = props.registration.status === 'completed'
 
-const formatFileType = (upload: Upload) => {
-  const extension = upload.original_name.split('.').pop()?.toLowerCase()
+const submissionStatusClass = (status: FormSubmission['status']) => {
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+  if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
 
-  if (extension === 'pdf') return 'PDF'
-  if (extension === 'doc' || extension === 'docx') return 'DOCX'
-
-  if (upload.mime_type?.includes('pdf')) return 'PDF'
-  if (upload.mime_type?.includes('word') || upload.mime_type?.includes('officedocument')) return 'DOCX'
-
-  return 'FILE'
-}
-
-const formatUploadedDate = (dateString: string | null) => {
-  if (!dateString) return 'n/a'
-
-  const parsed = new Date(dateString)
-  if (Number.isNaN(parsed.getTime())) return dateString
-
-  return parsed.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-  })
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
 }
 </script>
 
@@ -135,22 +83,35 @@ const formatUploadedDate = (dateString: string | null) => {
         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <div class="flex items-center justify-between gap-3">
             <h1 class="font-['Space_Grotesk'] text-2xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Registration Details</h1>
-          <div class="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  as="a"
-                  :href="`/admin/user/create?email=${encodeURIComponent(registration.email)}`"
-                  size="icon-sm"
-                  class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
-                  aria-label="Create User"
-                >
-                  <UserPlus />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Create User</TooltipContent>
-            </Tooltip>
-          </div>
+            <div class="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    v-if="canCreateUser"
+                    as="a"
+                    :href="`/admin/user/create?email=${encodeURIComponent(registration.email)}`"
+                    size="icon-sm"
+                    class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+                    aria-label="Create User"
+                  >
+                    <UserPlus />
+                  </Button>
+                  <Button
+                    v-else
+                    type="button"
+                    size="icon-sm"
+                    class="cursor-not-allowed bg-slate-300 text-slate-600 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300"
+                    aria-label="Create User"
+                    :disabled="true"
+                  >
+                    <UserPlus />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ canCreateUser ? 'Create User' : 'Set registration status to Completed before creating a user.' }}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
           <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
@@ -174,104 +135,71 @@ const formatUploadedDate = (dateString: string | null) => {
         </div>
 
         <div class="space-y-3">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Files</h2>
-          <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <table class="min-w-full text-sm">
-            <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
-              <tr>
-                <th class="px-4 py-3">File</th>
-                <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Size</th>
-                <th class="px-4 py-3">Uploaded</th>
-                <th class="px-4 py-3">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
-                <td class="px-4 py-3">{{ upload.original_name }}</td>
-                <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
-                <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
-                <td class="px-4 py-3">{{ formatUploadedDate(upload.created_at) }}</td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button
-                          as="a"
-                          :href="upload.download_url"
-                          size="icon-sm"
-                          variant="outline"
-                          class="cursor-pointer"
-                          aria-label="Download Original"
-                        >
-                          <Download />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Download Original</TooltipContent>
-                    </Tooltip>
-                    <Tooltip v-if="upload.can_convert_pdf">
-                      <TooltipTrigger as-child>
-                        <Button
-                          as="a"
-                          :href="upload.download_pdf_url"
-                          size="icon-sm"
-                          variant="outline"
-                          class="cursor-pointer"
-                          aria-label="Download PDF"
-                        >
-                          <FileDown />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Download PDF</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="destructive"
-                          class="cursor-pointer"
-                          aria-label="Delete File"
-                          @click="openDeleteModal(upload)"
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete File</TooltipContent>
-                    </Tooltip>
+          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Form Data</h2>
+
+          <FormPdfList
+            :submission="registration.form_submission"
+            :company-type="registration.company_type"
+            context="admin"
+          />
+
+          <Collapsible
+            v-if="registration.form_submission"
+            class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]"
+          >
+            <CollapsibleTrigger class="group w-full">
+              <div class="flex flex-wrap items-center justify-between gap-2 text-left">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-[#475569] dark:text-[#9FB3C8]">Submitted Form:</span>
+                  <span
+                    class="inline-flex rounded-full px-2 py-1 text-xs font-medium uppercase"
+                    :class="submissionStatusClass(registration.form_submission.status)"
+                  >
+                    {{ registration.form_submission.status }}
+                  </span>
+                </div>
+                <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
+                <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent class="space-y-4 pt-3">
+              <Collapsible
+                v-for="section in registration.form_submission.sections"
+                :key="section.name"
+                class="rounded-xl border border-[#E2E8F0] p-4 dark:border-[#1E3A5F]"
+              >
+                <CollapsibleTrigger class="group w-full">
+                  <div class="flex items-center justify-between gap-2 text-left">
+                    <h3 class="font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ section.label }}</h3>
+                    <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
+                    <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
                   </div>
-                </td>
-              </tr>
-              <tr v-if="!registration.uploads.length">
-                <td colspan="5" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No files uploaded yet.</td>
-              </tr>
-            </tbody>
-          </table>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <div class="mt-3 grid gap-2 md:grid-cols-2">
+                    <div
+                      v-for="field in section.fields"
+                      :key="`${section.name}-${field.name}`"
+                      class="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm dark:bg-[#0F2747]"
+                    >
+                      <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ field.label }}</p>
+                      <p class="font-medium">{{ field.value || '—' }}</p>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
+          <div
+            v-else
+            class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 text-sm text-[#64748B] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#9FB3C8]"
+          >
+            No online form submission yet.
           </div>
         </div>
       </div>
     </div>
-
-    <AlertDialog :open="isDeleteModalOpen" @update:open="isDeleteModalOpen = $event">
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete File</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this file? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel
-            :disabled="deleting"
-            @click="isDeleteModalOpen = false; selectedUploadForDelete = null"
-          >
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction :disabled="deleting" @click="confirmDelete">
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   </AppLayout>
 </template>

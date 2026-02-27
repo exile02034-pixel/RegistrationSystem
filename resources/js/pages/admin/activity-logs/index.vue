@@ -18,6 +18,11 @@ type ActivityLogItem = {
   files_count: number | null
   filenames: string[]
   file_types: string[]
+  metadata?: {
+    section?: string
+    section_label?: string
+    updated_fields?: string[]
+  }
   created_at: string | null
 }
 
@@ -57,10 +62,9 @@ const reload = (page: number) => {
       <div class="relative space-y-6">
         <Card class="rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <CardHeader class="pb-2">
-            <CardTitle class="font-['Space_Grotesk'] text-2xl font-semibold">Activity Log</CardTitle>
+            <CardTitle class=" text-center font-['Space_Grotesk'] text-2xl font-semibold">Activity Log</CardTitle>
           </CardHeader>
           <CardContent>
-            <p class="text-sm text-[#475569] dark:text-[#9FB3C8]">Newest first. This log is append-only.</p>
           </CardContent>
         </Card>
 
@@ -102,6 +106,14 @@ const reload = (page: number) => {
                     <div v-if="log.filenames?.length" class="pt-1">
                       <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">
                         Files: {{ log.filenames.join(', ') }}
+                      </p>
+                    </div>
+                    <div v-if="log.metadata?.section_label || log.metadata?.updated_fields?.length" class="pt-1 space-y-1">
+                      <p v-if="log.metadata?.section_label" class="text-xs text-[#64748B] dark:text-[#9FB3C8]">
+                        Section: {{ log.metadata.section_label }}
+                      </p>
+                      <p v-if="log.metadata?.updated_fields?.length" class="text-xs text-[#64748B] dark:text-[#9FB3C8]">
+                        Updated fields: {{ log.metadata.updated_fields.join(', ') }}
                       </p>
                     </div>
                   </div>

@@ -14,13 +14,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type UserRow = {
   id: number
@@ -29,7 +35,7 @@ type UserRow = {
   created_at: string | null
   company_types: Array<{ value: 'opc' | 'sole_prop' | 'corp'; label: string }>
   company_type_values: Array<'opc' | 'sole_prop' | 'corp'>
-  uploads_count: number
+  submissions_count: number
   show_url: string
 }
 
@@ -276,7 +282,7 @@ const confirmDelete = () => {
                       <component :is="sortIcon" class="h-4 w-4" />
                     </button>
                   </th>
-                  <th class="px-4 py-3">Files</th>
+                  <th class="px-4 py-3">Form Submission</th>
                   <th class="px-4 py-3">Actions</th>
                 </tr>
               </thead>
@@ -307,7 +313,7 @@ const confirmDelete = () => {
                   <td class="px-4 py-3">{{ formatDate(user.created_at) }}</td>
 
                   <td class="px-4 py-3">
-                    <Badge>{{ user.uploads_count > 0 ? `${user.uploads_count} file(s)` : 'No Files' }}</Badge>
+                    <Badge>{{ user.submissions_count > 0 ? `${user.submissions_count} submitted` : 'Not Submitted' }}</Badge>
                   </td>
 
                   <td class="px-4 py-3">
@@ -321,14 +327,19 @@ const confirmDelete = () => {
                         <TooltipContent>View</TooltipContent>
                       </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Button size="icon-sm" variant="destructive" class="cursor-pointer" aria-label="Delete User" @click="openDeleteModal(user)">
-                            <Trash2 />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <Button size="icon-sm" variant="ghost" class="cursor-pointer" aria-label="More Actions">
+                            <MoreHorizontal />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                      </Tooltip>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="w-40">
+                          <DropdownMenuItem class="text-destructive" @click="openDeleteModal(user)">
+                            <Trash2 class="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>

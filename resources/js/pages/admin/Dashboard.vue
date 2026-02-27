@@ -12,7 +12,7 @@ const props = defineProps<{
     totalUsers: number
     pendingUsers: number
     acceptedUsers: number
-    totalUploads: number
+    totalSubmissions: number
   }
   recentActivities?: Array<{
     id: number
@@ -72,8 +72,8 @@ const { relativeTime, roleLabel } = useActivityLogs(props.recentActivities ?? []
           </Card>
 
           <Card class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
-            <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Files In Database</p>
-            <h2 class="mt-2 font-['Space_Grotesk'] text-3xl font-semibold text-violet-600">{{ stats?.totalUploads ?? 0 }}</h2>
+            <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Submitted Forms</p>
+            <h2 class="mt-2 font-['Space_Grotesk'] text-3xl font-semibold text-violet-600">{{ stats?.totalSubmissions ?? 0 }}</h2>
           </Card>
         </div>
 

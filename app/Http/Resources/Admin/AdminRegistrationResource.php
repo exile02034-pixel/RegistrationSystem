@@ -16,11 +16,12 @@ class AdminRegistrationResource extends JsonResource
             'company_type_label' => data_get($this->resource, 'company_type_label'),
             'status' => data_get($this->resource, 'status'),
             'token' => data_get($this->resource, 'token'),
-            'uploads_count' => data_get($this->resource, 'uploads_count', 0),
+            'form_submitted' => data_get($this->resource, 'form_submitted', false),
             'created_at' => data_get($this->resource, 'created_at'),
             'client_url' => data_get($this->resource, 'client_url'),
             'show_url' => data_get($this->resource, 'show_url'),
             'uploads' => data_get($this->resource, 'uploads', []),
+            'form_submission' => data_get($this->resource, 'form_submission'),
         ];
     }
 }

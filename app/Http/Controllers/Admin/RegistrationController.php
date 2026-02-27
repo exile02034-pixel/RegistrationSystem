@@ -11,10 +11,11 @@ use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\DocumentConversionService;
 use App\Services\NotificationService;
+use App\Services\RegistrationFormService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,11 +26,11 @@ class RegistrationController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
+        private readonly RegistrationFormService $registrationFormService,
         private readonly DocumentConversionService $conversionService,
         private readonly NotificationService $notificationService,
         private readonly ActivityLogService $activityLogService,
-    ) {
-    }
+    ) {}
 
     public function index(): Response
     {
@@ -39,7 +40,7 @@ class RegistrationController extends Controller
         $companyType = request('company_type');
 
         $links = RegistrationLink::query()
-            ->withCount('uploads')
+            ->with('formSubmission')
             ->when(in_array($companyType, ['corp', 'sole_prop', 'opc'], true), function ($query) use ($companyType) {
                 $query->where('company_type', $companyType);
             })
@@ -68,17 +69,17 @@ class RegistrationController extends Controller
             ->withQueryString();
 
         $links->setCollection($links->getCollection()->map(fn (RegistrationLink $link) => [
-                'id' => $link->id,
-                'email' => $link->email,
-                'company_type' => $link->company_type,
-                'company_type_label' => $this->templateService->labelFor($link->company_type),
-                'status' => $link->status,
-                'token' => $link->token,
-                'uploads_count' => $link->uploads_count,
-                'created_at' => $link->created_at?->toDateTimeString(),
-                'client_url' => route('client.registration.show', $link->token),
-                'show_url' => route('admin.register.show', $link->id),
-            ]));
+            'id' => $link->id,
+            'email' => $link->email,
+            'company_type' => $link->company_type,
+            'company_type_label' => $this->templateService->labelFor($link->company_type),
+            'status' => $link->status,
+            'token' => $link->token,
+            'form_submitted' => $link->formSubmission !== null,
+            'created_at' => $link->created_at?->toDateTimeString(),
+            'client_url' => route('registration.form.show', $link->token),
+            'show_url' => route('admin.register.show', $link->id),
+        ]));
 
         return Inertia::render('admin/registration/index', [
             'links' => $links,
@@ -180,27 +181,16 @@ class RegistrationController extends Controller
 
     public function show(RegistrationLink $registrationLink): Response
     {
-        $registrationLink->load('uploads');
-
         return Inertia::render('admin/registration/show', [
             'registration' => [
                 'id' => $registrationLink->id,
                 'email' => $registrationLink->email,
                 'token' => $registrationLink->token,
+                'company_type' => $registrationLink->company_type,
                 'company_type_label' => $this->templateService->labelFor($registrationLink->company_type),
                 'status' => $registrationLink->status,
                 'created_at' => $registrationLink->created_at?->toDateTimeString(),
-                'uploads' => $registrationLink->uploads->map(fn (RegistrationUpload $upload) => [
-                    'id' => $upload->id,
-                    'original_name' => $upload->original_name,
-                    'mime_type' => $upload->mime_type,
-                    'size_bytes' => $upload->size_bytes,
-                    'created_at' => $upload->created_at?->toDateTimeString(),
-                    'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
-                    'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
-                    'delete_url' => route('admin.register.uploads.destroy', [$registrationLink->id, $upload->id]),
-                    'can_convert_pdf' => in_array(strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION)), ['doc', 'docx'], true),
-                ]),
+                'form_submission' => $this->registrationFormService->getStructuredSubmission($registrationLink),
             ],
         ]);
     }

@@ -18,8 +18,8 @@ class RegistrationWorkflowService
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly ActivityLogService $activityLogService,
-    ) {
-    }
+        private readonly RegistrationQrCodeService $qrCodeService,
+    ) {}
 
     public function createRegistrationLinkAndSend(string $email, string $companyType): RegistrationLink
     {
@@ -30,13 +30,13 @@ class RegistrationWorkflowService
             'status' => 'pending',
         ]);
 
-        $registrationUrl = route('client.registration.show', $link->token);
-        $templates = $this->templateService->templatesFor($companyType);
+        $registrationUrl = route('registration.form.show', $link->token);
+        $qrCodeDataUri = $this->qrCodeService->makeDataUri($registrationUrl);
 
         Mail::to($email)->send(new RegistrationLinkMail(
             registrationUrl: $registrationUrl,
             companyTypeLabel: $this->templateService->labelFor($companyType),
-            templateAttachments: $templates,
+            qrCodeDataUri: $qrCodeDataUri,
         ));
 
         return $link;
@@ -110,7 +110,7 @@ class RegistrationWorkflowService
         }
 
         $absolutePath = Storage::disk('public')->path($storagePath);
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($absolutePath) !== true) {
             return null;

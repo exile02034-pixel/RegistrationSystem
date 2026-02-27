@@ -11,6 +11,11 @@ type ActivityLogItem = {
   files_count?: number | null
   filenames?: string[]
   file_types?: string[]
+  metadata?: {
+    section?: string
+    section_label?: string
+    updated_fields?: string[]
+  }
   created_at: string | null
 }
 

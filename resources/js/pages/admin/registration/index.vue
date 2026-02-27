@@ -12,20 +12,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, Trash2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type RegistrationLink = {
   id: number
   email: string
   company_type_label: string
   status: string
-  uploads_count: number
+  form_submitted: boolean
   created_at: string | null
   client_url: string
   show_url: string
@@ -167,6 +173,14 @@ const confirmDelete = () => {
     },
   })
 }
+
+const statusClass = (status: string) => {
+  if (status === 'completed') return 'text-emerald-600 dark:text-emerald-400'
+  if (status === 'incomplete') return 'text-rose-600 dark:text-rose-400'
+  if (status === 'pending') return 'text-amber-600 dark:text-amber-400'
+
+  return 'text-[#0B1F3A] dark:text-[#E6F1FF]'
+}
 </script>
 
 <template>
@@ -247,7 +261,7 @@ const confirmDelete = () => {
                 <th class="px-4 py-3">Email</th>
                 <th class="px-4 py-3">Company Type</th>
                 <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3">Files Uploaded</th>
+                <th class="px-4 py-3">Form Submission</th>
                 <th class="px-4 py-3">
                   <button type="button" class="inline-flex items-center gap-1 cursor-pointer" @click="toggleSort">
                     Created
@@ -261,8 +275,8 @@ const confirmDelete = () => {
               <tr v-for="link in links.data" :key="link.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
                 <td class="px-4 py-3">{{ link.email }}</td>
                 <td class="px-4 py-3">{{ link.company_type_label }}</td>
-                <td class="px-4 py-3">{{ link.status }}</td>
-                <td class="px-4 py-3">{{ link.uploads_count }}</td>
+                <td class="px-4 py-3 font-medium capitalize" :class="statusClass(link.status)">{{ link.status }}</td>
+                <td class="px-4 py-3">{{ link.form_submitted ? 'Submitted' : 'Pending' }}</td>
                 <td class="px-4 py-3">{{ formatDate(link.created_at) }}</td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
@@ -274,14 +288,19 @@ const confirmDelete = () => {
                       </TooltipTrigger>
                       <TooltipContent>View</TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Button type="button" size="icon-sm" variant="destructive" class="cursor-pointer" aria-label="Delete Registration" @click="openDeleteModal(link)">
-                          <Trash2 />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button type="button" size="icon-sm" variant="ghost" class="cursor-pointer" aria-label="More Actions">
+                          <MoreHorizontal />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete</TooltipContent>
-                    </Tooltip>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="w-40">
+                        <DropdownMenuItem class="text-destructive" @click="openDeleteModal(link)">
+                          <Trash2 class="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>

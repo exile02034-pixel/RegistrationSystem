@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AdminFormSubmissionController;
+use App\Http\Controllers\Admin\AdminFormPdfController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\UserController;
@@ -31,4 +33,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])
             ->name('register.uploads.view');
         Route::delete('/registration/{registrationLink}/uploads/{upload}', [RegistrationController::class, 'destroyUpload'])
             ->name('register.uploads.destroy');
+        Route::get('/submissions/{submission}/pdf/{section}/view', [AdminFormPdfController::class, 'view'])->name('submissions.pdf.view');
+        Route::get('/submissions/{submission}/pdf/{section}/download', [AdminFormPdfController::class, 'download'])->name('submissions.pdf.download');
+        Route::get('/submissions/{submission}/pdf/print-batch', [AdminFormPdfController::class, 'printBatch'])->name('submissions.pdf.print-batch');
+        Route::delete('/submissions/{submission}/pdf/{section}', [AdminFormPdfController::class, 'destroy'])->name('submissions.pdf.destroy');
+        Route::patch('/submissions/{submission}/section/{section}', [AdminFormSubmissionController::class, 'updateSection'])->name('submissions.section.update');
     });

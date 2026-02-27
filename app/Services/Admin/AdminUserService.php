@@ -16,8 +16,7 @@ class AdminUserService
         private readonly RegistrationTemplateService $templateService,
         private readonly NotificationService $notificationService,
         private readonly AdminFileService $fileService,
-    ) {
-    }
+    ) {}
 
     public function listUsers(array $input): array
     {
@@ -50,7 +49,7 @@ class AdminUserService
             ->withQueryString();
 
         $linkStatsByEmail = RegistrationLink::query()
-            ->withCount('uploads')
+            ->with('formSubmission')
             ->whereIn('email', $users->getCollection()->pluck('email')->filter()->values())
             ->latest()
             ->get()
@@ -59,7 +58,7 @@ class AdminUserService
         $users->setCollection(
             $users->getCollection()->map(function (User $user) use ($linkStatsByEmail) {
                 $emailLinks = $linkStatsByEmail->get($user->email, collect());
-                $totalUploads = $emailLinks->sum('uploads_count');
+                $submittedFormsCount = $emailLinks->filter(fn (RegistrationLink $link) => $link->formSubmission !== null)->count();
                 $assignedTypeValues = $emailLinks
                     ->where('status', 'completed')
                     ->pluck('company_type')
@@ -82,7 +81,7 @@ class AdminUserService
                         $assignedTypeValues
                     ),
                     'company_type_values' => $assignedTypeValues,
-                    'uploads_count' => $totalUploads,
+                    'submissions_count' => $submittedFormsCount,
                     'show_url' => route('admin.user.show', $user->id),
                 ];
             })

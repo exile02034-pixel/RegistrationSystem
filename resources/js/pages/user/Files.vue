@@ -1,40 +1,44 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
-import { Printer } from 'lucide-vue-next'
-import { computed, ref, toRef } from 'vue'
+import { Head } from '@inertiajs/vue3'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { toast } from '@/components/ui/sonner'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import FileGroupTable from '@/components/user/files/FileGroupTable.vue'
-import SortControl from '@/components/user/files/SortControl.vue'
-import { useUserFiles, type UserFileGroup } from '@/composables/useUserFiles'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import FormPdfList from '@/components/forms/FormPdfList.vue'
+import FormSection from '@/components/forms/FormSection.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { type BreadcrumbItem } from '@/types'
 
-type Filters = {
-  sort: 'created_at'
-  direction: 'asc' | 'desc'
+type SubmittedField = {
+  name: string
+  label: string
+  value: string | null
 }
 
-type UploadTarget = {
+type SubmittedSection = {
+  name: string
+  label: string
+  fields: SubmittedField[]
+}
+
+type FormSubmission = {
   id: number
+  email?: string
+  status: 'pending' | 'incomplete' | 'completed'
+  submitted_at: string | null
+  sections: SubmittedSection[]
+}
+
+type UserSubmission = {
+  registration_id: number
+  company_type: 'opc' | 'sole_prop' | 'corp'
   company_type_label: string
-  status: string
+  registration_status: 'pending' | 'incomplete' | 'completed'
+  created_at: string | null
+  form_submission: FormSubmission | null
 }
 
 const props = defineProps<{
-  uploadGroups: UserFileGroup[]
-  batchPrintBaseUrl: string
-  filters: Filters
-  uploadTargets: UploadTarget[]
+  submissions: UserSubmission[]
   clientInfo: {
     name: string
     email: string
@@ -44,72 +48,10 @@ const props = defineProps<{
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'My Files',
-    href: '/user/files',
+    title: 'My Submission',
+    href: '/user/about-me',
   },
 ]
-
-const uploadGroups = toRef(props, 'uploadGroups')
-const {
-  direction,
-  selectedIds,
-  setDirection,
-  isGroupSelected,
-  toggleGroup,
-  toggleUpload,
-  printSelected,
-} = useUserFiles({
-  uploadGroups,
-  batchPrintBaseUrl: props.batchPrintBaseUrl,
-  filters: props.filters,
-})
-
-const hasUploads = computed(() => uploadGroups.value.length > 0)
-const isUploadModalOpen = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
-const selectedFiles = ref<File[]>([])
-
-const uploadForm = useForm({
-  registration_link_id: props.uploadTargets[0]?.id ?? null as number | null,
-  files: [] as File[],
-})
-
-const onFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  selectedFiles.value = Array.from(target.files ?? [])
-}
-
-const submitUploads = () => {
-  if (!selectedFiles.value.length) {
-    toast.error('Please select at least one file.')
-    return
-  }
-
-  if (!uploadForm.registration_link_id) {
-    toast.error('Please select a target registration.')
-    return
-  }
-
-  uploadForm.files = selectedFiles.value
-
-  uploadForm.post('/user/uploads/store', {
-    forceFormData: true,
-    preserveScroll: true,
-    onSuccess: () => {
-      uploadForm.reset()
-      uploadForm.registration_link_id = props.uploadTargets[0]?.id ?? null
-      selectedFiles.value = []
-      if (fileInput.value) {
-        fileInput.value.value = ''
-      }
-      isUploadModalOpen.value = false
-      toast.success('Files uploaded successfully.')
-    },
-    onError: () => {
-      toast.error('Unable to upload files.')
-    },
-  })
-}
 
 const initials = (name: string) =>
   name
@@ -124,10 +66,17 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
   if (value === 'corp') return 'CORP'
   return 'SOLE PROP'
 }
+
+const submissionStatusClass = (status: 'pending' | 'incomplete' | 'completed') => {
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+  if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+}
 </script>
 
 <template>
-  <Head title="My Files" />
+  <Head title="About Me" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
@@ -139,74 +88,13 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
       </div>
 
       <div class="relative space-y-6">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
-              My Files
-            </h1>
-            <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
-              View and manage your submitted registration files.
-            </p>
-          </div>
-          <Dialog :open="isUploadModalOpen" @update:open="isUploadModalOpen = $event">
-            <DialogTrigger as-child>
-              <Button
-                type="button"
-                :disabled="!uploadTargets.length"
-                class="inline-flex h-10 items-center justify-center rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 text-sm font-medium text-white transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-[#3B82F6]"
-              >
-                Upload Files
-              </Button>
-            </DialogTrigger>
-            <DialogContent class="sm:max-w-lg dark:border-[#1E3A5F] dark:bg-[#12325B]">
-              <DialogHeader>
-                <DialogTitle>Upload Files</DialogTitle>
-              </DialogHeader>
-
-              <div class="space-y-4">
-                <div class="space-y-2">
-                  <label class="text-sm font-medium">Registration Target</label>
-                  <select
-                    v-model="uploadForm.registration_link_id"
-                    class="h-10 w-full rounded-md border border-[#E2E8F0] bg-[#FFFFFF] px-3 text-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]"
-                  >
-                    <option v-for="target in uploadTargets" :key="target.id" :value="target.id">
-                      {{ target.company_type_label }} - {{ target.status }}
-                    </option>
-                  </select>
-                  <p v-if="uploadForm.errors.registration_link_id" class="text-xs text-red-600">
-                    {{ uploadForm.errors.registration_link_id }}
-                  </p>
-                </div>
-
-                <div class="space-y-2">
-                  <label class="text-sm font-medium">Files</label>
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    multiple
-                    class="w-full rounded-md border border-[#E2E8F0] bg-[#FFFFFF] p-2 text-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]"
-                    @change="onFileChange"
-                  >
-                  <p v-if="uploadForm.errors.files" class="text-xs text-red-600">
-                    {{ uploadForm.errors.files }}
-                  </p>
-                  <p v-if="uploadForm.errors['files.0']" class="text-xs text-red-600">
-                    {{ uploadForm.errors['files.0'] }}
-                  </p>
-                </div>
-
-                <div class="flex justify-end gap-2">
-                  <Button type="button" variant="outline" @click="isUploadModalOpen = false">
-                    Cancel
-                  </Button>
-                  <Button type="button" :disabled="uploadForm.processing" @click="submitUploads">
-                    Submit Files
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+        <div>
+          <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+            About Me
+          </h1>
+          <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+            View your submitted registration form data.
+          </p>
         </div>
 
         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
@@ -233,51 +121,72 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
           </div>
         </div>
 
-        <div v-if="hasUploads" class="space-y-3">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
-            Submitted Files
-          </h2>
-          <div class="flex items-center justify-between gap-2 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-3 dark:border-[#1E3A5F] dark:bg-[#12325B]">
-            <SortControl :direction="direction" @change="setDirection" />
-            <div class="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button variant="outline" size="icon-sm" class="cursor-pointer" :disabled="selectedIds.length === 0" aria-label="Print Selected" @click="printSelected">
-                    <Printer />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Print Selected</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-
         <div
-          v-if="!hasUploads"
+          v-if="!submissions.length"
           class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 text-center text-sm text-[#475569] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#9FB3C8]"
         >
-          No files found yet.
+          No registration records found yet.
         </div>
 
-        <div
-          v-for="group in uploadGroups"
-          :key="group.value"
-          class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]"
-        >
-          <div class="border-b border-[#E2E8F0] px-4 py-3 dark:border-[#1E3A5F]">
-            <p class="text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
-              {{ group.label }}
-            </p>
-          </div>
-          <div>
-            <FileGroupTable
-              :group="group"
-              :selected-ids="selectedIds"
-              :group-selected="isGroupSelected(group.uploads)"
-              @toggle-group="toggleGroup"
-              @toggle-upload="toggleUpload"
+        <div v-if="submissions.length" class="space-y-3">
+          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Generated PDF</h2>
+          <div class="grid gap-3">
+            <FormPdfList
+              v-for="entry in submissions"
+              :key="`pdf-${entry.registration_id}`"
+              :submission="entry.form_submission"
+              :company-type="entry.company_type"
+              :title="entry.company_type_label"
+              :subtitle="`Registration #${entry.registration_id}`"
+              context="user"
             />
           </div>
+        </div>
+
+        <div v-for="entry in submissions" :key="entry.registration_id" class="space-y-3">
+          <Collapsible
+            class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]"
+          >
+            <CollapsibleTrigger class="group w-full">
+              <div class="flex flex-wrap items-center justify-between gap-2 text-left">
+                <div>
+                  <h2 class="font-['Space_Grotesk'] text-xl font-semibold">{{ entry.company_type_label }}</h2>
+                  <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">Registration #{{ entry.registration_id }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-flex rounded-full px-2 py-1 text-xs font-medium uppercase"
+                    :class="submissionStatusClass(entry.form_submission?.status ?? entry.registration_status)"
+                  >
+                    {{ entry.form_submission?.status ?? entry.registration_status }}
+                  </span>
+                  <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
+                  <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent class="pt-3">
+              <div
+                v-if="entry.form_submission"
+                class="space-y-3"
+              >
+                <FormSection
+                  v-for="section in entry.form_submission.sections"
+                  :key="section.name"
+                  :section="section"
+                  :update-url="`/user/submissions/${entry.form_submission.id}/section/${section.name}`"
+                />
+              </div>
+
+              <div
+                v-else
+                class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-sm text-[#64748B] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#9FB3C8]"
+              >
+                No submitted form data yet for this registration.
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ namespace App\Services\Admin;
 use App\Http\Resources\Admin\AdminRegistrationResource;
 use App\Models\RegistrationLink;
 use App\Services\NotificationService;
+use App\Services\RegistrationFormService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,10 +15,10 @@ class AdminRegistrationService
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
+        private readonly RegistrationFormService $registrationFormService,
         private readonly NotificationService $notificationService,
         private readonly AdminFileService $fileService,
-    ) {
-    }
+    ) {}
 
     public function listLinks(array $input): array
     {
@@ -28,7 +29,7 @@ class AdminRegistrationService
         $allowedType = in_array($companyType, ['corp', 'sole_prop', 'opc'], true) ? $companyType : '';
 
         $links = RegistrationLink::query()
-            ->withCount('uploads')
+            ->with('formSubmission')
             ->when($allowedType !== '', function ($query) use ($allowedType) {
                 $query->where('company_type', $allowedType);
             })
@@ -63,9 +64,9 @@ class AdminRegistrationService
             'company_type_label' => $this->templateService->labelFor($link->company_type),
             'status' => $link->status,
             'token' => $link->token,
-            'uploads_count' => $link->uploads_count,
+            'form_submitted' => $link->formSubmission !== null,
             'created_at' => $link->created_at?->toDateTimeString(),
-            'client_url' => route('client.registration.show', $link->token),
+            'client_url' => route('registration.form.show', $link->token),
             'show_url' => route('admin.register.show', $link->id),
         ]));
 
@@ -133,6 +134,7 @@ class AdminRegistrationService
             'status' => $registrationLink->status,
             'created_at' => $registrationLink->created_at?->toDateTimeString(),
             'uploads' => $this->fileService->mapUploadsForRegistration($registrationLink),
+            'form_submission' => $this->registrationFormService->getStructuredSubmission($registrationLink),
         ])->resolve();
     }
 

@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Services\NotificationService;
-use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use App\Services\UserDashboardService;
 use App\Services\UserFileService;
+use App\Services\UserFormSubmissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,11 +22,10 @@ class DashboardController extends Controller
     public function __construct(
         private readonly UserDashboardService $dashboardService,
         private readonly UserFileService $fileService,
-        private readonly RegistrationTemplateService $templateService,
+        private readonly UserFormSubmissionService $formSubmissionService,
         private readonly RegistrationWorkflowService $workflowService,
         private readonly NotificationService $notificationService,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -35,40 +34,16 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function files(Request $request): Response
+    public function aboutMe(Request $request): Response
     {
         $user = $request->user();
-        $companyTypes = RegistrationLink::query()
-            ->where('email', $user->email)
-            ->pluck('company_type')
-            ->filter(fn ($type) => in_array($type, ['corp', 'sole_prop', 'opc'], true))
-            ->unique()
-            ->values()
-            ->map(fn (string $type) => [
-                'value' => $type,
-                'label' => $this->templateService->labelFor($type),
-            ])
-            ->values();
-
-        $uploadTargets = RegistrationLink::query()
-            ->where('email', $user->email)
-            ->latest()
-            ->get()
-            ->map(fn (RegistrationLink $link) => [
-                'id' => $link->id,
-                'company_type_label' => $this->templateService->labelFor($link->company_type),
-                'status' => $link->status,
-            ])
-            ->values();
 
         return Inertia::render('user/Files', [
-            ...$this->fileService->getFilesForUser($user, $request->only(['sort', 'direction'])),
-            'batchPrintBaseUrl' => route('user.uploads.print-batch'),
-            'uploadTargets' => $uploadTargets,
+            'submissions' => $this->formSubmissionService->getSubmissionsForUser($user),
             'clientInfo' => [
                 'name' => $user->name,
                 'email' => $user->email,
-                'company_types' => $companyTypes,
+                'company_types' => $this->formSubmissionService->getCompanyTypesForUser($user)->all(),
             ],
         ]);
     }
@@ -147,6 +122,7 @@ class DashboardController extends Controller
     public function printBatchFile(Request $request, string $token): SymfonyResponse
     {
         $path = $this->fileService->getBatchPrintFilePath($request->user(), $token);
+
         return response()->file($path)->deleteFileAfterSend(true);
     }
 }

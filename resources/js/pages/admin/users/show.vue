@@ -1,30 +1,45 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ChevronDown, ChevronUp } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
+import FormPdfList from '@/components/forms/FormPdfList.vue'
+import FormSection from '@/components/forms/FormSection.vue'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Pagination } from '@/components/ui/pagination'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Download, Eye, FileDown } from 'lucide-vue-next'
 
 type CompanyType = {
   value: 'corp' | 'sole_prop' | 'opc'
   label: string
 }
 
-type UploadItem = {
+type SubmittedField = {
+  name: string
+  label: string
+  value: string | null
+}
+
+type SubmittedSection = {
+  name: string
+  label: string
+  fields: SubmittedField[]
+}
+
+type FormSubmission = {
   id: number
-  registration_link_id: number
-  company_type: 'corp' | 'sole_prop' | 'opc'
+  email?: string
+  status: 'pending' | 'incomplete' | 'completed'
+  submitted_at: string | null
+  sections: SubmittedSection[]
+}
+
+type UserSubmission = {
+  registration_id: number
+  company_type: 'opc' | 'sole_prop' | 'corp'
   company_type_label: string
-  original_name: string
-  mime_type: string | null
-  size_bytes: number
+  registration_status: 'pending' | 'incomplete' | 'completed'
   created_at: string | null
-  view_url: string
-  download_url: string
-  download_pdf_url: string
-  can_convert_pdf: boolean
+  form_submission: FormSubmission | null
 }
 
 type ActivityItem = {
@@ -34,6 +49,8 @@ type ActivityItem = {
   created_at: string | null
   files_count: number | null
   filenames: string[]
+  section_label?: string | null
+  updated_fields?: string[]
 }
 
 const props = defineProps<{
@@ -45,32 +62,9 @@ const props = defineProps<{
     created_at: string | null
     company_types: CompanyType[]
   }
-  uploads: UploadItem[]
+  submissions: UserSubmission[]
   activities: ActivityItem[]
 }>()
-
-const groupedUploads = computed(() => {
-  return props.uploads.reduce<Record<string, UploadItem[]>>((acc, upload) => {
-    if (!acc[upload.company_type]) {
-      acc[upload.company_type] = []
-    }
-
-    acc[upload.company_type].push(upload)
-    return acc
-  }, {})
-})
-
-const displayCompanyTypes = computed(() => {
-  const known = new Set(props.user.company_types.map((item) => item.value))
-  const fromUploads = props.uploads
-    .filter((upload) => !known.has(upload.company_type))
-    .map((upload) => ({
-      value: upload.company_type,
-      label: upload.company_type_label,
-    }))
-
-  return [...props.user.company_types, ...fromUploads]
-})
 
 const activitiesPerPage = 5
 const activityPage = ref(1)
@@ -89,12 +83,6 @@ const paginatedActivities = computed(() => {
 
 const changeActivityPage = (page: number) => {
   activityPage.value = Math.max(1, Math.min(page, activityLastPage.value))
-}
-
-const formatBytes = (bytes: number) => {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 const formatDate = (value: string | null) => {
@@ -122,6 +110,13 @@ const formatDateTime = (value: string | null) => {
     minute: '2-digit',
   })
 }
+
+const submissionStatusClass = (status: 'pending' | 'incomplete' | 'completed') => {
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+  if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+}
 </script>
 
 <template>
@@ -148,7 +143,6 @@ const formatDateTime = (value: string | null) => {
           <div class="mt-3 grid gap-2 text-sm text-[#475569] dark:text-[#9FB3C8]">
             <p><strong>Name:</strong> {{ user.name }}</p>
             <p><strong>Email:</strong> {{ user.email }}</p>
-            <p><strong>Status:</strong> {{ user.status }}</p>
             <p><strong>Registered:</strong> {{ formatDate(user.created_at) }}</p>
           </div>
         </div>
@@ -164,73 +158,89 @@ const formatDateTime = (value: string | null) => {
         </div>
 
         <div class="space-y-4 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Documents</h2>
+          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Form Data</h2>
 
           <div
-            v-if="!uploads.length"
+            v-if="!submissions.length"
             class="rounded-lg border border-[#E2E8F0] p-6 text-center text-sm text-[#64748B] dark:border-[#1E3A5F] dark:text-[#9FB3C8]"
           >
-            No files uploaded yet.
+            No submitted form records yet.
           </div>
 
-          <div v-for="type in displayCompanyTypes" :key="`uploads-${type.value}`" class="space-y-2">
-            <h3 class="font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ type.label }}</h3>
-            <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-              <table class="min-w-full text-sm">
-                <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
-                  <tr>
-                    <th class="px-4 py-3">File</th>
-                    <th class="px-4 py-3">Size</th>
-                    <th class="px-4 py-3">Uploaded</th>
-                    <th class="px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="upload in groupedUploads[type.value] ?? []"
-                    :key="upload.id"
-                    class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]"
-                  >
-                    <td class="px-4 py-3 text-[#0B1F3A] dark:text-[#E6F1FF]">{{ upload.original_name }}</td>
-                    <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">{{ formatBytes(upload.size_bytes) }}</td>
-                    <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">{{ formatDate(upload.created_at) }}</td>
-                    <td class="px-4 py-3">
-                      <div class="flex items-center gap-2">
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <Button as="a" :href="upload.view_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="View">
-                              <Eye class="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>View</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <Button as="a" :href="upload.download_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="Download Original">
-                              <Download class="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Download Original</TooltipContent>
-                        </Tooltip>
-                        <Tooltip v-if="upload.can_convert_pdf">
-                          <TooltipTrigger as-child>
-                            <Button as="a" :href="upload.download_pdf_url" size="icon-sm" variant="outline" class="cursor-pointer" aria-label="Download PDF">
-                              <FileDown class="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Download PDF</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="!(groupedUploads[type.value] ?? []).length">
-                    <td colspan="4" class="px-4 py-4 text-center text-[#64748B] dark:text-[#9FB3C8]">
-                      No files for this company type yet.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div v-if="submissions.length" class="space-y-3">
+            <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Generated PDF</h3>
+            <div class="grid gap-3">
+              <FormPdfList
+                v-for="entry in submissions"
+                :key="`pdf-${entry.registration_id}`"
+                :submission="entry.form_submission"
+                :company-type="entry.company_type"
+                :title="entry.company_type_label"
+                :subtitle="`Registration #${entry.registration_id}`"
+                context="admin"
+              />
             </div>
+          </div>
+
+          <div
+            v-for="entry in submissions"
+            :key="entry.registration_id"
+            class="space-y-3"
+          >
+            <Collapsible class="rounded-xl border border-[#E2E8F0] p-4 dark:border-[#1E3A5F]">
+              <CollapsibleTrigger class="group w-full">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-left">
+                  <div>
+                    <h3 class="font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ entry.company_type_label }}</h3>
+                    <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">Registration #{{ entry.registration_id }}</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="inline-flex rounded-full px-2 py-1 text-xs font-medium uppercase"
+                      :class="submissionStatusClass(entry.form_submission?.status ?? entry.registration_status)"
+                    >
+                      {{ entry.form_submission?.status ?? entry.registration_status }}
+                    </span>
+                    <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
+                    <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent class="pt-3">
+                <div v-if="entry.form_submission" class="space-y-3">
+                  <Collapsible
+                    v-for="section in entry.form_submission.sections"
+                    :key="section.name"
+                    class="rounded-xl border border-[#E2E8F0] p-4 dark:border-[#1E3A5F]"
+                  >
+                    <CollapsibleTrigger class="group w-full">
+                      <div class="flex items-center justify-between gap-2 text-left">
+                        <h4 class="font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ section.label }}</h4>
+                        <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
+                        <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
+                      </div>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent>
+                      <div class="mt-3">
+                        <FormSection
+                          :section="section"
+                          :update-url="`/admin/submissions/${entry.form_submission.id}/section/${section.name}`"
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+
+                <div
+                  v-else
+                  class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-sm text-[#64748B] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#9FB3C8]"
+                >
+                  No submitted form data yet for this registration.
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </div>
 
@@ -258,6 +268,12 @@ const formatDateTime = (value: string | null) => {
               </p>
               <p v-if="activity.filenames.length" class="mt-1 text-sm text-[#475569] dark:text-[#9FB3C8]">
                 {{ activity.filenames.join(', ') }}
+              </p>
+              <p v-if="activity.section_label" class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]">
+                Section: {{ activity.section_label }}
+              </p>
+              <p v-if="activity.updated_fields?.length" class="mt-1 text-sm text-[#475569] dark:text-[#9FB3C8]">
+                Updated fields: {{ activity.updated_fields.join(', ') }}
               </p>
             </div>
             <Pagination

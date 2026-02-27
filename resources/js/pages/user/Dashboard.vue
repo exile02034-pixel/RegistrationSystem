@@ -7,8 +7,8 @@ import { type BreadcrumbItem } from '@/types';
 
 const props = defineProps<{
     stats: {
-        totalUploads: number;
-        pdfUploads: number;
+        totalSubmissions: number;
+        completedSubmissions: number;
         latestSubmissionAt: string | null;
     };
 }>();
@@ -43,7 +43,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </CardHeader>
                     <CardContent class="px-0">
                         <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
-                            Access your submitted documents and registration updates.
+                            Access your submitted form records and registration updates.
                         </p>
                     </CardContent>
                 </Card>
@@ -53,7 +53,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">My Access</p>
                         <ul class="mt-3 space-y-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
                             <li>View personal documents only</li>
-                            <li>Download submitted files</li>
+                            <li>View and update submitted form sections</li>
                           
                         </ul>
                     </Card>
@@ -61,7 +61,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <Card class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                         <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">My Submission Stats</p>
                         <div class="mt-3 space-y-2 text-sm text-[#475569] dark:text-[#9FB3C8]">
-                            <p><strong>Total Submitted Files:</strong> {{ props.stats.totalUploads }}</p>
+                            <p><strong>Total Submitted Forms:</strong> {{ props.stats.totalSubmissions }}</p>
+                            <p><strong>Completed Forms:</strong> {{ props.stats.completedSubmissions }}</p>
                             <p><strong>Latest Submission:</strong>   {{ props.stats.latestSubmissionAt ? new Date(props.stats.latestSubmissionAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'n/a' }}</p>
 
                         </div>
@@ -75,7 +76,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <CardContent>
                         <div class="flex flex-wrap gap-3">
                             <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]">
-                                <Link href="/user/files">Open My Files</Link>
+                                <Link href="/user/about-me">Open About Me</Link>
                             </Button>
                             <Button as-child variant="outline" class="border-[#2563EB] bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]">
                                 <Link href="/notifications">Notifications</Link>

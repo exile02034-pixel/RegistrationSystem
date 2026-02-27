@@ -17,7 +17,7 @@ class AdminUserResource extends JsonResource
             'created_at' => data_get($this->resource, 'created_at'),
             'company_types' => data_get($this->resource, 'company_types', []),
             'company_type_values' => data_get($this->resource, 'company_type_values', []),
-            'uploads_count' => data_get($this->resource, 'uploads_count', 0),
+            'submissions_count' => data_get($this->resource, 'submissions_count', 0),
             'show_url' => data_get($this->resource, 'show_url'),
         ];
     }

@@ -2,8 +2,8 @@
 
 namespace App\Services\Admin;
 
+use App\Models\FormSubmission;
 use App\Models\RegistrationLink;
-use App\Models\RegistrationUpload;
 use App\Models\User;
 
 class AdminDashboardService
@@ -20,7 +20,7 @@ class AdminDashboardService
                 'totalUsers' => User::where('role', 'user')->count(),
                 'pendingUsers' => RegistrationLink::where('status', 'pending')->count(),
                 'acceptedUsers' => RegistrationLink::where('status', 'completed')->count(),
-                'totalUploads' => RegistrationUpload::count(),
+                'totalSubmissions' => FormSubmission::count(),
             ],
             'recentActivities' => $this->activityLogService->recent(5),
         ];

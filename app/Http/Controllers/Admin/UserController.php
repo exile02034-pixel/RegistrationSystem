@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreUserRequest;
 use App\Models\ActivityLog;
 use App\Models\RegistrationLink;
-use App\Models\RegistrationUpload;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
+use App\Services\UserFormSubmissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -22,8 +23,8 @@ class UserController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly NotificationService $notificationService,
         private readonly ActivityLogService $activityLogService,
-    ) {
-    }
+        private readonly UserFormSubmissionService $formSubmissionService,
+    ) {}
 
     public function index(): Response
     {
@@ -55,7 +56,7 @@ class UserController extends Controller
             ->withQueryString();
 
         $linkStatsByEmail = RegistrationLink::query()
-            ->withCount('uploads')
+            ->with('formSubmission')
             ->whereIn('email', $users->getCollection()->pluck('email')->filter()->values())
             ->latest()
             ->get()
@@ -64,7 +65,7 @@ class UserController extends Controller
         $users->setCollection(
             $users->getCollection()->map(function (User $user) use ($linkStatsByEmail) {
                 $emailLinks = $linkStatsByEmail->get($user->email, collect());
-                $totalUploads = $emailLinks->sum('uploads_count');
+                $submittedFormsCount = $emailLinks->filter(fn (RegistrationLink $link) => $link->formSubmission !== null)->count();
                 $assignedTypeValues = $emailLinks
                     ->where('status', 'completed')
                     ->pluck('company_type')
@@ -87,7 +88,7 @@ class UserController extends Controller
                         $assignedTypeValues
                     ),
                     'company_type_values' => $assignedTypeValues,
-                    'uploads_count' => $totalUploads,
+                    'submissions_count' => $submittedFormsCount,
                     'show_url' => route('admin.user.show', $user->id),
                 ];
             })
@@ -104,23 +105,34 @@ class UserController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response|RedirectResponse
     {
+        $email = trim((string) $request->query('email', ''));
+
+        if ($email !== '') {
+            $canCreateFromRegistration = RegistrationLink::query()
+                ->where('email', $email)
+                ->where('status', 'completed')
+                ->exists();
+
+            if (! $canCreateFromRegistration) {
+                return redirect()
+                    ->route('admin.register.index')
+                    ->with('error', 'User creation is allowed only for completed registrations.');
+            }
+        }
+
         return Inertia::render('admin/users/create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
             'role' => 'user',
         ]);
 
@@ -177,29 +189,9 @@ class UserController extends Controller
         abort_unless($user->role === 'user', 404);
 
         $links = RegistrationLink::query()
-            ->with('uploads')
             ->where('email', $user->email)
             ->latest()
             ->get();
-
-        $uploads = $links
-            ->flatMap(function (RegistrationLink $link) {
-                return $link->uploads->map(fn (RegistrationUpload $upload) => [
-                    'id' => $upload->id,
-                    'registration_link_id' => $link->id,
-                    'company_type' => $link->company_type,
-                    'company_type_label' => $this->templateService->labelFor($link->company_type),
-                    'original_name' => $upload->original_name,
-                    'mime_type' => $upload->mime_type,
-                    'size_bytes' => $upload->size_bytes,
-                    'created_at' => $upload->created_at?->toDateTimeString(),
-                    'view_url' => route('admin.register.uploads.view', [$link->id, $upload->id]),
-                    'download_url' => route('admin.register.uploads.download', [$link->id, $upload->id]),
-                    'download_pdf_url' => route('admin.register.uploads.download', [$link->id, $upload->id]).'?format=pdf',
-                    'can_convert_pdf' => in_array(strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION)), ['doc', 'docx'], true),
-                ]);
-            })
-            ->values();
 
         $assignedTypes = $links
             ->where('status', 'completed')
@@ -222,14 +214,14 @@ class UserController extends Controller
                         'label' => $this->templateService->labelFor($type),
                     ])->values(),
             ],
-            'uploads' => $uploads,
+            'submissions' => $this->formSubmissionService->getSubmissionsByEmail($user->email),
             'activities' => ActivityLog::query()
                 ->where(function ($query) use ($user) {
                     $query
                         ->where('performed_by', $user->id)
                         ->orWhere('performed_by_email', $user->email);
                 })
-                ->whereIn('type', ['user.files.submitted', 'client.registration.submitted'])
+                ->whereIn('type', ['user.files.submitted', 'client.registration.submitted', 'form.section.updated'])
                 ->latest()
                 ->limit(20)
                 ->get()
@@ -243,6 +235,8 @@ class UserController extends Controller
                         'created_at' => $log->created_at?->toDateTimeString(),
                         'files_count' => isset($metadata['files_count']) ? (int) $metadata['files_count'] : null,
                         'filenames' => isset($metadata['filenames']) && is_array($metadata['filenames']) ? array_values($metadata['filenames']) : [],
+                        'section_label' => isset($metadata['section_label']) ? (string) $metadata['section_label'] : null,
+                        'updated_fields' => isset($metadata['updated_fields']) && is_array($metadata['updated_fields']) ? array_values($metadata['updated_fields']) : [],
                     ];
                 })
                 ->values(),
