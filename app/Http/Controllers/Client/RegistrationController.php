@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Client\StoreClientUploadsRequest;
 use App\Models\RegistrationLink;
 use App\Services\DocumentConversionService;
+use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,7 @@ class RegistrationController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
         private readonly DocumentConversionService $conversionService,
+        private readonly NotificationService $notificationService,
     ) {
     }
 
@@ -62,8 +64,21 @@ class RegistrationController extends Controller
     public function storeUploads(StoreClientUploadsRequest $request, string $token): RedirectResponse
     {
         $link = RegistrationLink::where('token', $token)->firstOrFail();
+        $uploadedFiles = $request->file('files') ?? [];
 
-        $this->workflowService->storeClientUploads($link, $request->file('files'));
+        $this->workflowService->storeClientUploads($link, $uploadedFiles);
+
+        $this->notificationService->notifyAdmins(
+            category: 'client_files_submitted',
+            title: 'Client files submitted',
+            message: "{$link->email} submitted ".count($uploadedFiles).' file(s).',
+            actionUrl: route('admin.register.show', $link->id),
+            meta: [
+                'email' => $link->email,
+                'registration_link_id' => $link->id,
+                'files_count' => count($uploadedFiles),
+            ],
+        );
 
         return redirect()
             ->route('client.registration.thank-you', $link->token)

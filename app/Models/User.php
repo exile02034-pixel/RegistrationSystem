@@ -23,7 +23,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role'
+        'role',
+        'notification_preferences',
     ];
 
     /**
@@ -49,6 +50,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -61,4 +63,5 @@ class User extends Authenticatable
     {
         return $this->hasMany(RegistrationLink::class, 'email', 'email');
     }
+
 }

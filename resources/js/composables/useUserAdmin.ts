@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import user from '@/routes/admin/user'
+import { toast } from '@/components/ui/sonner'
 
 export type FormData = {
   name: string
@@ -46,9 +47,11 @@ export const useUserAdmin = () => {
 
         // Show success message
         success.value = true
+        toast.success('User created successfully.')
       },
       onError: (e: Partial<FormErrors>) => {
         Object.assign(errors, e)
+        toast.error('Unable to create user. Please check the form.')
       },
     })
   }

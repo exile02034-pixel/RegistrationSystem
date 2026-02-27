@@ -106,12 +106,20 @@ const formatUploadedDate = (dateString: string | null) => {
 
 <template>
   <AppLayout>
-    <div class="space-y-6 p-6">
-      <a href="/admin/registration" class="text-sm text-blue-600 hover:underline">Back to registrations</a>
+    <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
+      <div class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
+        <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
+        <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30" />
+      </div>
 
-      <div class="rounded-xl border bg-white p-5 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-          <h1 class="text-2xl font-bold">Registration Details</h1>
+      <div class="relative space-y-6">
+        <a href="/admin/registration" class="inline-flex text-sm font-medium text-[#2563EB] transition hover:underline dark:text-[#60A5FA]">Back to registrations</a>
+
+        <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
+          <div class="flex items-center justify-between gap-3">
+            <h1 class="font-['Space_Grotesk'] text-2xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Registration Details</h1>
           <div class="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger as-child>
@@ -128,17 +136,17 @@ const formatUploadedDate = (dateString: string | null) => {
               <TooltipContent>Create User</TooltipContent>
             </Tooltip>
           </div>
+          </div>
+          <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
+          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
+          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Status:</strong> {{ registration.status }}</p>
         </div>
-        <p class="mt-2 text-sm text-gray-600"><strong>Email:</strong> {{ registration.email }}</p>
-        <p class="text-sm text-gray-600"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
-        <p class="text-sm text-gray-600"><strong>Status:</strong> {{ registration.status }}</p>
-      </div>
 
-      <div class="space-y-3">
-        <h2 class="text-xl font-semibold">Submitted Files</h2>
-        <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
+        <div class="space-y-3">
+          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Files</h2>
+          <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <table class="min-w-full text-sm">
-            <thead class="bg-gray-50 text-left text-gray-600">
+            <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
               <tr>
                 <th class="px-4 py-3">File</th>
                 <th class="px-4 py-3">Type</th>
@@ -148,7 +156,7 @@ const formatUploadedDate = (dateString: string | null) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t">
+              <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
                 <td class="px-4 py-3">{{ upload.original_name }}</td>
                 <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
                 <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
@@ -204,10 +212,11 @@ const formatUploadedDate = (dateString: string | null) => {
                 </td>
               </tr>
               <tr v-if="!registration.uploads.length">
-                <td colspan="5" class="px-4 py-6 text-center text-gray-500">No files uploaded yet.</td>
+                <td colspan="5" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No files uploaded yet.</td>
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

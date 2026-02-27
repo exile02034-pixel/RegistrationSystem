@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,29 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'notifications' => fn () => $request->user() ? [
+                'unreadCount' => UserNotification::query()
+                    ->forUser($request->user()->id)
+                    ->unread()
+                    ->count(),
+                'recent' => UserNotification::query()
+                    ->forUser($request->user()->id)
+                    ->latest('created_at')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn (UserNotification $notification) => [
+                        'id' => $notification->id,
+                        'title' => $notification->title,
+                        'message' => $notification->message,
+                        'action_url' => $notification->action_url,
+                        'read_at' => $notification->read_at?->toDateTimeString(),
+                        'created_at' => $notification->created_at?->toDateTimeString(),
+                    ])
+                    ->values(),
+            ] : [
+                'unreadCount' => 0,
+                'recent' => [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
