@@ -16,6 +16,7 @@ use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -213,6 +214,7 @@ class RegistrationController extends Controller
                     'mime_type' => $upload->mime_type,
                     'size_bytes' => $upload->size_bytes,
                     'created_at' => $upload->created_at?->toDateTimeString(),
+                    'view_url' => route('admin.register.uploads.view', [$registrationLink->id, $upload->id]).'?format=pdf&strict=1',
                     'view_pdf_url' => route('admin.register.uploads.view', [$registrationLink->id, $upload->id]).'?format=pdf&strict=1',
                     'download_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]),
                     'download_pdf_url' => route('admin.register.uploads.download', [$registrationLink->id, $upload->id]).'?format=pdf',
@@ -294,32 +296,23 @@ class RegistrationController extends Controller
         return response()->download($sourcePath, $upload->original_name);
     }
 
-    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse
+    public function viewUpload(Request $request, RegistrationLink $registrationLink, RegistrationUpload $upload): BinaryFileResponse|HttpResponse
     {
         abort_unless($upload->registration_link_id === $registrationLink->id, 404);
 
         $sourcePath = Storage::disk('public')->path($upload->storage_path);
-        $extension = strtolower(pathinfo($upload->original_name, PATHINFO_EXTENSION));
         $format = $request->query('format', 'raw');
-        $strict = (bool) $request->boolean('strict');
-
-        if ($format === 'pdf' && $extension === 'pdf') {
-            return response()->file($sourcePath);
+        if ($format !== 'pdf') {
+            return response('Only PDF preview is supported for file viewing.', 422);
         }
 
-        if ($format === 'pdf') {
-            $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
+        $pdf = $this->conversionService->convertToPdf($sourcePath, $upload->original_name);
 
-            if ($pdf !== null) {
-                return response()->file($pdf['path'])->deleteFileAfterSend(true);
-            }
-
-            if ($strict) {
-                return response('PDF preview is unavailable for this file type.', 422);
-            }
+        if ($pdf === null) {
+            return response('PDF preview could not be generated for this file.', 422);
         }
 
-        return response()->file($sourcePath);
+        return response()->file($pdf['path'])->deleteFileAfterSend(true);
     }
 
     public function destroyUpload(RegistrationLink $registrationLink, RegistrationUpload $upload): RedirectResponse

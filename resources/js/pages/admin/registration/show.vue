@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
-import { AlertTriangle, CheckCircle2, Download, FileDown, Loader2, Mail, MoreHorizontal, Trash2, UserPlus } from 'lucide-vue-next'
+import { AlertTriangle, CheckCircle2, Download, Eye, FileDown, Loader2, Mail, MoreHorizontal, Trash2, UserPlus } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   AlertDialog,
@@ -27,6 +27,7 @@ type Upload = {
   mime_type: string | null
   size_bytes: number
   created_at: string | null
+  view_url: string
   view_pdf_url: string
   download_url: string
   download_pdf_url: string
@@ -54,8 +55,11 @@ const props = defineProps<{
 const isDeleteModalOpen = ref(false)
 const isFollowUpModalOpen = ref(false)
 const isCreateUserModalOpen = ref(false)
+const isPreviewModalOpen = ref(false)
+const isStatusConfirmModalOpen = ref(false)
 const deleting = ref(false)
 const selectedUploadForDelete = ref<Upload | null>(null)
+const selectedUploadForPreview = ref<Upload | null>(null)
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
 })
@@ -78,6 +82,19 @@ const completionPercent = computed(() => {
 const openDeleteModal = (upload: Upload) => {
   selectedUploadForDelete.value = upload
   isDeleteModalOpen.value = true
+}
+
+const openPreviewModal = (upload: Upload) => {
+  selectedUploadForPreview.value = upload
+  isPreviewModalOpen.value = true
+}
+
+const onPreviewModalOpenChange = (open: boolean) => {
+  isPreviewModalOpen.value = open
+
+  if (!open) {
+    selectedUploadForPreview.value = null
+  }
 }
 
 const confirmDelete = () => {
@@ -106,12 +123,17 @@ const updateStatus = () => {
   statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
     preserveScroll: true,
     onSuccess: () => {
+      isStatusConfirmModalOpen.value = false
       toast.success(`Successfully set the status to ${statusForm.status}.`)
     },
     onError: () => {
       toast.error('Unable to update status.')
     },
   })
+}
+
+const onClickSaveStatus = () => {
+  isStatusConfirmModalOpen.value = true
 }
 
 const openFollowUpModal = () => {
@@ -271,7 +293,7 @@ const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + s
               </select>
               <p v-if="statusForm.errors.status" class="text-xs text-red-600">{{ statusForm.errors.status }}</p>
             </div>
-            <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="updateStatus">
+            <Button type="button" :disabled="statusForm.processing" variant="outline" class="cursor-pointer" @click="onClickSaveStatus">
               Save
             </Button>
             <Button
@@ -350,14 +372,13 @@ const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + s
             <tbody>
               <tr v-for="upload in registration.uploads" :key="upload.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
                 <td class="px-4 py-3">
-                  <a
-                    :href="upload.view_pdf_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
                     class="text-[#2563EB] hover:underline dark:text-[#60A5FA]"
+                    @click="openPreviewModal(upload)"
                   >
                     {{ upload.original_name }}
-                  </a>
+                  </button>
                 </td>
                 <td class="px-4 py-3">{{ formatFileType(upload) }}</td>
                 <td class="px-4 py-3">{{ formatBytes(upload.size_bytes) }}</td>
@@ -393,6 +414,14 @@ const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + s
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" class="w-44">
                         <DropdownMenuItem
+                          @click="openPreviewModal(upload)"
+                        >
+                          <span class="flex w-full items-center gap-2">
+                            <Eye class="h-4 w-4" />
+                            View File
+                          </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           v-if="upload.can_convert_pdf"
                           as-child
                         >
@@ -425,6 +454,42 @@ const statusLabel = computed(() => statusForm.status.charAt(0).toUpperCase() + s
         </div>
       </div>
     </div>
+
+    <Dialog :open="isPreviewModalOpen" @update:open="onPreviewModalOpenChange">
+      <DialogContent class="max-h-[90vh] w-[min(95vw,1100px)] max-w-none overflow-hidden p-0 dark:border-[#1E3A5F] dark:bg-[#12325B]">
+        <DialogHeader class="border-b border-[#E2E8F0] px-4 py-3 dark:border-[#1E3A5F]">
+          <DialogTitle class="truncate pr-8">
+            Preview: {{ selectedUploadForPreview?.original_name }}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div class="h-[75vh] bg-[#F8FAFC] dark:bg-[#0F2747]">
+          <iframe
+            v-if="selectedUploadForPreview"
+            :src="selectedUploadForPreview.view_url"
+            class="h-full w-full border-0"
+            title="PDF preview"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog :open="isStatusConfirmModalOpen" @update:open="isStatusConfirmModalOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirm Status Update</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to set this registration status to {{ statusLabel }}?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="statusForm.processing">Cancel</AlertDialogCancel>
+          <AlertDialogAction :disabled="statusForm.processing" @click="updateStatus">
+            Confirm
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <AlertDialog :open="isDeleteModalOpen" @update:open="isDeleteModalOpen = $event">
       <AlertDialogContent>
