@@ -48,14 +48,12 @@ class DashboardController extends Controller
     public function files(Request $request): Response
     {
         $user = $request->user();
-        $search = trim((string) $request->query('search', ''));
         $sort = $request->query('sort') === 'created_at' ? 'created_at' : 'created_at';
         $direction = $request->query('direction') === 'asc' ? 'asc' : 'desc';
 
         $uploads = RegistrationUpload::query()
             ->with('registrationLink')
             ->whereHas('registrationLink', fn ($query) => $query->where('email', $user->email))
-            ->when($search !== '', fn ($query) => $query->where('original_name', 'like', "%{$search}%"))
             ->orderBy($sort, $direction)
             ->get()
             ->map(function (RegistrationUpload $upload) {
@@ -68,6 +66,7 @@ class DashboardController extends Controller
                     'original_name' => $upload->original_name,
                     'size_bytes' => $upload->size_bytes,
                     'submitted_at' => $upload->created_at?->toDateTimeString(),
+                    'company_type' => (string) ($upload->registrationLink?->company_type ?? ''),
                     'view_raw_url' => route('user.uploads.view', ['upload' => $upload->id, 'format' => 'raw']),
                     'preview_pdf_url' => route('user.uploads.view', ['upload' => $upload->id, 'format' => 'pdf', 'strict' => 1]),
                     'download_original_url' => route('user.uploads.download', $upload->id),
@@ -82,7 +81,6 @@ class DashboardController extends Controller
             'uploads' => $uploads,
             'batchPrintBaseUrl' => route('user.uploads.print-batch'),
             'filters' => [
-                'search' => $search,
                 'sort' => $sort,
                 'direction' => $direction,
             ],
@@ -163,18 +161,14 @@ class DashboardController extends Controller
     public function printBatch(Request $request): \Illuminate\Contracts\View\View
     {
         $user = $request->user();
-        $all = $request->boolean('all');
         $idCsv = trim((string) $request->query('ids', ''));
         $ids = $idCsv !== '' ? array_values(array_filter(array_map('intval', explode(',', $idCsv)))) : [];
 
         $query = RegistrationUpload::query()
             ->with('registrationLink')
             ->whereHas('registrationLink', fn ($q) => $q->where('email', $user->email))
+            ->whereIn('id', $ids)
             ->latest();
-
-        if (! $all) {
-            $query->whereIn('id', $ids);
-        }
 
         $uploads = $query->get();
 
