@@ -27,12 +27,6 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
         Route::patch('/registration/{registrationLink}/status', [RegistrationController::class, 'updateStatus'])->name('register.status.update');
         Route::delete('/registrations/{registrationLink}', [RegistrationController::class, 'destroy'])->name('register.destroy');
-        Route::get('/registration/{registrationLink}/uploads/{upload}/download', [RegistrationController::class, 'downloadUpload'])
-            ->name('register.uploads.download');
-        Route::get('/registration/{registrationLink}/uploads/{upload}/view', [RegistrationController::class, 'viewUpload'])
-            ->name('register.uploads.view');
-        Route::delete('/registration/{registrationLink}/uploads/{upload}', [RegistrationController::class, 'destroyUpload'])
-            ->name('register.uploads.destroy');
         Route::get('/submissions/{submission}/pdf/{section}/view', [AdminFormPdfController::class, 'view'])->name('submissions.pdf.view');
         Route::get('/submissions/{submission}/pdf/{section}/download', [AdminFormPdfController::class, 'download'])->name('submissions.pdf.download');
         Route::get('/submissions/{submission}/pdf/print-batch', [AdminFormPdfController::class, 'printBatch'])->name('submissions.pdf.print-batch');
