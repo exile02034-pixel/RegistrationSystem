@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Models\RegistrationLink;
 use App\Models\RegistrationUpload;
 use App\Services\DocumentConversionService;
+use App\Services\NotificationService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class RegistrationController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
         private readonly DocumentConversionService $conversionService,
+        private readonly NotificationService $notificationService,
     ) {
     }
 
@@ -95,9 +97,23 @@ class RegistrationController extends Controller
 
     public function sendLink(SendRegistrationLinkRequest $request): RedirectResponse
     {
+        $email = $request->string('email')->toString();
+        $companyType = $request->string('company_type')->toString();
+
         $this->workflowService->createRegistrationLinkAndSend(
-            email: $request->string('email')->toString(),
-            companyType: $request->string('company_type')->toString(),
+            email: $email,
+            companyType: $companyType,
+        );
+
+        $this->notificationService->notifyAdmins(
+            category: 'registration_email_sent',
+            title: 'Registration email sent',
+            message: "A registration email was sent to {$email}.",
+            actionUrl: route('admin.register.index'),
+            meta: [
+                'email' => $email,
+                'company_type' => $companyType,
+            ],
         );
 
         return back()->with('success', 'Registration email sent successfully.');
@@ -105,7 +121,16 @@ class RegistrationController extends Controller
 
     public function destroy(RegistrationLink $registrationLink): RedirectResponse
     {
+        $email = $registrationLink->email;
         $registrationLink->delete();
+
+        $this->notificationService->notifyAdmins(
+            category: 'registration_deleted',
+            title: 'Registration deleted',
+            message: "Registration record for {$email} was deleted.",
+            actionUrl: route('admin.register.index'),
+            meta: ['email' => $email],
+        );
 
         return redirect()
             ->route('admin.register.index')
@@ -192,8 +217,21 @@ class RegistrationController extends Controller
     {
         abort_unless($upload->registration_link_id === $registrationLink->id, 404);
 
+        $fileName = $upload->original_name;
+        $email = $registrationLink->email;
         Storage::disk('public')->delete($upload->storage_path);
         $upload->delete();
+
+        $this->notificationService->notifyAdmins(
+            category: 'registration_file_deleted',
+            title: 'Registration file deleted',
+            message: "File {$fileName} was deleted for {$email}.",
+            actionUrl: route('admin.register.show', $registrationLink->id),
+            meta: [
+                'email' => $email,
+                'file_name' => $fileName,
+            ],
+        );
 
         return back()->with('success', 'File deleted successfully.');
     }

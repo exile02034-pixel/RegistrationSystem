@@ -24,6 +24,10 @@ const sidebarNavItems: NavItem[] = [
         title: 'Appearance',
         href: editAppearance(),
     },
+    {
+        title: 'Notifications',
+        href: '/settings/notifications',
+    },
 ];
 
 const { isCurrentUrl } = useCurrentUrl();
