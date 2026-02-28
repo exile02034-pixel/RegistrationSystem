@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('form_submissions', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('registration_link_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('registration_link_id')->constrained()->cascadeOnDelete();
             $table->string('company_type');
             $table->enum('status', ['pending', 'completed', 'incomplete'])->default('pending');
             $table->timestamp('submitted_at')->nullable();

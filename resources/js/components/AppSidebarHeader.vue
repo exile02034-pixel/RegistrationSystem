@@ -38,7 +38,7 @@ const notifications = computed(() => {
         return value as {
             unreadCount: number;
             recent: Array<{
-                id: number;
+                id: string;
                 title: string;
                 message: string | null;
                 action_url: string | null;
@@ -65,7 +65,7 @@ const formatDate = (value: string | null) => {
     });
 };
 
-const openNotification = (id: number, actionUrl: string | null) => {
+const openNotification = (id: string, actionUrl: string | null) => {
     const target = actionUrl || '/notifications';
 
     router.patch(

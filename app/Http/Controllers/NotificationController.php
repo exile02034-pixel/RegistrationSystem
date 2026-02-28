@@ -76,7 +76,7 @@ class NotificationController extends Controller
 
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer'],
+            'ids.*' => ['uuid'],
         ]);
 
         UserNotification::query()

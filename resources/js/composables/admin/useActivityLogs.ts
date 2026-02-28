@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 
 type ActivityLogItem = {
-  id: number
+  id: string
   type: string
   description: string
   performed_by_name: string | null

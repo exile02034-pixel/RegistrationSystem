@@ -32,7 +32,7 @@ type SubmittedSection = {
 }
 
 type FormSubmission = {
-  id: number
+  id: string
   submitted_at?: string | null
   sections: SubmittedSection[]
 }

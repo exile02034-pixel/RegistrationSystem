@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('form_submission_fields', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('form_submission_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('form_submission_id')->constrained()->cascadeOnDelete();
             $table->string('section');
             $table->string('field_name');
             $table->text('field_value')->nullable();
