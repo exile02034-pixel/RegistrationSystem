@@ -18,8 +18,13 @@ type FormSection = {
 
 type SectionErrorMap = Record<string, Record<string, string>>
 
-export const useRegistrationForm = (formSchema: FormSection[], submitUrl: string) => {
-  const initialSections = formSchema.reduce<Record<string, Record<string, string>>>((carry, section) => {
+export const useRegistrationForm = (
+  formSchema: FormSection[],
+  submitUrl: string,
+  initialValues: Record<string, Record<string, string>> = {},
+  initialSectionName: string | null = null,
+) => {
+  const schemaSections = formSchema.reduce<Record<string, Record<string, string>>>((carry, section) => {
     carry[section.name] = section.fields.reduce<Record<string, string>>((fieldCarry, field) => {
       fieldCarry[field.name] = ''
 
@@ -29,11 +34,33 @@ export const useRegistrationForm = (formSchema: FormSection[], submitUrl: string
     return carry
   }, {})
 
+  const initialSections = Object.keys(schemaSections).reduce<Record<string, Record<string, string>>>((carry, sectionName) => {
+    const base = schemaSections[sectionName]
+    const provided = initialValues[sectionName] ?? {}
+
+    carry[sectionName] = {
+      ...base,
+      ...provided,
+    }
+
+    return carry
+  }, {})
+
   const form = useForm({
     sections: initialSections,
   })
 
-  const currentStep = ref(0)
+  const initialStep = (() => {
+    if (!initialSectionName) {
+      return 0
+    }
+
+    const index = formSchema.findIndex((section) => section.name === initialSectionName)
+
+    return index >= 0 ? index : 0
+  })()
+
+  const currentStep = ref(initialStep)
   const totalSteps = computed(() => formSchema.length + 1)
   const isReviewStep = computed(() => currentStep.value === formSchema.length)
   const clientErrors = ref<SectionErrorMap>({})

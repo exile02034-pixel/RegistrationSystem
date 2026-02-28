@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FormSubmission;
+use App\Models\FormSubmissionRevision;
 use App\Models\RegistrationLink;
 use App\Models\User;
 use Illuminate\Support\Arr;
@@ -50,6 +51,7 @@ class RegistrationFormService
                 'submitted_at' => now(),
             ],
         );
+        $isResubmission = ! $submission->wasRecentlyCreated;
 
         $payload = [];
 
@@ -73,8 +75,32 @@ class RegistrationFormService
 
         $submission->fields()->delete();
         $submission->fields()->insert($payload);
+        $submission->refresh()->load('fields');
+        $revisionNumber = $this->captureRevision(
+            submission: $submission,
+            event: $isResubmission ? 'resubmitted' : 'submitted',
+            actorType: 'client',
+            actorIdentifier: $link->email,
+        );
 
-        return $submission->load('fields');
+        $this->activityLogService->log(
+            type: $isResubmission ? 'client.form.resubmitted' : 'client.form.submitted',
+            description: $isResubmission
+                ? "Client {$link->email} revised and resubmitted their registration form"
+                : "Client {$link->email} submitted their registration form",
+            guestEmail: $link->email,
+            guestName: $this->displayNameFromEmail($link->email),
+            role: 'client',
+            metadata: [
+                'registration_id' => $link->id,
+                'submission_id' => $submission->id,
+                'company_type' => $link->company_type,
+                'revision_number' => $revisionNumber,
+                'sections_count' => count($allowedFieldsBySection),
+            ],
+        );
+
+        return $submission;
     }
 
     public function getSubmission(RegistrationLink $link): ?FormSubmission
@@ -175,6 +201,13 @@ class RegistrationFormService
             ? "Admin {$updatedBy->name} ({$updatedBy->email}) updated the {$sectionLabel} form for client {$clientEmail}"
             : "User {$updatedBy->name} ({$updatedBy->email}) updated their {$sectionLabel} form";
 
+        $revisionNumber = $this->captureRevision(
+            submission: $submission->refresh()->load('fields'),
+            event: 'section_updated',
+            actorType: $updatedBy->role,
+            actorIdentifier: $updatedBy->email,
+        );
+
         $this->activityLogService->log(
             type: 'form.section.updated',
             description: $description,
@@ -185,6 +218,7 @@ class RegistrationFormService
                 'section_label' => $sectionLabel,
                 'updated_fields' => $updatedFieldNames,
                 'client_email' => $clientEmail,
+                'revision_number' => $revisionNumber,
             ],
         );
     }
@@ -220,5 +254,49 @@ class RegistrationFormService
         }
 
         return json_encode($value);
+    }
+
+    private function captureRevision(
+        FormSubmission $submission,
+        string $event,
+        string $actorType,
+        ?string $actorIdentifier = null,
+    ): int {
+        $nextRevision = ((int) $submission->revisions()->max('revision_number')) + 1;
+
+        $snapshot = [
+            'status' => $submission->status,
+            'submitted_at' => $submission->submitted_at?->toDateTimeString(),
+            'sections' => $submission->fields
+                ->groupBy('section')
+                ->map(fn ($rows, $section) => [
+                    'name' => $section,
+                    'fields' => $rows->map(fn ($row) => [
+                        'name' => $row->field_name,
+                        'value' => $row->field_value,
+                    ])->values()->all(),
+                ])
+                ->values()
+                ->all(),
+        ];
+
+        FormSubmissionRevision::query()->create([
+            'form_submission_id' => $submission->id,
+            'revision_number' => $nextRevision,
+            'event' => $event,
+            'actor_type' => $actorType,
+            'actor_identifier' => $actorIdentifier,
+            'snapshot' => $snapshot,
+        ]);
+
+        return $nextRevision;
+    }
+
+    private function displayNameFromEmail(string $email): string
+    {
+        $localPart = explode('@', $email)[0] ?? $email;
+        $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
+
+        return $normalized !== '' ? ucwords($normalized) : $email;
     }
 }

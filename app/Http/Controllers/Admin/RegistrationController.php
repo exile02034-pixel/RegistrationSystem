@@ -176,6 +176,10 @@ class RegistrationController extends Controller
 
     public function show(RegistrationLink $registrationLink): Response
     {
+        $registrationLink->loadMissing('formSubmission.revisions');
+        $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
+        $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
+
         return Inertia::render('admin/registration/show', [
             'registration' => [
                 'id' => $registrationLink->id,
@@ -186,6 +190,8 @@ class RegistrationController extends Controller
                 'status' => $registrationLink->status,
                 'created_at' => $registrationLink->created_at?->toDateTimeString(),
                 'form_submission' => $this->registrationFormService->getStructuredSubmission($registrationLink),
+                'revision_count' => $revisionCount,
+                'last_revision_at' => $lastRevisionAt?->toDateTimeString(),
             ],
         ]);
     }

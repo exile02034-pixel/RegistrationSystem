@@ -9,7 +9,9 @@ use App\Services\NotificationService;
 use App\Services\RegistrationFormService;
 use App\Services\RegistrationQrCodeService;
 use App\Services\RegistrationTemplateService;
+use App\Services\SubmissionTrackingService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,17 +22,27 @@ class RegistrationFormController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly NotificationService $notificationService,
         private readonly RegistrationQrCodeService $qrCodeService,
+        private readonly SubmissionTrackingService $trackingService,
     ) {}
 
-    public function show(string $token): Response
+    public function show(Request $request, string $token): Response
     {
         $link = RegistrationLink::query()
             ->where('token', $token)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'incomplete'])
             ->firstOrFail();
 
         $formSchema = $this->formService->getSchemaForCompanyType($link->company_type);
         $formUrl = route('registration.form.show', $token);
+        $existingSubmission = $this->formService->getStructuredSubmission($link);
+        $allowedSections = array_map(
+            fn (array $section): string => (string) ($section['name'] ?? ''),
+            $formSchema,
+        );
+        $focusSection = $request->query('section');
+        $focusSection = is_string($focusSection) && in_array($focusSection, $allowedSections, true)
+            ? $focusSection
+            : null;
 
         return Inertia::render('Registration/Form', [
             'token' => $token,
@@ -40,12 +52,18 @@ class RegistrationFormController extends Controller
             'formSchema' => $formSchema,
             'submitUrl' => route('registration.form.submit', $token),
             'qrCodeDataUri' => $this->qrCodeService->makeDataUri($formUrl),
+            'initialSections' => $this->structuredSectionsToInput($existingSubmission['sections'] ?? []),
+            'isEditing' => $existingSubmission !== null,
+            'focusSection' => $focusSection,
         ]);
     }
 
     public function submit(string $token, SubmitRegistrationFormRequest $request): RedirectResponse
     {
-        $link = RegistrationLink::query()->where('token', $token)->firstOrFail();
+        $link = RegistrationLink::query()
+            ->where('token', $token)
+            ->whereIn('status', ['pending', 'incomplete'])
+            ->firstOrFail();
 
         $this->formService->saveSubmission($link, $request->validated());
 
@@ -61,11 +79,42 @@ class RegistrationFormController extends Controller
             ],
         );
 
+        $this->trackingService->sendAccessLink($link->email);
+
         return redirect()->route('registration.form.success');
     }
 
     public function success(): Response
     {
-        return Inertia::render('Registration/Success');
+        return Inertia::render('Registration/Success', [
+            'trackingLookupUrl' => route('registration.tracking.lookup'),
+        ]);
+    }
+
+    private function structuredSectionsToInput(array $sections): array
+    {
+        $result = [];
+
+        foreach ($sections as $section) {
+            $sectionName = (string) ($section['name'] ?? '');
+
+            if ($sectionName === '') {
+                continue;
+            }
+
+            $result[$sectionName] = [];
+
+            foreach ((array) ($section['fields'] ?? []) as $field) {
+                $fieldName = (string) ($field['name'] ?? '');
+
+                if ($fieldName === '') {
+                    continue;
+                }
+
+                $result[$sectionName][$fieldName] = (string) ($field['value'] ?? '');
+            }
+        }
+
+        return $result;
     }
 }
