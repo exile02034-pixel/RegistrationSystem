@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
+import FormSection from '@/components/forms/FormSection.vue'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -38,6 +39,8 @@ const props = defineProps<{
     status: string
     created_at: string | null
     form_submission: FormSubmission | null
+    revision_count: number
+    last_revision_at: string | null
   }
 }>()
 
@@ -64,6 +67,20 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
   if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
 
   return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+}
+
+const formatDateTime = (date:any) => {
+  if (!date) return 'N/A'
+  const utcDate = new Date(date + 'Z') // force UTC interpretation
+  return utcDate.toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
 }
 </script>
 
@@ -115,6 +132,10 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
           </div>
           <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ registration.email }}</p>
           <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ registration.company_type_label }}</p>
+          <p class="text-sm text-[#475569] dark:text-[#9FB3C8]">
+            <strong>Revision History:</strong> {{ registration.revision_count }} change(s)
+            <span v-if="registration.last_revision_at">(last update: {{ formatDateTime(registration.last_revision_at) }})</span>
+          </p>
           <div class="mt-3 flex flex-wrap items-end gap-2">
             <div class="space-y-1">
               <label class="text-sm me-3 font-medium text-[#475569] dark:text-[#9FB3C8]">Status</label>
@@ -151,12 +172,7 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
               <div class="flex flex-wrap items-center justify-between gap-2 text-left">
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-medium text-[#475569] dark:text-[#9FB3C8]">Submitted Form:</span>
-                  <span
-                    class="inline-flex rounded-full px-2 py-1 text-xs font-medium uppercase"
-                    :class="submissionStatusClass(registration.form_submission.status)"
-                  >
-                    {{ registration.form_submission.status }}
-                  </span>
+                 
                 </div>
                 <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
                 <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
@@ -164,32 +180,16 @@ const submissionStatusClass = (status: FormSubmission['status']) => {
             </CollapsibleTrigger>
 
             <CollapsibleContent class="space-y-4 pt-3">
-              <Collapsible
+              <div
                 v-for="section in registration.form_submission.sections"
                 :key="section.name"
-                class="rounded-xl border border-[#E2E8F0] p-4 dark:border-[#1E3A5F]"
+                class="mt-3"
               >
-                <CollapsibleTrigger class="group w-full">
-                  <div class="flex items-center justify-between gap-2 text-left">
-                    <h3 class="font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ section.label }}</h3>
-                    <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
-                    <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <div class="mt-3 grid gap-2 md:grid-cols-2">
-                    <div
-                      v-for="field in section.fields"
-                      :key="`${section.name}-${field.name}`"
-                      class="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm dark:bg-[#0F2747]"
-                    >
-                      <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ field.label }}</p>
-                      <p class="font-medium">{{ field.value || '—' }}</p>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+                <FormSection
+                  :section="section"
+                  :update-url="`/admin/submissions/${registration.form_submission.id}/section/${section.name}`"
+                />
+              </div>
             </CollapsibleContent>
           </Collapsible>
           <div

@@ -37,4 +37,9 @@ class FormSubmission extends Model
     {
         return $this->hasMany(FormSubmissionField::class);
     }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(FormSubmissionRevision::class);
+    }
 }

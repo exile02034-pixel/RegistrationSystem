@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
+
+const props = defineProps<{
+  trackingLookupUrl: string
+}>()
 </script>
 
 <template>
@@ -15,6 +19,12 @@ import { Head } from '@inertiajs/vue3'
       <div class="w-full rounded-3xl border border-[#E2E8F0] bg-white p-8 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
         <h1 class="font-['Space_Grotesk'] text-3xl font-semibold">Thank You</h1>
         <p class="mt-3 text-[#475569] dark:text-[#9FB3C8]">Your registration form was submitted successfully.</p>
+        <a
+          :href="props.trackingLookupUrl"
+          class="mt-6 inline-flex rounded-xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
+        >
+          Track my submission
+        </a>
       </div>
     </div>
   </div>

@@ -1,10 +1,28 @@
 <?php
 
 use App\Http\Controllers\Client\RegistrationFormController;
+use App\Http\Controllers\Client\SubmissionTrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/register/success', [RegistrationFormController::class, 'success'])
     ->name('registration.form.success');
+
+Route::get('/register/track', [SubmissionTrackingController::class, 'lookup'])
+    ->name('registration.tracking.lookup');
+
+Route::post('/register/track/request-link', [SubmissionTrackingController::class, 'requestLink'])
+    ->middleware('throttle:5,1')
+    ->name('registration.tracking.request-link');
+
+Route::get('/register/track/access/{token}', [SubmissionTrackingController::class, 'access'])
+    ->middleware('throttle:20,1')
+    ->name('registration.tracking.access');
+
+Route::get('/register/track/submission', [SubmissionTrackingController::class, 'show'])
+    ->name('registration.tracking.show');
+
+Route::post('/register/track/logout', [SubmissionTrackingController::class, 'logout'])
+    ->name('registration.tracking.logout');
 
 Route::get('/register/{token}', [RegistrationFormController::class, 'show'])
     ->name('registration.form.show');

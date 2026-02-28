@@ -27,6 +27,9 @@ const props = defineProps<{
   formSchema: SectionSchema[]
   submitUrl: string
   qrCodeDataUri: string
+  initialSections?: Record<string, Record<string, string>>
+  isEditing?: boolean
+  focusSection?: string | null
 }>()
 
 const {
@@ -40,7 +43,12 @@ const {
   sectionErrors,
   stepItems,
   submit,
-} = useRegistrationForm(props.formSchema, props.submitUrl)
+} = useRegistrationForm(
+  props.formSchema,
+  props.submitUrl,
+  props.initialSections ?? {},
+  props.focusSection ?? null,
+)
 
 const isLastStep = () => currentStep.value === stepItems.value.length - 1
 </script>
@@ -67,9 +75,17 @@ const isLastStep = () => currentStep.value === stepItems.value.length - 1
       <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold">Online Registration Form</h1>
+            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold">
+              {{ isEditing ? 'Edit Registration Form' : 'Online Registration Form' }}
+            </h1>
             <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ email }}</p>
             <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ companyTypeLabel }}</p>
+            <p
+              v-if="isEditing"
+              class="mt-1 text-xs text-[#2563EB] dark:text-[#93C5FD]"
+            >
+              Your previously submitted values are loaded below.
+            </p>
           </div>
 
           <img :src="qrCodeDataUri" alt="Registration QR Code" class="h-24 w-24 rounded-lg border border-[#E2E8F0] dark:border-[#1E3A5F]" />
