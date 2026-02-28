@@ -15,7 +15,7 @@ const props = defineProps<{
     totalSubmissions: number
   }
   recentActivities?: Array<{
-    id: number
+    id: string
     type: string
     description: string
     performed_by_name: string | null

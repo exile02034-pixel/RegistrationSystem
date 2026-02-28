@@ -26,7 +26,7 @@ type SubmittedSection = {
 }
 
 type FormSubmission = {
-  id: number
+  id: string
   email?: string
   status: 'pending' | 'incomplete' | 'completed'
   submitted_at: string | null
@@ -34,7 +34,7 @@ type FormSubmission = {
 }
 
 type UserSubmission = {
-  registration_id: number
+  registration_id: string
   company_type: 'opc' | 'sole_prop' | 'corp'
   company_type_label: string
   registration_status: 'pending' | 'incomplete' | 'completed'
@@ -43,7 +43,7 @@ type UserSubmission = {
 }
 
 type ActivityItem = {
-  id: number
+  id: string
   type: string
   description: string
   created_at: string | null
@@ -55,7 +55,7 @@ type ActivityItem = {
 
 const props = defineProps<{
   user: {
-    id: number
+    id: string
     name: string
     email: string
     status: string

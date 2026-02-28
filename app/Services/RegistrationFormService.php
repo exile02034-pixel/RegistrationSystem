@@ -60,6 +60,7 @@ class RegistrationFormService
                 $value = Arr::get($values, $fieldName);
 
                 $payload[] = [
+                    'id' => (string) Str::uuid(),
                     'form_submission_id' => $submission->id,
                     'section' => $section,
                     'field_name' => $fieldName,

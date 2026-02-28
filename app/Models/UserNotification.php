@@ -3,11 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserNotification extends Model
 {
+    use HasUuids;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $fillable = [
         'user_id',
         'category',
@@ -31,7 +38,7 @@ class UserNotification extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function scopeForUser(Builder $query, int $userId): Builder
+    public function scopeForUser(Builder $query, string $userId): Builder
     {
         return $query->where('user_id', $userId);
     }
@@ -41,4 +48,3 @@ class UserNotification extends Model
         return $query->whereNull('read_at');
     }
 }
-

@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type RegistrationLink = {
-  id: number
+  id: string
   email: string
   company_type_label: string
   status: string

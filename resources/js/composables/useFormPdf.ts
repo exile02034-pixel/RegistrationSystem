@@ -13,7 +13,7 @@ type SubmittedSection = {
 }
 
 type FormSubmission = {
-  id: number
+  id: string
   sections: SubmittedSection[]
 }
 

@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('user_company_types', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->enum('company_type', ['corp', 'sole_prop', 'opc']);
             $table->timestamps();
             $table->unique(['user_id', 'company_type']);
@@ -22,4 +22,3 @@ return new class extends Migration
         Schema::dropIfExists('user_company_types');
     }
 };
-

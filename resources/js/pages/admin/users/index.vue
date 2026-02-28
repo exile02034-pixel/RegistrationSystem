@@ -29,7 +29,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type UserRow = {
-  id: number
+  id: string
   name: string
   email: string
   created_at: string | null

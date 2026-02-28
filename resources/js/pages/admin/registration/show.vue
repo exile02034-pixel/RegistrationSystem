@@ -21,7 +21,7 @@ type SubmittedSection = {
 }
 
 type FormSubmission = {
-  id: number
+  id: string
   email?: string
   status: 'pending' | 'incomplete' | 'completed'
   submitted_at: string | null
@@ -30,7 +30,7 @@ type FormSubmission = {
 
 const props = defineProps<{
   registration: {
-    id: number
+    id: string
     email: string
     token: string
     company_type: 'opc' | 'sole_prop' | 'corp'

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
        Schema::create('registration_links', function (Blueprint $table) {
-        $table->id();
+        $table->uuid('id')->primary();
         $table->string('email');
         $table->string('token')->unique();
         $table->enum('status', ['pending', 'completed', 'incomplete'])->default('pending');

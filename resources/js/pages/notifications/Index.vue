@@ -14,7 +14,7 @@ import { toast } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
 
 type NotificationRow = {
-    id: number;
+    id: string;
     category: string;
     title: string;
     message: string | null;
@@ -33,7 +33,7 @@ type PaginatedNotifications = {
 const props = defineProps<{
     notifications: PaginatedNotifications;
 }>();
-const selectedIds = ref<number[]>([]);
+const selectedIds = ref<string[]>([]);
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -54,7 +54,7 @@ const formatDate = (value: string | null) => {
     });
 };
 
-const markAsRead = (id: number) => {
+const markAsRead = (id: string) => {
     router.patch(
         `/notifications/${id}/read`,
         {},
@@ -107,7 +107,7 @@ const allVisibleSelected = computed(() =>
     props.notifications.data.every((item) => selectedIds.value.includes(item.id)),
 );
 
-const toggleSelect = (id: number) => {
+const toggleSelect = (id: string) => {
     if (selectedIds.value.includes(id)) {
         selectedIds.value = selectedIds.value.filter((selectedId) => selectedId !== id);
         return;
@@ -125,7 +125,7 @@ const toggleSelectAll = () => {
     selectedIds.value = props.notifications.data.map((item) => item.id);
 };
 
-const deleteNotification = (id: number) => {
+const deleteNotification = (id: string) => {
     router.delete(`/notifications/${id}`, {
         preserveScroll: true,
         onSuccess: () => {
