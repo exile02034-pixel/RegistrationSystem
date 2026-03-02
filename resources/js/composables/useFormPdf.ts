@@ -48,7 +48,7 @@ export const useFormPdf = (
   const baseSections = computed(() => {
     const companySection = COMPANY_SECTION[companyType]
 
-    return ['client_information', 'treasurer_details', companySection]
+    return ['client_information', companySection, 'treasurer_details']
   })
 
   const sectionHasData = (section: string) => {

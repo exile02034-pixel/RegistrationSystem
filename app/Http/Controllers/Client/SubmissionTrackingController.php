@@ -69,6 +69,7 @@ class SubmissionTrackingController extends Controller
             'statusLabel' => $this->statusLabel($link->status),
             'submittedAt' => $link->formSubmission->submitted_at?->toDateTimeString(),
             'canEdit' => $this->trackingService->canEdit($link),
+            'editableSections' => $this->trackingService->editableSections($link),
             'editUrl' => route('registration.form.show', $link->token),
             'logoutUrl' => route('registration.tracking.logout'),
             'revisionCount' => $link->formSubmission->revisions()->count(),

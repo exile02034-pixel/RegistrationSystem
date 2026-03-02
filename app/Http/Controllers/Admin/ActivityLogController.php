@@ -11,8 +11,7 @@ class ActivityLogController extends Controller
 {
     public function __construct(
         private readonly AdminActivityLogService $activityLogService,
-    ) {
-    }
+    ) {}
 
     public function index(): Response
     {

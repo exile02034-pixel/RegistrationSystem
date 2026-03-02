@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
-use App\Http\Controllers\User\UserFormSubmissionController;
 use App\Http\Controllers\User\UserFormPdfController;
+use App\Http\Controllers\User\UserFormSubmissionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'role:user'])

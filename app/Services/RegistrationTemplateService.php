@@ -7,7 +7,9 @@ use InvalidArgumentException;
 class RegistrationTemplateService
 {
     public const TYPE_CORP = 'corp';
+
     public const TYPE_SOLE_PROP = 'sole_prop';
+
     public const TYPE_OPC = 'opc';
 
     private const TEMPLATE_MAP = [

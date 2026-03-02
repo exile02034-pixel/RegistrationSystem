@@ -28,6 +28,18 @@ class SubmissionTrackingService
             return;
         }
 
+        // Avoid duplicate mails when the endpoint is triggered twice in quick succession.
+        $hasRecentActiveToken = SubmissionAccessToken::query()
+            ->where('registration_link_id', $link->id)
+            ->whereNull('revoked_at')
+            ->where('expires_at', '>', now())
+            ->where('created_at', '>=', now()->subSeconds(60))
+            ->exists();
+
+        if ($hasRecentActiveToken) {
+            return;
+        }
+
         SubmissionAccessToken::query()
             ->where('registration_link_id', $link->id)
             ->whereNull('revoked_at')
@@ -102,7 +114,40 @@ class SubmissionTrackingService
 
     public function canEdit(RegistrationLink $link): bool
     {
-        return in_array($link->status, ['pending', 'incomplete'], true);
+        return $link->status === 'incomplete';
+    }
+
+    public function editableSections(RegistrationLink $link): array
+    {
+        $submission = $link->formSubmission;
+
+        if ($submission === null) {
+            return [];
+        }
+
+        return $submission->fields()
+            ->whereNotNull('field_value')
+            ->where('field_value', '!=', '')
+            ->pluck('section')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function isTrackingSessionForLink(Request $request, RegistrationLink $link): bool
+    {
+        $registrationLinkId = $request->session()->get(self::SESSION_LINK_ID);
+        $expiresAt = $request->session()->get(self::SESSION_EXPIRES_AT);
+
+        if (! is_string($registrationLinkId) || ! is_string($expiresAt)) {
+            return false;
+        }
+
+        if ($registrationLinkId !== $link->id) {
+            return false;
+        }
+
+        return now()->lessThanOrEqualTo(Carbon::parse($expiresAt));
     }
 
     public function clearAccess(Request $request): void

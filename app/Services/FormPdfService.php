@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use RuntimeException;
 
 class FormPdfService
 {
@@ -88,11 +89,11 @@ class FormPdfService
 
     public function expectedSectionsForCompanyType(string $companyType): array
     {
-        $alwaysIncluded = ['client_information', 'treasurer_details'];
+        $alwaysIncluded = ['client_information'];
         $sectionMap = config('registration_forms.company_type_sections', []);
         $companySpecific = $sectionMap[$companyType] ?? null;
 
-        return array_values(array_filter(array_merge($alwaysIncluded, [$companySpecific])));
+        return array_values(array_filter(array_merge($alwaysIncluded, [$companySpecific], ['treasurer_details'])));
     }
 
     private function generatePdf(FormSubmission $submission, string $section): array
@@ -147,6 +148,14 @@ class FormPdfService
 
     private function makeDompdf(): Dompdf
     {
+        if (! class_exists(Dompdf::class)) {
+            throw new RuntimeException('Dompdf is not installed. Run "composer install" on the running environment.');
+        }
+
+        if (! class_exists(Options::class)) {
+            return new Dompdf;
+        }
+
         $options = new Options;
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isPhpEnabled', false);

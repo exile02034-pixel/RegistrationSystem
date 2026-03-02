@@ -4,6 +4,7 @@ namespace App\Http\Requests\Client;
 
 use App\Models\RegistrationLink;
 use App\Services\RegistrationFormService;
+use App\Services\SubmissionTrackingService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -26,6 +27,15 @@ class SubmitRegistrationFormRequest extends FormRequest
         }
 
         $schema = app(RegistrationFormService::class)->getSchemaForCompanyType($link->company_type);
+
+        if (app(SubmissionTrackingService::class)->isTrackingSessionForLink($this, $link)) {
+            $editableSections = app(SubmissionTrackingService::class)->editableSections($link);
+            $schema = array_values(array_filter(
+                $schema,
+                fn (array $section): bool => in_array((string) ($section['name'] ?? ''), $editableSections, true),
+            ));
+        }
+
         $rules = [
             'sections' => ['required', 'array'],
         ];
@@ -52,6 +62,13 @@ class SubmitRegistrationFormRequest extends FormRequest
             }
 
             $schema = app(RegistrationFormService::class)->getSchemaForCompanyType($link->company_type);
+            if (app(SubmissionTrackingService::class)->isTrackingSessionForLink($this, $link)) {
+                $editableSections = app(SubmissionTrackingService::class)->editableSections($link);
+                $schema = array_values(array_filter(
+                    $schema,
+                    fn (array $section): bool => in_array((string) ($section['name'] ?? ''), $editableSections, true),
+                ));
+            }
             $allowedSections = [];
 
             foreach ($schema as $section) {
@@ -87,6 +104,24 @@ class SubmitRegistrationFormRequest extends FormRequest
         $fieldName = (string) ($field['name'] ?? '');
         $type = $field['type'] ?? 'text';
 
+        if (str_contains($fieldName, 'tin')) {
+            $rules[] = 'string';
+            $rules[] = 'max:15';
+            $rules[] = 'regex:/^(NA|[0-9]+)$/i';
+            $rules[] = function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || preg_match('/^na$/i', $value)) {
+                    return;
+                }
+
+                $length = strlen($value);
+                if ($length < 9 || $length > 15) {
+                    $fail('TIN must be 9 to 15 digits, or NA.');
+                }
+            };
+
+            return $rules;
+        }
+
         if ($type === 'date' || str_contains($fieldName, 'date')) {
             $rules[] = 'date';
 
@@ -95,10 +130,6 @@ class SubmitRegistrationFormRequest extends FormRequest
 
         if ($this->isNumericField($fieldName, $type)) {
             $rules[] = 'regex:/^[0-9]+$/';
-
-            if (str_contains($fieldName, 'tin')) {
-                $rules[] = 'digits_between:9,15';
-            }
 
             if ($this->isContactNumberField($fieldName)) {
                 $rules[] = 'digits_between:7,15';

@@ -1,5 +1,5 @@
-import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
 
 export const useDelete = () => {

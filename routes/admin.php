@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\AdminFormSubmissionController;
 use App\Http\Controllers\Admin\AdminFormPdfController;
+use App\Http\Controllers\Admin\AdminFormSubmissionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\UserController;

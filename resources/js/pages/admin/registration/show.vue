@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
 import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ref } from 'vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
+import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -47,6 +51,13 @@ const props = defineProps<{
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
 })
+const createUserForm = useForm({
+  name: '',
+  email: props.registration.email,
+  password: '',
+  password_confirmation: '',
+})
+const isCreateUserModalOpen = ref(false)
 
 const updateStatus = () => {
   statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
@@ -62,11 +73,29 @@ const updateStatus = () => {
 
 const canCreateUser = props.registration.status === 'completed'
 
-const submissionStatusClass = (status: FormSubmission['status']) => {
-  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-  if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+const openCreateUserModal = () => {
+  createUserForm.clearErrors()
+  createUserForm.email = props.registration.email
+  isCreateUserModalOpen.value = true
+}
 
-  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+const submitCreateUser = () => {
+  createUserForm.post('/admin/user', {
+    preserveScroll: true,
+    onSuccess: () => {
+      createUserForm.reset()
+      createUserForm.email = props.registration.email
+      isCreateUserModalOpen.value = false
+      toast.success('User created successfully', {
+        description: 'The new client account is ready to use.',
+      })
+    },
+    onError: () => {
+      toast.error('Unable to create user', {
+        description: 'Please check the form fields and try again.',
+      })
+    },
+  })
 }
 
 const formatDateTime = (date:any) => {
@@ -105,11 +134,11 @@ const formatDateTime = (date:any) => {
                 <TooltipTrigger as-child>
                   <Button
                     v-if="canCreateUser"
-                    as="a"
-                    :href="`/admin/user/create?email=${encodeURIComponent(registration.email)}`"
+                    type="button"
                     size="icon-sm"
                     class="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
                     aria-label="Create User"
+                    @click="openCreateUserModal"
                   >
                     <UserPlus />
                   </Button>
@@ -154,6 +183,40 @@ const formatDateTime = (date:any) => {
             </Button>
           </div>
         </div>
+
+        <Dialog :open="isCreateUserModalOpen" @update:open="isCreateUserModalOpen = $event">
+          <DialogContent class="sm:max-w-lg dark:border-[#1E3A5F] dark:bg-[#12325B]">
+            <DialogHeader>
+              <DialogTitle>Create User / Client</DialogTitle>
+            </DialogHeader>
+
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <Label>Name</Label>
+                <Input v-model="createUserForm.name" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+                <p v-if="createUserForm.errors.name" class="text-red-500 text-sm">{{ createUserForm.errors.name }}</p>
+              </div>
+              <div class="space-y-2">
+                <Label>Email</Label>
+                <Input v-model="createUserForm.email" type="email" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+                <p v-if="createUserForm.errors.email" class="text-red-500 text-sm">{{ createUserForm.errors.email }}</p>
+              </div>
+              <div class="space-y-2">
+                <Label>Password</Label>
+                <Input v-model="createUserForm.password" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+                <p v-if="createUserForm.errors.password" class="text-red-500 text-sm">{{ createUserForm.errors.password }}</p>
+              </div>
+              <div class="space-y-2">
+                <Label>Confirm Password</Label>
+                <Input v-model="createUserForm.password_confirmation" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+              </div>
+              <div class="flex justify-end gap-2">
+                <button type="button" class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] px-4 py-2 text-sm text-[#0B1F3A] transition hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]" @click="isCreateUserModalOpen = false">Cancel</button>
+                <button type="button" class="rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-sm text-white transition hover:bg-[#1D4ED8] dark:hover:bg-[#3B82F6]" @click="submitCreateUser">Create User</button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div class="space-y-3">
           <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Form Data</h2>

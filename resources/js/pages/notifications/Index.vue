@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Bell, MoreHorizontal } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import {
@@ -9,8 +9,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { toast } from '@/components/ui/sonner';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type NotificationRow = {

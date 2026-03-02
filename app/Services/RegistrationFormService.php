@@ -21,9 +21,9 @@ class RegistrationFormService
         $sectionsConfig = config('registration_forms.sections', []);
         $companyTypeSectionMap = config('registration_forms.company_type_sections', []);
 
-        $alwaysIncluded = ['client_information', 'treasurer_details'];
+        $alwaysIncluded = ['client_information'];
         $companySpecific = $companyTypeSectionMap[$companyType] ?? null;
-        $sectionNames = array_values(array_filter(array_merge($alwaysIncluded, [$companySpecific])));
+        $sectionNames = array_values(array_filter(array_merge($alwaysIncluded, [$companySpecific], ['treasurer_details'])));
 
         return array_values(array_map(function (string $sectionName) use ($sectionsConfig): array {
             $section = $sectionsConfig[$sectionName] ?? ['label' => Str::title(str_replace('_', ' ', $sectionName)), 'fields' => []];

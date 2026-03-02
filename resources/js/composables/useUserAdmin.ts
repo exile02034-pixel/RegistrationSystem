@@ -1,8 +1,8 @@
 // composables/useUserAdmin.ts
-import { reactive, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
-import user from '@/routes/admin/user'
+import { reactive, ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
+import user from '@/routes/admin/user'
 
 export type FormData = {
   name: string

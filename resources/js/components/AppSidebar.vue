@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Folder, LayoutGrid, Users, HomeIcon, History, User } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Users, User } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import NavMain from '@/components/NavMain.vue';

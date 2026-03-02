@@ -10,8 +10,7 @@ class AdminDashboardService
 {
     public function __construct(
         private readonly AdminActivityLogService $activityLogService,
-    ) {
-    }
+    ) {}
 
     public function dashboardData(): array
     {

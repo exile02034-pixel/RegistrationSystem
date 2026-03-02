@@ -13,8 +13,7 @@ class NotificationPreferenceController extends Controller
 {
     public function __construct(
         private readonly NotificationService $notificationService
-    ) {
-    }
+    ) {}
 
     public function edit(Request $request): Response
     {
@@ -46,4 +45,3 @@ class NotificationPreferenceController extends Controller
         return back();
     }
 }
-

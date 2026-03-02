@@ -81,7 +81,11 @@ export const useRegistrationForm = (
       return true
     }
 
-    return /(tin|mobile|phone|contact_number|_number$)/i.test(field.name)
+    return /(mobile|phone|contact_number|_number$)/i.test(field.name)
+  }
+
+  const isTinField = (field: FormField): boolean => {
+    return /tin/i.test(field.name)
   }
 
   const validateField = (sectionName: string, field: FormField): string | null => {
@@ -109,6 +113,22 @@ export const useRegistrationForm = (
       if (!allowed.has(value)) {
         return 'Please select a valid option.'
       }
+    }
+
+    if (isTinField(field)) {
+      if (/^na$/i.test(value)) {
+        return null
+      }
+
+      if (!/^\d+$/.test(value)) {
+        return 'Numbers only or NA.'
+      }
+
+      if (value.length < 9 || value.length > 15) {
+        return 'TIN must be 9 to 15 digits, or NA.'
+      }
+
+      return null
     }
 
     if (isNumericField(field) && !/^\d+$/.test(value)) {
