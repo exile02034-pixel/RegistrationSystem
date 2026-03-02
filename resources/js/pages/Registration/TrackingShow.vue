@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import TrackedSectionCard from '@/components/registration/TrackedSectionCard.vue'
 import { useSubmissionTracking } from '@/composables/useSubmissionTracking'
 
@@ -24,6 +25,15 @@ const form = useForm({})
 const { formatDate, sectionEditUrl } = useSubmissionTracking(props.editUrl)
 const canEditSection = (sectionName: string) =>
   props.canEdit && props.editableSections.includes(sectionName)
+
+const summarySections = computed(() => {
+  return (props.summary?.sections ?? [])
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => String(field.value ?? '').trim() !== ''),
+    }))
+    .filter((section) => section.fields.length > 0)
+})
 
 const logout = () => {
   form.post(props.logoutUrl)
@@ -74,14 +84,14 @@ const logout = () => {
       </div>
 
       <div
-        v-if="props.summary?.sections?.length"
+        v-if="summarySections.length"
         class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#2A4A72] dark:bg-[#12325B]"
       >
         <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#F8FAFC]">Submission Summary</h2>
 
         <div class="mt-4 space-y-4">
           <TrackedSectionCard
-            v-for="section in props.summary.sections"
+            v-for="section in summarySections"
             :key="section.name"
             :section="section"
             :can-edit="canEditSection(section.name)"

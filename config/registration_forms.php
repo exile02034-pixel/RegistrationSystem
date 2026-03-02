@@ -53,6 +53,17 @@ return [
                 ['name' => 'incorporator_tin', 'label' => 'Incorporator Tax Identification Number', 'type' => 'text', 'required' => true],
                 ['name' => 'incorporator_email_address', 'label' => 'Incorporator E-Mail Address', 'type' => 'email', 'required' => true],
                 ['name' => 'incorporator_contact_number', 'label' => 'Incorporator Contact Number', 'type' => 'text', 'required' => true],
+                ['name' => 'nominee_person_choice', 'label' => 'Nominee Auto-Fill Person', 'type' => 'select', 'required' => false, 'options' => [
+                    ['label' => 'No one (enter manually)', 'value' => 'no_one'],
+                    ['label' => 'Vince Anthony Paule Feir', 'value' => 'person_1'],
+                    ['label' => 'Tristan Harvey Mallari Braceros', 'value' => 'person_2'],
+                ]],
+                ['name' => 'nominee_role', 'label' => 'Nominee Role', 'type' => 'select', 'required' => true, 'options' => [
+                    ['label' => 'President', 'value' => 'president'],
+                    ['label' => 'Treasurer', 'value' => 'treasurer'],
+                    ['label' => 'Secretary', 'value' => 'secretary'],
+                    ['label' => 'Treasurer and Secretary', 'value' => 'treasurer_and_secretary'],
+                ]],
                 ['name' => 'nominee_first_name', 'label' => 'Nominee First Name', 'type' => 'text', 'required' => true],
                 ['name' => 'nominee_middle_name', 'label' => 'Nominee Middle Name', 'type' => 'text', 'required' => false],
                 ['name' => 'nominee_surname', 'label' => 'Nominee Surname', 'type' => 'text', 'required' => true],
@@ -61,6 +72,17 @@ return [
                 ['name' => 'nominee_tin', 'label' => 'Nominee Tax Identification Number', 'type' => 'text', 'required' => true],
                 ['name' => 'nominee_email_address', 'label' => 'Nominee E-Mail Address', 'type' => 'email', 'required' => true],
                 ['name' => 'nominee_contact_number', 'label' => 'Nominee Contact Number', 'type' => 'text', 'required' => true],
+                ['name' => 'alternate_nominee_person_choice', 'label' => 'Alternate Nominee Auto-Fill Person', 'type' => 'select', 'required' => false, 'options' => [
+                    ['label' => 'No one (enter manually)', 'value' => 'no_one'],
+                    ['label' => 'Vince Anthony Paule Feir', 'value' => 'person_1'],
+                    ['label' => 'Tristan Harvey Mallari Braceros', 'value' => 'person_2'],
+                ]],
+                ['name' => 'alternate_nominee_role', 'label' => 'Alternate Nominee Role', 'type' => 'select', 'required' => true, 'options' => [
+                    ['label' => 'President', 'value' => 'president'],
+                    ['label' => 'Treasurer', 'value' => 'treasurer'],
+                    ['label' => 'Secretary', 'value' => 'secretary'],
+                    ['label' => 'Treasurer and Secretary', 'value' => 'treasurer_and_secretary'],
+                ]],
                 ['name' => 'alternate_nominee_first_name', 'label' => 'Alternate Nominee First Name', 'type' => 'text', 'required' => true],
                 ['name' => 'alternate_nominee_middle_name', 'label' => 'Alternate Nominee Middle Name', 'type' => 'text', 'required' => false],
                 ['name' => 'alternate_nominee_surname', 'label' => 'Alternate Nominee Surname', 'type' => 'text', 'required' => true],
@@ -79,11 +101,8 @@ return [
                 ['name' => 'address', 'label' => 'Address', 'type' => 'text', 'required' => true],
                 ['name' => 'proposed_business_name_1', 'label' => 'Proposed Business Name 1', 'type' => 'text', 'required' => true],
                 ['name' => 'proposed_business_name_2', 'label' => 'Proposed Business Name 2', 'type' => 'text', 'required' => false],
-                ['name' => 'business_address', 'label' => 'Business Address', 'type' => 'text', 'required' => true],
                 ['name' => 'mobile_number', 'label' => 'Mobile Number', 'type' => 'text', 'required' => true],
-                ['name' => 'organization_type', 'label' => 'Organization Type (Sole Prop, Corp, Others)', 'type' => 'text', 'required' => false],
                 ['name' => 'tin', 'label' => 'TIN', 'type' => 'text', 'required' => true],
-                ['name' => 'tax_type', 'label' => 'Tax Type (VAT/NON VAT)', 'type' => 'text', 'required' => true],
                 ['name' => 'birthdate', 'label' => 'Birthdate', 'type' => 'date', 'required' => true],
                 ['name' => 'mother_maiden_name', 'label' => 'Mother\'s Maiden Name', 'type' => 'text', 'required' => false],
                 ['name' => 'mother_birthdate', 'label' => 'Mother\'s Birthdate', 'type' => 'date', 'required' => false],
@@ -101,59 +120,31 @@ return [
         ],
         'regular_corporation' => [
             'label' => 'Regular Corporation Details',
-            'fields' => [
-                ['name' => 'proposed_corporation_name_1', 'label' => 'Proposed Corporation Name 1', 'type' => 'text', 'required' => true],
-                ['name' => 'proposed_corporation_name_2', 'label' => 'Proposed Corporation Name 2', 'type' => 'text', 'required' => false],
-                ['name' => 'proposed_corporation_name_3', 'label' => 'Proposed Corporation Name 3', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_1_first_name', 'label' => 'Incorporator 1 First Name', 'type' => 'text', 'required' => true],
-                ['name' => 'incorporator_1_middle_name', 'label' => 'Incorporator 1 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_1_surname', 'label' => 'Incorporator 1 Surname', 'type' => 'text', 'required' => true],
-                ['name' => 'incorporator_1_birthdate', 'label' => 'Incorporator 1 Birthdate', 'type' => 'date', 'required' => true],
-                ['name' => 'incorporator_1_complete_address', 'label' => 'Incorporator 1 Complete Address', 'type' => 'text', 'required' => true],
-                ['name' => 'incorporator_1_tin', 'label' => 'Incorporator 1 Tax Identification Number', 'type' => 'text', 'required' => true],
-                ['name' => 'incorporator_1_email_address', 'label' => 'Incorporator 1 E-Mail Address', 'type' => 'email', 'required' => true],
-                ['name' => 'incorporator_1_contact_number', 'label' => 'Incorporator 1 Contact Number', 'type' => 'text', 'required' => true],
-                ['name' => 'incorporator_2_first_name', 'label' => 'Incorporator 2 First Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_2_middle_name', 'label' => 'Incorporator 2 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_2_surname', 'label' => 'Incorporator 2 Surname', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_2_birthdate', 'label' => 'Incorporator 2 Birthdate', 'type' => 'date', 'required' => false],
-                ['name' => 'incorporator_2_complete_address', 'label' => 'Incorporator 2 Complete Address', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_2_tin', 'label' => 'Incorporator 2 Tax Identification Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_2_email_address', 'label' => 'Incorporator 2 E-Mail Address', 'type' => 'email', 'required' => false],
-                ['name' => 'incorporator_2_contact_number', 'label' => 'Incorporator 2 Contact Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_first_name', 'label' => 'Incorporator 3 First Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_middle_name', 'label' => 'Incorporator 3 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_surname', 'label' => 'Incorporator 3 Surname', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_birthdate', 'label' => 'Incorporator 3 Birthdate', 'type' => 'date', 'required' => false],
-                ['name' => 'incorporator_3_complete_address', 'label' => 'Incorporator 3 Complete Address', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_tin', 'label' => 'Incorporator 3 Tax Identification Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_3_email_address', 'label' => 'Incorporator 3 E-Mail Address', 'type' => 'email', 'required' => false],
-                ['name' => 'incorporator_3_contact_number', 'label' => 'Incorporator 3 Contact Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_first_name', 'label' => 'Incorporator 4 First Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_middle_name', 'label' => 'Incorporator 4 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_surname', 'label' => 'Incorporator 4 Surname', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_birthdate', 'label' => 'Incorporator 4 Birthdate', 'type' => 'date', 'required' => false],
-                ['name' => 'incorporator_4_complete_address', 'label' => 'Incorporator 4 Complete Address', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_tin', 'label' => 'Incorporator 4 Tax Identification Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_4_email_address', 'label' => 'Incorporator 4 E-Mail Address', 'type' => 'email', 'required' => false],
-                ['name' => 'incorporator_4_contact_number', 'label' => 'Incorporator 4 Contact Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_first_name', 'label' => 'Incorporator 5 First Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_middle_name', 'label' => 'Incorporator 5 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_surname', 'label' => 'Incorporator 5 Surname', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_birthdate', 'label' => 'Incorporator 5 Birthdate', 'type' => 'date', 'required' => false],
-                ['name' => 'incorporator_5_complete_address', 'label' => 'Incorporator 5 Complete Address', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_tin', 'label' => 'Incorporator 5 Tax Identification Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_5_email_address', 'label' => 'Incorporator 5 E-Mail Address', 'type' => 'email', 'required' => false],
-                ['name' => 'incorporator_5_contact_number', 'label' => 'Incorporator 5 Contact Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_first_name', 'label' => 'Incorporator 6 First Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_middle_name', 'label' => 'Incorporator 6 Middle Name', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_surname', 'label' => 'Incorporator 6 Surname', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_birthdate', 'label' => 'Incorporator 6 Birthdate', 'type' => 'date', 'required' => false],
-                ['name' => 'incorporator_6_complete_address', 'label' => 'Incorporator 6 Complete Address', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_tin', 'label' => 'Incorporator 6 Tax Identification Number', 'type' => 'text', 'required' => false],
-                ['name' => 'incorporator_6_email_address', 'label' => 'Incorporator 6 E-Mail Address', 'type' => 'email', 'required' => false],
-                ['name' => 'incorporator_6_contact_number', 'label' => 'Incorporator 6 Contact Number', 'type' => 'text', 'required' => false],
-            ],
+            'fields' => array_merge(
+                [
+                    ['name' => 'proposed_corporation_name_1', 'label' => 'Proposed Corporation Name 1', 'type' => 'text', 'required' => true],
+                    ['name' => 'proposed_corporation_name_2', 'label' => 'Proposed Corporation Name 2', 'type' => 'text', 'required' => false],
+                    ['name' => 'proposed_corporation_name_3', 'label' => 'Proposed Corporation Name 3', 'type' => 'text', 'required' => false],
+                ],
+                (static function (): array {
+                    $fields = [];
+
+                    for ($index = 1; $index <= 15; $index++) {
+                        $isRequired = $index <= 2;
+
+                        $fields[] = ['name' => "incorporator_{$index}_first_name", 'label' => "Incorporator {$index} First Name", 'type' => 'text', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_middle_name", 'label' => "Incorporator {$index} Middle Name", 'type' => 'text', 'required' => false];
+                        $fields[] = ['name' => "incorporator_{$index}_surname", 'label' => "Incorporator {$index} Surname", 'type' => 'text', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_birthdate", 'label' => "Incorporator {$index} Birthdate", 'type' => 'date', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_complete_address", 'label' => "Incorporator {$index} Complete Address", 'type' => 'text', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_tin", 'label' => "Incorporator {$index} Tax Identification Number", 'type' => 'text', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_email_address", 'label' => "Incorporator {$index} E-Mail Address", 'type' => 'email', 'required' => $isRequired];
+                        $fields[] = ['name' => "incorporator_{$index}_contact_number", 'label' => "Incorporator {$index} Contact Number", 'type' => 'text', 'required' => $isRequired];
+                    }
+
+                    return $fields;
+                })(),
+            ),
         ],
     ],
     'company_type_sections' => [
