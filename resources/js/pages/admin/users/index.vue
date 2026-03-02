@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import { Badge } from '@/components/ui/badge'
-import Button from '@/components/ui/button/Button.vue'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +12,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import Button from '@/components/ui/button/Button.vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,6 @@ import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type UserRow = {
   id: string

@@ -19,4 +19,3 @@ return [
         'registration_file_deleted' => 'Registration file deleted',
     ],
 ];
-

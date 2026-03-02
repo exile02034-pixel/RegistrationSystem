@@ -81,4 +81,3 @@ class NotificationService
         return (bool) Arr::get($this->mergedPreferencesForUser($user), $category, true);
     }
 }
-

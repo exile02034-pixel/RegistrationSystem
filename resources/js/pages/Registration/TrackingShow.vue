@@ -10,6 +10,7 @@ const props = defineProps<{
   statusLabel: string
   submittedAt: string | null
   canEdit: boolean
+  editableSections: string[]
   editUrl: string
   logoutUrl: string
   revisionCount: number
@@ -20,7 +21,9 @@ const props = defineProps<{
 }>()
 
 const form = useForm({})
-const { formatDate, statusClass, sectionEditUrl } = useSubmissionTracking(props.editUrl)
+const { formatDate, sectionEditUrl } = useSubmissionTracking(props.editUrl)
+const canEditSection = (sectionName: string) =>
+  props.canEdit && props.editableSections.includes(sectionName)
 
 const logout = () => {
   form.post(props.logoutUrl)
@@ -38,16 +41,16 @@ const logout = () => {
     </div>
 
     <div class="relative mx-auto max-w-4xl space-y-4 px-4 py-8">
-      <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
+      <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#2A4A72] dark:bg-[#12325B]">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold">Submission Tracking</h1>
+            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#F8FAFC]">Submission Tracking</h1>
             <p class="mt-2 text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Email:</strong> {{ props.email }}</p>
             <p class="text-sm text-[#475569] dark:text-[#9FB3C8]"><strong>Company Type:</strong> {{ props.companyTypeLabel }}</p>
           </div>
           <button
             type="button"
-            class="rounded-xl border border-[#E2E8F0] px-3 py-2 text-sm font-medium transition hover:bg-[#EFF6FF]"
+            class="rounded-xl border border-[#E2E8F0] px-3 py-2 text-sm font-medium text-[#0B1F3A] transition hover:bg-[#EFF6FF] dark:border-[#2A4A72] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#16345C]"
             @click="logout"
           >
             End session
@@ -55,8 +58,8 @@ const logout = () => {
         </div>
       </div>
 
-      <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-        <h2 class="font-['Space_Grotesk'] text-xl font-semibold">Submission Details</h2>
+      <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#2A4A72] dark:bg-[#12325B]">
+        <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#F8FAFC]">Submission Details</h2>
         <div class="mt-3 flex items-center gap-2">
           
         </div>
@@ -72,16 +75,16 @@ const logout = () => {
 
       <div
         v-if="props.summary?.sections?.length"
-        class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]"
+        class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#2A4A72] dark:bg-[#12325B]"
       >
-        <h2 class="font-['Space_Grotesk'] text-xl font-semibold">Submission Summary</h2>
+        <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#F8FAFC]">Submission Summary</h2>
 
         <div class="mt-4 space-y-4">
           <TrackedSectionCard
             v-for="section in props.summary.sections"
             :key="section.name"
             :section="section"
-            :can-edit="props.canEdit"
+            :can-edit="canEditSection(section.name)"
             :edit-url="sectionEditUrl(section.name)"
           />
         </div>

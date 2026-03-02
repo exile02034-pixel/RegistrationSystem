@@ -36,9 +36,20 @@ const inputType = computed(() => {
 })
 
 const fieldId = computed(() => `${props.sectionName}-${props.field.name}`)
-const isNumericField = computed(() => /(tin|mobile|phone|contact_number|_number$)/i.test(props.field.name) || props.field.type === 'number')
+const isTinField = computed(() => /tin/i.test(props.field.name))
+const isNumericField = computed(() => {
+  if (isTinField.value) return false
+  return /(mobile|phone|contact_number|_number$)/i.test(props.field.name) || props.field.type === 'number'
+})
+const tinNaChecked = computed(() => isTinField.value && props.modelValue.toUpperCase() === 'NA')
 
 const onInputValueChange = (value: string) => {
+  if (isTinField.value) {
+    emit('update:modelValue', value.replace(/\D+/g, ''))
+
+    return
+  }
+
   if (isNumericField.value) {
     emit('update:modelValue', value.replace(/\D+/g, ''))
 
@@ -46,6 +57,11 @@ const onInputValueChange = (value: string) => {
   }
 
   emit('update:modelValue', value)
+}
+
+const onTinNaToggle = (checked: boolean) => {
+  if (!isTinField.value) return
+  emit('update:modelValue', checked ? 'NA' : '')
 }
 </script>
 
@@ -83,9 +99,22 @@ const onInputValueChange = (value: string) => {
       :type="isNumericField ? 'text' : inputType"
       :inputmode="isNumericField ? 'numeric' : undefined"
       :pattern="isNumericField ? '[0-9]*' : undefined"
+      :disabled="tinNaChecked"
       :model-value="modelValue"
       @update:model-value="onInputValueChange(String($event ?? ''))"
     />
+
+    <label
+      v-if="isTinField"
+      class="mt-1 inline-flex items-center gap-2 text-xs text-[#475569] dark:text-[#9FB3C8]"
+    >
+      <input
+        type="checkbox"
+        :checked="tinNaChecked"
+        @change="onTinNaToggle(($event.target as HTMLInputElement).checked)"
+      >
+      No TIN (set as N/A)
+    </label>
 
     <p v-if="error" class="text-xs text-red-600">{{ error }}</p>
   </div>

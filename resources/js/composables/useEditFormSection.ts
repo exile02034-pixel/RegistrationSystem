@@ -1,5 +1,5 @@
-import { reactive, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { reactive, ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
 
 type SectionField = {

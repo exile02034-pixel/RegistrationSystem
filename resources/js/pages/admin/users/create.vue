@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { useUserAdmin } from '@/composables/useUserAdmin'
 import { onMounted } from 'vue'
+import { useUserAdmin } from '@/composables/useUserAdmin'
+import AppLayout from '@/layouts/AppLayout.vue'
 import user from '@/routes/admin/user'
 
 const { form, errors, submit, success } = useUserAdmin()

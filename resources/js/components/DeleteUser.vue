@@ -2,6 +2,7 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { AlertTriangle, LogOut } from 'lucide-vue-next';
 import { useTemplateRef } from 'vue';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,7 +19,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { logout } from '@/routes';
 
 const passwordInput = useTemplateRef('passwordInput');

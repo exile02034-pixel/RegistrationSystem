@@ -20,6 +20,6 @@ class TestEmail extends Mailable
     public function build()
     {
         return $this->subject('Laravel Email Test')
-                    ->view('emails.test'); // We'll create this view next
+            ->view('emails.test'); // We'll create this view next
     }
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
+import { toast } from '@/components/ui/sonner';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { toast } from '@/components/ui/sonner';
 import type { BreadcrumbItem } from '@/types';
 
 const props = defineProps<{

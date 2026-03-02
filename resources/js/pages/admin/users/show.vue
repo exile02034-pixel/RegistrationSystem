@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import { ChevronDown, ChevronUp } from 'lucide-vue-next'
-import AppLayout from '@/layouts/AppLayout.vue'
+import { computed, ref } from 'vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Pagination } from '@/components/ui/pagination'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 type CompanyType = {
   value: 'corp' | 'sole_prop' | 'opc'

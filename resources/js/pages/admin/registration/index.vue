@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3'
+import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,19 +12,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import { toast } from '@/components/ui/sonner'
-import AppLayout from '@/layouts/AppLayout.vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
+import AppLayout from '@/layouts/AppLayout.vue'
 
 type RegistrationLink = {
   id: string
