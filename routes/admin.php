@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminFormPdfController;
 use App\Http\Controllers\Admin\AdminFormSubmissionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DocumentGeneratorController;
 use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,15 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
         Route::patch('/registration/{registrationLink}/status', [RegistrationController::class, 'updateStatus'])->name('register.status.update');
         Route::delete('/registrations/{registrationLink}', [RegistrationController::class, 'destroy'])->name('register.destroy');
+        Route::post('/registration/{registrationLink}/documents/{documentType}/generate', [DocumentGeneratorController::class, 'generate'])
+            ->whereIn('documentType', ['secretary_certificate', 'appointment_form_opc', 'gis_stock_corporation'])
+            ->name('register.documents.generate');
+        Route::get('/registration/{registrationLink}/documents/{document}/view', [DocumentGeneratorController::class, 'view'])
+            ->name('register.documents.view');
+        Route::get('/registration/{registrationLink}/documents/{document}/download', [DocumentGeneratorController::class, 'download'])
+            ->name('register.documents.download');
+        Route::delete('/registration/{registrationLink}/documents/{document}', [DocumentGeneratorController::class, 'destroy'])
+            ->name('register.documents.destroy');
         Route::get('/submissions/{submission}/pdf/{section}/view', [AdminFormPdfController::class, 'view'])->name('submissions.pdf.view');
         Route::get('/submissions/{submission}/pdf/{section}/download', [AdminFormPdfController::class, 'download'])->name('submissions.pdf.download');
         Route::get('/submissions/{submission}/pdf/print-batch', [AdminFormPdfController::class, 'printBatch'])->name('submissions.pdf.print-batch');

@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3'
 import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
 import { ref } from 'vue'
+import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,23 @@ type FormSubmission = {
   sections: SubmittedSection[]
 }
 
+type GeneratedDocument = {
+  id: string
+  document_type: string
+  document_name: string
+  created_at: string | null
+  generated_by: string | null
+  view_url: string
+  download_url: string
+  delete_url: string
+}
+
+type DocumentForm = {
+  type: 'secretary_certificate' | 'appointment_form_opc' | 'gis_stock_corporation'
+  name: string
+  description: string
+}
+
 const props = defineProps<{
   registration: {
     id: string
@@ -43,6 +61,8 @@ const props = defineProps<{
     status: string
     created_at: string | null
     form_submission: FormSubmission | null
+    generated_documents: GeneratedDocument[]
+    document_forms: DocumentForm[]
     revision_count: number
     last_revision_at: string | null
   }
@@ -225,6 +245,12 @@ const formatDateTime = (date:any) => {
             :submission="registration.form_submission"
             :company-type="registration.company_type"
             context="admin"
+          />
+
+          <DocumentFormsPanel
+            :registration-id="registration.id"
+            :forms="registration.document_forms"
+            :generated-documents="registration.generated_documents"
           />
 
           <Collapsible
