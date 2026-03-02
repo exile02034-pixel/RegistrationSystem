@@ -32,4 +32,9 @@ class RegistrationLink extends Model
     {
         return $this->hasMany(SubmissionAccessToken::class);
     }
+
+    public function generatedDocuments(): HasMany
+    {
+        return $this->hasMany(RegistrationGeneratedDocument::class);
+    }
 }

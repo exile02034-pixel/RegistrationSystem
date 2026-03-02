@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
 use App\Models\RegistrationLink;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\DocumentGenerationService;
 use App\Services\NotificationService;
 use App\Services\RegistrationFormService;
 use App\Services\RegistrationTemplateService;
@@ -23,6 +24,7 @@ class RegistrationController extends Controller
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
         private readonly RegistrationFormService $registrationFormService,
+        private readonly DocumentGenerationService $documentGenerationService,
         private readonly NotificationService $notificationService,
         private readonly ActivityLogService $activityLogService,
     ) {}
@@ -176,7 +178,7 @@ class RegistrationController extends Controller
 
     public function show(RegistrationLink $registrationLink): Response
     {
-        $registrationLink->loadMissing('formSubmission.revisions');
+        $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy');
         $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
         $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
 
@@ -190,6 +192,21 @@ class RegistrationController extends Controller
                 'status' => $registrationLink->status,
                 'created_at' => $registrationLink->created_at?->toDateTimeString(),
                 'form_submission' => $this->registrationFormService->getStructuredSubmission($registrationLink),
+                'generated_documents' => $registrationLink->generatedDocuments
+                    ->sortByDesc('created_at')
+                    ->values()
+                    ->map(fn ($document) => [
+                        'id' => $document->id,
+                        'document_type' => $document->document_type,
+                        'document_name' => $document->document_name,
+                        'created_at' => $document->created_at?->toDateTimeString(),
+                        'generated_by' => $document->generatedBy?->name,
+                        'view_url' => route('admin.register.documents.view', [$registrationLink->id, $document->id]),
+                        'download_url' => route('admin.register.documents.download', [$registrationLink->id, $document->id]),
+                        'delete_url' => route('admin.register.documents.destroy', [$registrationLink->id, $document->id]),
+                    ])
+                    ->all(),
+                'document_forms' => $this->documentGenerationService->availableDocuments(),
                 'revision_count' => $revisionCount,
                 'last_revision_at' => $lastRevisionAt?->toDateTimeString(),
             ],
