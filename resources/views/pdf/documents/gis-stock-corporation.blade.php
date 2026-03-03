@@ -88,7 +88,7 @@
 <div class="page">
     <p class="title">GENERAL INFORMATION SHEET (GIS)</p>
     <p class="subtitle">STOCK CORPORATION</p>
-
+    <p>For the Year of 2026</p>
     <div class="section-title">General Instructions</div>
     <table>
         <tr><td>1. FOR USER CORPORATION: THIS GIS SHOULD BE SUBMITTED WITHIN THIRTY (30) CALENDAR DAYS FROM THE DATE OF THE ANNUAL STOCKHOLDERS' MEETING. DO NOT LEAVE ANY ITEM BLANK.</td></tr>
@@ -106,25 +106,27 @@
         </tr>
         <tr>
             <th>BUSINESS/TRADE NAME</th><td>{{ $step1['business_trade_name'] ?? '' }}</td>
-            <th>FISCAL YEAR END</th><td>{{ $step1['fiscal_year_end'] ?? '' }}</td>
+            <th>FISCAL YEAR END</th><td>December 31</td>
         </tr>
         <tr>
             <th>SEC REGISTRATION NUMBER</th><td>{{ $step1['sec_registration_number'] ?? '' }}</td>
             <th>CORPORATE TAX IDENTIFICATION NUMBER (TIN)</th><td>{{ $step1['corporate_tin'] ?? '' }}</td>
         </tr>
         <tr>
-            <th>DATE OF ANNUAL MEETING PER BY-LAWS</th><td>{{ $step1['meeting_date_annual'] ?? '' }}</td>
+            <th>DATE OF ANNUAL MEETING PER BY-LAWS</th><td>3rd Saturday of {{ $step1['meeting_month'] ?? '' }}</td>
             <th>ACTUAL DATE OF ANNUAL MEETING</th><td>{{ $step1['meeting_date_actual'] ?? '' }}</td>
         </tr>
-        <tr><th>COMPLETE PRINCIPAL OFFICE ADDRESS</th><td colspan="3">{{ $step1['principal_office_address'] ?? '' }}</td></tr>
-        <tr><th>COMPLETE BUSINESS ADDRESS</th><td colspan="3">{{ $step1['business_address'] ?? '' }}</td></tr>
+        <tr><th>COMPLETE PRINCIPAL OFFICE ADDRESS</th><td colspan="3">482 Purok 4 San Juan Nepomuceno, Betis, Guagua, Pampanga
+</td></tr>
+        <tr><th>COMPLETE BUSINESS ADDRESS</th><td colspan="3">482 Purok 4 San Juan Nepomuceno, Betis, Guagua, Pampanga
+</td></tr>
         <tr>
-            <th>OFFICIAL E-MAIL ADDRESS</th><td>{{ $step1['email'] ?? '' }}</td>
-            <th>ALTERNATE E-MAIL ADDRESS</th><td>{{ $step1['alternate_email'] ?? '' }}</td>
+            <th>OFFICIAL E-MAIL ADDRESS</th><td>vafeir27@gmail.com</td>
+            <th>ALTERNATE E-MAIL ADDRESS</th><td>tfcitaxteam@gmail.com</td>
         </tr>
         <tr>
-            <th>OFFICIAL MOBILE NUMBER</th><td>{{ $step1['official_mobile'] ?? '' }}</td>
-            <th>ALTERNATE MOBILE NUMBER</th><td>{{ $step1['alternate_mobile'] ?? '' }}</td>
+            <th>OFFICIAL MOBILE NUMBER</th><td>09271713690</td>
+            <th>ALTERNATE MOBILE NUMBER</th><td>09682312875</td>
         </tr>
         <tr>
             <th>NAME OF EXTERNAL AUDITOR & SIGNING PARTNER</th><td>{{ $step1['external_auditor_name'] ?? '' }}</td>
@@ -134,8 +136,8 @@
             <th>TELEPHONE NUMBER(S)</th><td>{{ $step1['telephone'] ?? '' }}</td>
             <th>FAX / WEBSITE / GEOGRAPHICAL CODE</th><td>{{ $step1['fax_number'] ?? '' }} / {{ $step1['website_url'] ?? '' }} / {{ $step1['geographical_code'] ?? '' }}</td>
         </tr>
-        <tr><th>PRIMARY PURPOSE/ACTIVITY</th><td colspan="3">{{ $step1['primary_purpose'] ?? '' }}</td></tr>
-        <tr><th>INDUSTRY CLASSIFICATION</th><td colspan="3">{{ $step1['industry_classification'] ?? '' }}</td></tr>
+        <tr><th>PRIMARY PURPOSE/ACTIVITY</th><td colspan="3">Wholesale and retail trading of goods </td></tr>
+        <tr><th>INDUSTRY CLASSIFICATION</th><td colspan="3">Retail sale via internet</td></tr>
     </table>
 
     <div class="section-title">Intercompany Affiliations</div>
@@ -629,7 +631,7 @@
     <p class="subtitle">STOCK CORPORATION</p>
 
     <p class="small">
-        I, <span class="line">{{ $step9['certifier_name'] ?? '' }}</span>, Corporate Secretary of
+        I, <span class="line">Vince Anthony Feir</span>, Corporate Secretary of
         <span class="line">{{ $step1['corporate_name'] ?? '' }}</span>, declare under penalty of perjury that all matters
         set forth in this GIS have been made in good faith, duly verified by me and to the best of my knowledge and belief are true and correct.
     </p>
@@ -639,21 +641,22 @@
 
     <p class="small">
         Done this <span class="line">{{ $step9['done_day'] ?? '' }}</span> day of
-        <span class="line">{{ $step9['done_month'] ?? '' }}</span>, 20
+        <span class="line">{{ $step9['done_month'] ?? '' }}</span>,
         <span class="line" style="min-width:40px;">{{ $step9['done_year'] ?? '' }}</span>
         in <span class="line">{{ $step9['done_place'] ?? '' }}</span>.
     </p>
 
     <div style="margin-top: 30px; text-align: center;" class="small">
-        <div class="line" style="min-width: 260px;">{{ $step9['certifier_name'] ?? '' }}</div>
-        <div>(Signature over printed name)</div>
+        <div class="line" style="min-width: 260px;">iMAGE PLACEHOLDER</div>
+        <p>SIGNATURE OVER PRINTED NAME</p>
+        
     </div>
 
     <p class="small" style="margin-top:20px;">
-        SUBSCRIBED AND SWORN TO before me in <span class="line">{{ $step9['notary_place'] ?? '' }}</span>
-        on <span class="line">{{ $step9['notary_date'] ?? '' }}</span> by affiant who exhibited competent evidence of identity:
-        <span class="line">{{ $step9['competent_evidence'] ?? '' }}</span>, issued at
-        <span class="line">{{ $step9['issued_at'] ?? '' }}</span> on <span class="line">{{ $step9['issued_on'] ?? '' }}</span>.
+        SUBSCRIBED AND SWORN TO before me in <span class="line"></span>
+        on <span class="line"></span> by affiant who exhibited competent evidence of identity:
+        <span class="line"></span>, issued at
+        <span class="line"></span> on <span class="line"></span>.
     </p>
 
     <div style="margin-top: 26px; text-align: center;" class="small">
