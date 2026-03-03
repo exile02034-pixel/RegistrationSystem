@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class GenerateRegistrationDocumentRequest extends FormRequest
 {
@@ -37,26 +36,7 @@ class GenerateRegistrationDocumentRequest extends FormRequest
         }
 
         if ($documentType === 'appointment_form_opc') {
-            return array_merge($rules, [
-                'fields.corporate_name' => ['required', 'string', 'max:255'],
-                'fields.trade_name' => ['nullable', 'string', 'max:255'],
-                'fields.sec_registration_number' => ['required', 'string', 'max:255'],
-                'fields.date_of_registration' => ['required', 'date'],
-                'fields.fiscal_year_end' => ['required', 'date'],
-                'fields.complete_business_address' => ['required', 'string', 'max:1000'],
-                'fields.email_address' => ['required', 'email', 'max:255'],
-                'fields.telephone_number' => ['required', 'string', 'max:50', 'regex:/^\+?[0-9()\-.\s]{6,20}$/'],
-                'fields.corporate_tin' => ['required', 'string', 'max:50', 'regex:/^\d{3}-\d{3}-\d{3}(?:-\d{3,4})?$/'],
-                'fields.primary_purpose_activity' => ['required', 'string', 'max:1000'],
-                'fields.officers' => ['required', 'array', 'size:3'],
-                'fields.officers.*.role' => ['required', Rule::in(['President', 'Treasurer', 'Corporate Secretary'])],
-                'fields.officers.*.name_and_residential_address' => ['required', 'string', 'max:1000'],
-                'fields.officers.*.nationality' => ['required', 'string', 'max:100'],
-                'fields.officers.*.gender' => ['required', 'string', 'max:50'],
-                'fields.officers.*.tin' => ['required', 'string', 'max:50', 'regex:/^\d{3}-\d{3}-\d{3}(?:-\d{3,4})?$/'],
-                'fields.certifier_name' => ['required', 'string', 'max:255'],
-                'fields.certifier_tin' => ['required', 'string', 'max:50', 'regex:/^\d{3}-\d{3}-\d{3}(?:-\d{3,4})?$/'],
-            ]);
+            return $rules;
         }
 
         if ($documentType === 'gis_stock_corporation') {

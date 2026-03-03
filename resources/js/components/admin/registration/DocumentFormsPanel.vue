@@ -53,9 +53,9 @@ const form = useForm<{ fields: Record<string, any> }>({
 })
 
 const defaultAppointmentOfficers = () => ([
-  { role: 'President', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
-  { role: 'Treasurer', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
-  { role: 'Corporate Secretary', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
+  { position: 'President', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
+  { position: 'Treasurer', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
+  { position: 'Corporate Secretary', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
 ])
 
 const defaultGisRows = () => Array.from({ length: 15 }, () => ({
@@ -165,8 +165,9 @@ const defaultFields = (type: DocumentForm['type']) => {
 
   if (type === 'appointment_form_opc') {
     return {
+      for_the_year: '',
       corporate_name: '',
-      trade_name: '',
+      business_trade_name: '',
       sec_registration_number: '',
       date_of_registration: '',
       fiscal_year_end: '',
@@ -178,6 +179,11 @@ const defaultFields = (type: DocumentForm['type']) => {
       officers: defaultAppointmentOfficers(),
       certifier_name: '',
       certifier_tin: '',
+      sworn_place: '',
+      sworn_date: '',
+      competent_evidence: '',
+      issued_at: '',
+      issued_on: '',
     }
   }
 
@@ -401,6 +407,7 @@ const validateAppointmentForm = (): string[] => {
   const errors: string[] = []
   const fields = form.fields ?? {}
 
+  if (isBlank(fields.for_the_year)) errors.push('For The Year is required.')
   if (isBlank(fields.corporate_name)) errors.push('Corporate Name is required.')
   if (isBlank(fields.sec_registration_number)) errors.push('SEC Registration Number is required.')
   if (isBlank(fields.date_of_registration)) errors.push('Date of Registration is required.')
@@ -423,6 +430,8 @@ const validateAppointmentForm = (): string[] => {
   if (isBlank(fields.certifier_name)) errors.push('Certifier Name is required.')
   if (isBlank(fields.certifier_tin)) errors.push('Certifier TIN is required.')
   if (!isBlank(fields.certifier_tin) && !isTinFormat(String(fields.certifier_tin))) errors.push('Certifier TIN must be in 000-000-000-000 format.')
+  if (isBlank(fields.sworn_place)) errors.push('Subscribed and sworn place is required.')
+  if (isBlank(fields.sworn_date) || !isIsoDate(fields.sworn_date)) errors.push('Subscribed and sworn date is required.')
 
   const officers = Array.isArray(fields.officers) ? fields.officers : []
   if (officers.length !== 3) {
@@ -430,7 +439,7 @@ const validateAppointmentForm = (): string[] => {
   } else {
     officers.forEach((officer, index) => {
       const row = index + 1
-      if (isBlank(officer.role)) errors.push(`Officer ${row} role is required.`)
+      if (isBlank(officer.position)) errors.push(`Officer ${row} position is required.`)
       if (isBlank(officer.name_and_residential_address)) errors.push(`Officer ${row} Name & Residential Address is required.`)
       if (isBlank(officer.nationality)) errors.push(`Officer ${row} Nationality is required.`)
       if (isBlank(officer.gender)) errors.push(`Officer ${row} Gender is required.`)
@@ -571,11 +580,13 @@ const submit = () => {
   if (!activeType.value) return
   // GIS validation is temporarily disabled per request.
   void validateAllGisSteps
+  // Appointment validation is temporarily disabled per request.
+  void validateAppointmentForm
 
   const errors = activeType.value === 'secretary_certificate'
     ? validateSecretaryForm()
     : activeType.value === 'appointment_form_opc'
-      ? validateAppointmentForm()
+      ? []
       : []
 
   if (errors.length > 0) {
@@ -733,50 +744,54 @@ const submit = () => {
 
       <div v-else-if="activeType === 'appointment_form_opc'" class="grid gap-4 md:grid-cols-2">
         <div class="space-y-2">
+          <Label>For The Year</Label>
+          <Input v-model="form.fields.for_the_year" />
+        </div>
+        <div class="space-y-2">
           <Label>Corporate Name</Label>
           <Input v-model="form.fields.corporate_name" />
-        </div>
-        <div class="space-y-2">
-          <Label>Trade Name</Label>
-          <Input v-model="form.fields.trade_name" />
-        </div>
-        <div class="space-y-2">
-          <Label>SEC Registration Number</Label>
-          <Input v-model="form.fields.sec_registration_number" />
         </div>
         <div class="space-y-2">
           <Label>Date of Registration</Label>
           <Input v-model="form.fields.date_of_registration" type="date" />
         </div>
         <div class="space-y-2">
+          <Label>Business / Trade Name</Label>
+          <Input v-model="form.fields.business_trade_name" />
+        </div>
+        <div class="space-y-2">
           <Label>Fiscal Year End</Label>
           <Input v-model="form.fields.fiscal_year_end" type="date" />
         </div>
-        <div class="space-y-2 md:col-span-2">
-          <Label>Complete Business Address</Label>
-          <textarea v-model="form.fields.complete_business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        <div class="space-y-2">
+          <Label>SEC Registration Number</Label>
+          <Input v-model="form.fields.sec_registration_number" />
         </div>
         <div class="space-y-2">
           <Label>Email Address</Label>
           <Input v-model="form.fields.email_address" type="email" />
         </div>
         <div class="space-y-2">
-          <Label>Telephone Number</Label>
-          <Input v-model="form.fields.telephone_number" type="tel" />
-        </div>
-        <div class="space-y-2">
-          <Label>Corporate TIN (000-000-000-000)</Label>
+          <Label>Corporate TIN</Label>
           <Input v-model="form.fields.corporate_tin" />
         </div>
+        <div class="space-y-2">
+          <Label>Telephone Number</Label>
+          <Input v-model="form.fields.telephone_number" />
+        </div>
         <div class="space-y-2 md:col-span-2">
-          <Label>Primary Purpose / Activity</Label>
+          <Label>Complete Business Address</Label>
+          <textarea v-model="form.fields.complete_business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+        </div>
+        <div class="space-y-2">
+          <Label>Primary Purpose / Activity / Industry Presently Engaged In</Label>
           <textarea v-model="form.fields.primary_purpose_activity" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
         </div>
 
         <div class="space-y-2 md:col-span-2">
           <Label>Officers</Label>
           <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-5">
-            <div>Role</div>
+            <div>Officer / Position</div>
             <div>Name & Residential Address</div>
             <div>Nationality</div>
             <div>Gender</div>
@@ -788,7 +803,7 @@ const submit = () => {
               :key="`officer-${index}`"
               class="grid gap-2 rounded-md border border-[#E2E8F0] p-3 dark:border-[#1E3A5F] md:grid-cols-5"
             >
-              <Input v-model="officer.role" readonly />
+              <Input v-model="officer.position" readonly />
               <Input v-model="officer.name_and_residential_address" />
               <Input v-model="officer.nationality" />
               <Input v-model="officer.gender" />
@@ -804,6 +819,26 @@ const submit = () => {
         <div class="space-y-2">
           <Label>Certifier TIN (000-000-000-000)</Label>
           <Input v-model="form.fields.certifier_tin" />
+        </div>
+        <div class="space-y-2">
+          <Label>Subscribed and Sworn Place</Label>
+          <Input v-model="form.fields.sworn_place" />
+        </div>
+        <div class="space-y-2">
+          <Label>Subscribed and Sworn Date</Label>
+          <Input v-model="form.fields.sworn_date" type="date" />
+        </div>
+        <div class="space-y-2 md:col-span-2">
+          <Label>Competent Evidence of Identity</Label>
+          <Input v-model="form.fields.competent_evidence" />
+        </div>
+        <div class="space-y-2">
+          <Label>Issued At</Label>
+          <Input v-model="form.fields.issued_at" />
+        </div>
+        <div class="space-y-2">
+          <Label>Issued On</Label>
+          <Input v-model="form.fields.issued_on" type="date" />
         </div>
       </div>
 
