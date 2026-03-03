@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
 import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
@@ -71,6 +71,7 @@ const props = defineProps<{
 const statusForm = useForm({
   status: props.registration.status as 'pending' | 'incomplete' | 'completed',
 })
+const currentStatus = ref(props.registration.status as 'pending' | 'incomplete' | 'completed')
 const createUserForm = useForm({
   name: '',
   email: props.registration.email,
@@ -83,15 +84,17 @@ const updateStatus = () => {
   statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
     preserveScroll: true,
     onSuccess: () => {
+      currentStatus.value = statusForm.status
       toast.success(`Successfully set the status to ${statusForm.status}.`)
     },
     onError: () => {
+      statusForm.status = currentStatus.value
       toast.error('Unable to update status.')
     },
   })
 }
 
-const canCreateUser = props.registration.status === 'completed'
+const canCreateUser = computed(() => currentStatus.value === 'completed')
 
 const openCreateUserModal = () => {
   createUserForm.clearErrors()

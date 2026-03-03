@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Pencil } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -38,6 +39,34 @@ const inputType = (type?: string) => {
 
   return 'text'
 }
+
+const visibleFields = computed(() => {
+  if (props.section.name !== 'regular_corporation') {
+    return props.section.fields
+  }
+
+  const filledIndexes = new Set<number>()
+
+  props.section.fields.forEach((field) => {
+    const match = field.name.match(/^incorporator_(\d+)_/)
+    if (!match) {
+      return
+    }
+
+    if (String(field.value ?? '').trim() !== '') {
+      filledIndexes.add(Number.parseInt(match[1], 10))
+    }
+  })
+
+  return props.section.fields.filter((field) => {
+    const match = field.name.match(/^incorporator_(\d+)_/)
+    if (!match) {
+      return true
+    }
+
+    return filledIndexes.has(Number.parseInt(match[1], 10))
+  })
+})
 </script>
 
 <template>
@@ -66,7 +95,7 @@ const inputType = (type?: string) => {
 
     <div class="mt-3 grid gap-2 md:grid-cols-2">
       <div
-        v-for="field in section.fields"
+        v-for="field in visibleFields"
         :key="`${section.name}-${field.name}`"
         class="rounded-md bg-[#F8FAFC] px-3 py-2 text-sm dark:bg-[#0F2747]"
       >
