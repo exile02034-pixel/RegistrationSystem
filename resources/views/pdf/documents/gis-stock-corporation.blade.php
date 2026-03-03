@@ -4,103 +4,421 @@
     <meta charset="utf-8">
     <style>
         @page { margin: 14px; }
-        body { font-family: Arial, sans-serif; font-size: 10.5px; color: #111827; }
-        h1 { font-size: 15px; margin: 0 0 2px; text-transform: uppercase; text-align: center; letter-spacing: .3px; }
-        h2 { font-size: 10.5px; margin: 0 0 8px; text-align: center; font-weight: normal; color: #374151; }
-        .section-title { font-size: 10px; margin: 8px 0 4px; background: #e5e7eb; padding: 3px 5px; border: 1px solid #111827; font-weight: 700; text-transform: uppercase; }
+        body { font-family: Cambria, serif; font-size: 10px; color: #111; }
+        .page { page-break-after: always; }
+        .page:last-child { page-break-after: auto; }
+        .title { margin: 0; text-align: center; font-weight: 700; font-size: 16px; }
+        .subtitle { margin: 0 0 6px; text-align: center; font-weight: 700; font-size: 12px; }
+        .rule { text-align: center; font-size: 9px; margin: 6px 0; }
+        .section-title { margin: 8px 0 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-        th, td { border: 1px solid #111827; padding: 5px; vertical-align: top; text-align: left; }
-        th { background: #f3f4f6; font-weight: 700; }
-        .break { page-break-after: always; }
-        .tiny { font-size: 9px; color: #4b5563; }
+        th, td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+        th { background: #f3f3f3; text-align: left; }
+        .small { font-size: 9px; }
+        .page-no { font-size: 9px; color: #444; text-align: right; margin-top: 4px; }
+        .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 8px; }
+        .check-item { display: flex; align-items: center; gap: 6px; }
+        .box { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; text-align: center; line-height: 11px; font-size: 9px; }
+        .line { border-bottom: 1px solid #000; min-height: 16px; display: inline-block; min-width: 160px; padding: 0 4px; }
+        .indent { margin-left: 14px; }
     </style>
 </head>
 <body>
-<h1>General Information Sheet (GIS) - Stock Corporation</h1>
-<h2>Registration #{{ $registrationLink->id }}</h2>
+@php
+    $step1 = $fields['step_1'] ?? [];
+    $step2 = $fields['step_2'] ?? [];
+    $step3 = $fields['step_3'] ?? [];
+    $step4 = $fields['step_4'] ?? [];
+    $step5 = $fields['step_5'] ?? [];
+    $step6 = $fields['step_6'] ?? [];
+    $step7 = $fields['step_7'] ?? [];
+    $step8 = $fields['step_8'] ?? [];
+    $step9 = $fields['step_9'] ?? [];
 
-<div class="section-title">Step 1: Corporate Information</div>
-<table>
-    <tr><th style="width: 20%">Corporate Name</th><td style="width: 30%">{{ $fields['step_1']['corporate_name'] ?? '' }}</td><th style="width: 20%">SEC Registration Number</th><td style="width: 30%">{{ $fields['step_1']['sec_registration_number'] ?? '' }}</td></tr>
-    <tr><th>Principal Office Address</th><td colspan="3">{{ $fields['step_1']['principal_office_address'] ?? '' }}</td></tr>
-    <tr><th>Business Address</th><td colspan="3">{{ $fields['step_1']['business_address'] ?? '' }}</td></tr>
-    <tr><th>Email</th><td>{{ $fields['step_1']['email'] ?? '' }}</td><th>Telephone</th><td>{{ $fields['step_1']['telephone'] ?? '' }}</td></tr>
-    <tr><th>Annual Meeting Date</th><td>{{ $fields['step_1']['meeting_date_annual'] ?? '' }}</td><th>Special Meeting Date</th><td>{{ $fields['step_1']['meeting_date_special'] ?? '' }}</td></tr>
-</table>
+    $amlaTypes = is_array($step2['amla_types'] ?? null) ? $step2['amla_types'] : [];
+    $stockRows5 = is_array($step5['rows'] ?? null) ? $step5['rows'] : [];
+    $stockRows6 = is_array($step6['rows'] ?? null) ? $step6['rows'] : [];
+    $stockRows7 = is_array($step7['rows'] ?? null) ? $step7['rows'] : [];
+    $additionalShares = is_array($step8['additional_shares'] ?? null) ? $step8['additional_shares'] : [];
+@endphp
 
-<div class="section-title">Step 2: AMLA Information</div>
-<table>
-    <tr><th style="width: 25%">AMLA Covered</th><td style="width: 25%">{{ ($fields['step_2']['amla_covered'] ?? false) ? 'YES' : 'NO' }}</td><th style="width: 25%">AMLA Reporting Entity</th><td style="width: 25%">{{ ($fields['step_2']['amla_reporting_entity'] ?? false) ? 'YES' : 'NO' }}</td></tr>
-    <tr><th>Other AMLA Details</th><td colspan="3">{{ $fields['step_2']['amla_other_details'] ?? '' }}</td></tr>
-</table>
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET (GIS)</p>
+    <p class="subtitle">STOCK CORPORATION</p>
 
-<div class="section-title">Step 3: Capital Structure</div>
-<table>
-    <tr><th style="width: 33%">Authorized Capital Stock</th><th style="width: 33%">Subscribed Capital Stock</th><th style="width: 34%">Paid-Up Capital Stock</th></tr>
-    <tr><td>{{ $fields['step_3']['authorized_capital_stock'] ?? '' }}</td><td>{{ $fields['step_3']['subscribed_capital_stock'] ?? '' }}</td><td>{{ $fields['step_3']['paid_up_capital_stock'] ?? '' }}</td></tr>
-</table>
+    <div class="section-title">General Instructions</div>
+    <table>
+        <tr><td>1. FOR USER CORPORATION: THIS GIS SHOULD BE SUBMITTED WITHIN THIRTY (30) CALENDAR DAYS FROM THE DATE OF THE ANNUAL STOCKHOLDERS' MEETING. DO NOT LEAVE ANY ITEM BLANK.</td></tr>
+        <tr><td>2. IF NO MEETING IS HELD, THE CORPORATION SHALL SUBMIT THE GIS NOT LATER THAN JANUARY 30 OF THE FOLLOWING YEAR.</td></tr>
+        <tr><td>3. THIS GIS SHALL BE ACCOMPLISHED IN ENGLISH AND CERTIFIED AND SWORN TO BY THE CORPORATE SECRETARY OF THE CORPORATION.</td></tr>
+        <tr><td>4. SUBMIT FOUR (4) COPIES OF THE GIS TO THE SEC RECEIVING SECTION OR SATELLITE/OFF-SITE OFFICES.</td></tr>
+    </table>
 
-<div class="section-title">Step 4: Directors</div>
-<table>
-    <thead><tr><th>Name</th><th>Nationality</th><th>Shareholdings</th></tr></thead>
-    <tbody>
-    @foreach(($fields['step_4'] ?? []) as $row)
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <table>
         <tr>
-            <td>{{ $row['name'] ?? '' }}</td>
-            <td>{{ $row['nationality'] ?? '' }}</td>
-            <td>{{ $row['shareholdings'] ?? '' }}</td>
+            <th style="width:24%">CORPORATE NAME</th><td style="width:26%">{{ $step1['corporate_name'] ?? '' }}</td>
+            <th style="width:24%">DATE REGISTERED</th><td style="width:26%">{{ $step1['date_registered'] ?? '' }}</td>
         </tr>
-    @endforeach
-    </tbody>
-</table>
-
-<div class="section-title">Step 5: Officers</div>
-<table>
-    <thead><tr><th>Position</th><th>Name</th><th>TIN</th></tr></thead>
-    <tbody>
-    @foreach(($fields['step_5'] ?? []) as $row)
         <tr>
-            <td>{{ $row['position'] ?? '' }}</td>
-            <td>{{ $row['name'] ?? '' }}</td>
-            <td>{{ $row['tin'] ?? '' }}</td>
+            <th>BUSINESS/TRADE NAME</th><td>{{ $step1['business_trade_name'] ?? '' }}</td>
+            <th>FISCAL YEAR END</th><td>{{ $step1['fiscal_year_end'] ?? '' }}</td>
         </tr>
-    @endforeach
-    </tbody>
-</table>
-
-<div class="break"></div>
-
-<div class="section-title">Step 6: Stockholders</div>
-<table>
-    <thead><tr><th>Stockholder Name</th><th>Shares</th></tr></thead>
-    <tbody>
-    @foreach(($fields['step_6'] ?? []) as $row)
         <tr>
-            <td>{{ $row['stockholder_name'] ?? '' }}</td>
-            <td>{{ $row['shares'] ?? '' }}</td>
+            <th>SEC REGISTRATION NUMBER</th><td>{{ $step1['sec_registration_number'] ?? '' }}</td>
+            <th>CORPORATE TAX IDENTIFICATION NUMBER (TIN)</th><td>{{ $step1['corporate_tin'] ?? '' }}</td>
         </tr>
-    @endforeach
-    </tbody>
-</table>
+        <tr>
+            <th>DATE OF ANNUAL MEETING PER BY-LAWS</th><td>{{ $step1['meeting_date_annual'] ?? '' }}</td>
+            <th>ACTUAL DATE OF ANNUAL MEETING</th><td>{{ $step1['meeting_date_actual'] ?? '' }}</td>
+        </tr>
+        <tr><th>COMPLETE PRINCIPAL OFFICE ADDRESS</th><td colspan="3">{{ $step1['principal_office_address'] ?? '' }}</td></tr>
+        <tr><th>COMPLETE BUSINESS ADDRESS</th><td colspan="3">{{ $step1['business_address'] ?? '' }}</td></tr>
+        <tr>
+            <th>OFFICIAL E-MAIL ADDRESS</th><td>{{ $step1['email'] ?? '' }}</td>
+            <th>ALTERNATE E-MAIL ADDRESS</th><td>{{ $step1['alternate_email'] ?? '' }}</td>
+        </tr>
+        <tr>
+            <th>OFFICIAL MOBILE NUMBER</th><td>{{ $step1['official_mobile'] ?? '' }}</td>
+            <th>ALTERNATE MOBILE NUMBER</th><td>{{ $step1['alternate_mobile'] ?? '' }}</td>
+        </tr>
+        <tr>
+            <th>NAME OF EXTERNAL AUDITOR & SIGNING PARTNER</th><td>{{ $step1['external_auditor_name'] ?? '' }}</td>
+            <th>SEC ACCREDITATION NUMBER</th><td>{{ $step1['sec_accreditation_number'] ?? '' }}</td>
+        </tr>
+        <tr>
+            <th>TELEPHONE NUMBER(S)</th><td>{{ $step1['telephone'] ?? '' }}</td>
+            <th>FAX / WEBSITE / GEOGRAPHICAL CODE</th><td>{{ $step1['fax_number'] ?? '' }} / {{ $step1['website_url'] ?? '' }} / {{ $step1['geographical_code'] ?? '' }}</td>
+        </tr>
+        <tr><th>PRIMARY PURPOSE/ACTIVITY</th><td colspan="3">{{ $step1['primary_purpose'] ?? '' }}</td></tr>
+        <tr><th>INDUSTRY CLASSIFICATION</th><td colspan="3">{{ $step1['industry_classification'] ?? '' }}</td></tr>
+    </table>
 
-<div class="section-title">Step 7: External Auditor</div>
-<table>
-    <tr><th style="width: 20%">Name</th><td style="width: 30%">{{ $fields['step_7']['external_auditor_name'] ?? '' }}</td><th style="width: 20%">TIN</th><td style="width: 30%">{{ $fields['step_7']['external_auditor_tin'] ?? '' }}</td></tr>
-</table>
+    <div class="section-title">Intercompany Affiliations</div>
+    <table>
+        <tr><th style="width:35%">PARENT COMPANY</th><th style="width:25%">SEC REG. NO.</th><th style="width:40%">ADDRESS</th></tr>
+        <tr><td>{{ $step1['intercompany_parent_company'] ?? '' }}</td><td>{{ $step1['intercompany_parent_sec_no'] ?? '' }}</td><td>{{ $step1['intercompany_parent_address'] ?? '' }}</td></tr>
+        <tr><th>SUBSIDIARY/AFFILIATE</th><th>SEC REG. NO.</th><th>ADDRESS</th></tr>
+        <tr><td>{{ $step1['intercompany_subsidiary'] ?? '' }}</td><td>{{ $step1['intercompany_subsidiary_sec_no'] ?? '' }}</td><td>{{ $step1['intercompany_subsidiary_address'] ?? '' }}</td></tr>
+    </table>
 
-<div class="section-title">Step 8: Corporate Secretary</div>
-<table>
-    <tr><th style="width: 20%">Name</th><td style="width: 30%">{{ $fields['step_8']['corporate_secretary_name'] ?? '' }}</td><th style="width: 20%">TIN</th><td style="width: 30%">{{ $fields['step_8']['corporate_secretary_tin'] ?? '' }}</td></tr>
-</table>
+    <div class="page-no">Page 1 of 9</div>
+</div>
 
-<div class="section-title">Step 9: Certification</div>
-<table>
-    <tr><th style="width: 20%">Certifier Name</th><td style="width: 30%">{{ $fields['step_9']['certifier_name'] ?? '' }}</td><th style="width: 20%">Certifier TIN</th><td style="width: 30%">{{ $fields['step_9']['certifier_tin'] ?? '' }}</td></tr>
-    <tr><th>Certification Date</th><td colspan="3">{{ $fields['step_9']['certifier_date'] ?? '' }}</td></tr>
-</table>
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
 
-<p class="tiny">
-    This output follows a Blade placeholder layout mapped from Input Fields data. For strict 1:1 government form geometry, native Excel-to-PDF rendering is still required.
-</p>
+    <table>
+        <tr>
+            <th style="width:22%">Corporate Name:</th>
+            <td>{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+    </table>
+
+    <div class="small" style="margin-bottom: 4px;"><strong>A.</strong> Is the Corporation a covered person under the Anti Money Laundering Act (AMLA), as amended? (Rep. Acts. 9160/9164/10167/10365)</div>
+    <div class="check-item small" style="margin-bottom: 6px;">
+        <span class="box">{{ ($step2['amla_covered'] ?? false) ? 'X' : '' }}</span>
+        Covered person under AMLA
+    </div>
+    <div class="small" style="margin-bottom: 4px;">Please check the appropriate box:</div>
+
+    <table class="small">
+        <tr>
+            <th colspan="3" style="width:50%; text-align:left;">No. 1 - AMLA Categories</th>
+            <th colspan="3" style="width:50%; text-align:left;">Continuation</th>
+        </tr>
+        <tr>
+            <td style="width:5%;">1.</td>
+            <td style="width:7%; text-align:center;"><span class="box">{{ in_array('Banks and Other Financial Institutions under BSP', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td style="width:38%;">Banks / OBU / Quasi-Banks / Trust Entities / NSSLAs / Pawnshops / FX Dealers / Money Changers / Remittance / EMI / BSP-supervised entities</td>
+            <td style="width:5%;">5.</td>
+            <td style="width:7%; text-align:center;"><span class="box">{{ in_array('Company Service Providers', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td style="width:38%;">Company service providers acting as formation agent / nominee director / registered office / nominee shareholder provider</td>
+        </tr>
+        <tr>
+            <td>2.</td>
+            <td style="text-align:center;"><span class="box">{{ in_array('Insurance Commission Regulated Entities', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td>Insurance companies/agents/brokers/reinsurers/holding company systems/pre-need/mutual benefit associations and all IC-regulated entities</td>
+            <td>6.</td>
+            <td style="text-align:center;"><span class="box">{{ in_array('Persons Providing AMLA-Covered Services', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td>Persons providing services: managing client money/assets, bank/securities accounts, organizing company contributions, creating/operating juridical persons</td>
+        </tr>
+        <tr>
+            <td>3.</td>
+            <td style="text-align:center;"><span class="box">{{ in_array('SEC Regulated Securities Entities', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td>Securities dealers/brokers/salesman/investment houses/agents/trading advisors/mutual funds/close-end funds/trust funds/transfer companies/SEC-regulated entities</td>
+            <td>7.</td>
+            <td style="text-align:center;"><span class="box">{{ in_array('None of the above', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td>None of the above</td>
+        </tr>
+        <tr>
+            <td>4.</td>
+            <td style="text-align:center;"><span class="box">{{ in_array('Jewelry Dealers (Precious Metals/Stones)', $amlaTypes, true) ? 'X' : '' }}</span></td>
+            <td>Jewelry dealers in precious metals and/or precious stones</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+    <div class="small" style="margin: 6px 0 4px;"><strong>B.</strong> Has the Corporation complied with the requirements on Customer Due Diligence (CDD) or Know Your Customer (KYC), record-keeping, and submission of reports under the AMLA, as amended, since the last filing of its GIS?</div>
+    <div class="check-item small" style="margin-bottom: 6px;">
+        <span class="box">{{ ($step2['cdd_complied'] ?? false) ? 'X' : '' }}</span>
+        Yes, complied
+    </div>
+
+    <table>
+        <tr><th style="width:35%">Describe nature of business</th><td>{{ $step2['nature_of_business'] ?? '' }}</td></tr>
+        <tr><th>Other AMLA details</th><td>{{ $step2['amla_other_details'] ?? '' }}</td></tr>
+    </table>
+
+    <div class="page-no">Page 2 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <div class="section-title">Capital Structure</div>
+    <table>
+        <tr><th>AUTHORIZED CAPITAL STOCK</th><th>SUBSCRIBED CAPITAL STOCK</th><th>PAID-UP CAPITAL STOCK</th></tr>
+        <tr>
+            <td>{{ $step3['authorized_capital_stock'] ?? '' }}</td>
+            <td>{{ $step3['subscribed_capital_stock'] ?? '' }}</td>
+            <td>{{ $step3['paid_up_capital_stock'] ?? '' }}</td>
+        </tr>
+    </table>
+
+    <div class="small">* Common, Preferred or other classification. ** Other than directors, officers, shareholders owning 10% of outstanding shares.</div>
+    <div class="page-no">Page 3 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <div class="section-title">Directors / Officers</div>
+    <table>
+        <tr>
+            <th style="width:30%">Name / Current Residential Address</th>
+            <th style="width:10%">Nationality</th>
+            <th style="width:6%">INC'R</th>
+            <th style="width:6%">BOARD</th>
+            <th style="width:6%">Gender</th>
+            <th style="width:8%">Stockholder</th>
+            <th style="width:12%">Officer</th>
+            <th style="width:8%">Exec. Comm.</th>
+            <th style="width:14%">TIN</th>
+        </tr>
+        @foreach($step4 as $row)
+            <tr>
+                <td>{{ $row['name'] ?? '' }}</td>
+                <td>{{ $row['nationality'] ?? '' }}</td>
+                <td>{{ $row['incorporator'] ?? '' }}</td>
+                <td>{{ $row['board'] ?? '' }}</td>
+                <td>{{ $row['gender'] ?? '' }}</td>
+                <td>{{ $row['stockholder'] ?? '' }}</td>
+                <td>{{ $row['officer'] ?? '' }}</td>
+                <td>{{ $row['exec_comm'] ?? '' }}</td>
+                <td>{{ $row['tin'] ?? '' }}</td>
+            </tr>
+        @endforeach
+    </table>
+
+    <div class="small">Instruction: For Sex: F/M. For Board: C/M/I. For INC'R and STOCKHOLDER: Y/N.</div>
+    <div class="page-no">Page 4 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <div class="section-title">Stockholder's Information (1 to 7)</div>
+    <table>
+        <tr>
+            <th style="width:4%">#</th>
+            <th style="width:30%">Name / Nationality / Address</th>
+            <th style="width:12%">Type</th>
+            <th style="width:10%">No. of Shares</th>
+            <th style="width:12%">Amount Subscribed</th>
+            <th style="width:10%">% Ownership</th>
+            <th style="width:12%">Amount Paid</th>
+            <th style="width:10%">TIN</th>
+        </tr>
+        @foreach($stockRows5 as $row)
+            <tr>
+                <td>{{ $row['no'] ?? '' }}</td>
+                <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
+                <td>{{ $row['share_type'] ?? '' }}</td>
+                <td>{{ $row['number_of_shares'] ?? '' }}</td>
+                <td>{{ $row['amount_subscribed'] ?? '' }}</td>
+                <td>{{ $row['percent_ownership'] ?? '' }}</td>
+                <td>{{ $row['amount_paid'] ?? '' }}</td>
+                <td>{{ $row['tin'] ?? '' }}</td>
+            </tr>
+        @endforeach
+    </table>
+    <table>
+        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
+        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
+    </table>
+
+    <div class="page-no">Page 5 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <div class="section-title">Stockholder's Information (8 to 14)</div>
+    <table>
+        <tr>
+            <th style="width:4%">#</th>
+            <th style="width:30%">Name / Nationality / Address</th>
+            <th style="width:12%">Type</th>
+            <th style="width:10%">No. of Shares</th>
+            <th style="width:12%">Amount Subscribed</th>
+            <th style="width:10%">% Ownership</th>
+            <th style="width:12%">Amount Paid</th>
+            <th style="width:10%">TIN</th>
+        </tr>
+        @foreach($stockRows6 as $row)
+            <tr>
+                <td>{{ $row['no'] ?? '' }}</td>
+                <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
+                <td>{{ $row['share_type'] ?? '' }}</td>
+                <td>{{ $row['number_of_shares'] ?? '' }}</td>
+                <td>{{ $row['amount_subscribed'] ?? '' }}</td>
+                <td>{{ $row['percent_ownership'] ?? '' }}</td>
+                <td>{{ $row['amount_paid'] ?? '' }}</td>
+                <td>{{ $row['tin'] ?? '' }}</td>
+            </tr>
+        @endforeach
+    </table>
+
+    <div class="page-no">Page 6 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+
+    <div class="section-title">Stockholder's Information (15 to 21 / Others)</div>
+    <table>
+        <tr>
+            <th style="width:4%">#</th>
+            <th style="width:30%">Name / Nationality / Address</th>
+            <th style="width:12%">Type</th>
+            <th style="width:10%">No. of Shares</th>
+            <th style="width:12%">Amount Subscribed</th>
+            <th style="width:10%">% Ownership</th>
+            <th style="width:12%">Amount Paid</th>
+            <th style="width:10%">TIN</th>
+        </tr>
+        @foreach($stockRows7 as $row)
+            <tr>
+                <td>{{ $row['no'] ?? '' }}</td>
+                <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
+                <td>{{ $row['share_type'] ?? '' }}</td>
+                <td>{{ $row['number_of_shares'] ?? '' }}</td>
+                <td>{{ $row['amount_subscribed'] ?? '' }}</td>
+                <td>{{ $row['percent_ownership'] ?? '' }}</td>
+                <td>{{ $row['amount_paid'] ?? '' }}</td>
+                <td>{{ $row['tin'] ?? '' }}</td>
+            </tr>
+        @endforeach
+    </table>
+    <table>
+        <tr><th style="width:40%">OTHERS (remaining stockholders count)</th><td>{{ $step7['others_count'] ?? '' }}</td></tr>
+    </table>
+
+    <div class="page-no">Page 7 of 9</div>
+</div>
+
+<div class="page">
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+    <p class="rule">PLEASE PRINT LEGIBLY</p>
+
+    <div class="section-title">Investments / Dividends / Licenses / Manpower</div>
+    <table>
+        <tr><th style="width:35%">Investment of Corporate Funds in Another Corporation - Stocks</th><td>{{ $step8['investment_stocks'] ?? '' }}</td><th>Date of Board Resolution</th><td>{{ $step8['investment_board_resolution_date'] ?? '' }}</td></tr>
+        <tr><th>Bonds/Commercial Paper</th><td>{{ $step8['investment_bonds'] ?? '' }}</td><th>Loans/Credits/Advances</th><td>{{ $step8['investment_loans_advances'] ?? '' }}</td></tr>
+        <tr><th>Government Treasury Bills</th><td>{{ $step8['investment_treasury_bills'] ?? '' }}</td><th>Others</th><td>{{ $step8['investment_others'] ?? '' }}</td></tr>
+        <tr><th>Secondary Purpose Activity</th><td>{{ $step8['secondary_purpose_activity'] ?? '' }}</td><th>Board Resolution / Ratification</th><td>{{ $step8['secondary_purpose_board_resolution_date'] ?? '' }} / {{ $step8['secondary_purpose_ratification_date'] ?? '' }}</td></tr>
+        <tr><th>Treasury Shares (No. / %)</th><td>{{ $step8['treasury_shares_count'] ?? '' }} / {{ $step8['treasury_shares_percent'] ?? '' }}</td><th>Retained Earnings</th><td>{{ $step8['retained_earnings'] ?? '' }}</td></tr>
+    </table>
+
+    <table>
+        <tr><th style="width:22%">Dividend Type</th><th style="width:26%">Amount</th><th style="width:22%">Date Declared</th><th style="width:30%">Notes</th></tr>
+        <tr><td>Cash</td><td>{{ $step8['dividend_cash_amount'] ?? '' }}</td><td>{{ $step8['dividend_cash_date'] ?? '' }}</td><td></td></tr>
+        <tr><td>Stock</td><td>{{ $step8['dividend_stock_amount'] ?? '' }}</td><td>{{ $step8['dividend_stock_date'] ?? '' }}</td><td></td></tr>
+        <tr><td>Property</td><td>{{ $step8['dividend_property_amount'] ?? '' }}</td><td>{{ $step8['dividend_property_date'] ?? '' }}</td><td></td></tr>
+    </table>
+
+    <table>
+        <tr><th style="width:20%">Additional Shares Issued - Date</th><th style="width:20%">No. of Shares</th><th style="width:20%">Amount</th><th style="width:40%">Secondary License / Registration</th></tr>
+        @foreach($additionalShares as $row)
+            <tr><td>{{ $row['date'] ?? '' }}</td><td>{{ $row['no_of_shares'] ?? '' }}</td><td>{{ $row['amount'] ?? '' }}</td><td>{{ $step8['agency_name'] ?? '' }} / {{ $step8['secondary_license_type'] ?? '' }}</td></tr>
+        @endforeach
+        <tr><td colspan="2">Date Issued / Date Started Operations</td><td colspan="2">{{ $step8['secondary_license_date_issued'] ?? '' }} / {{ $step8['secondary_license_date_started'] ?? '' }}</td></tr>
+        <tr><td colspan="2">Agency Flags (SEC/BSP/IC)</td><td colspan="2">{{ ($step8['secondary_license_sec'] ?? false) ? 'SEC ' : '' }}{{ ($step8['secondary_license_bsp'] ?? false) ? 'BSP ' : '' }}{{ ($step8['secondary_license_ic'] ?? false) ? 'IC' : '' }}</td></tr>
+    </table>
+
+    <table>
+        <tr><th>Total Annual Compensation of Directors</th><td>{{ $step8['total_annual_compensation_directors'] ?? '' }}</td><th>Total No. of Officers</th><td>{{ $step8['total_no_officers'] ?? '' }}</td></tr>
+        <tr><th>Total No. of Rank & File Employees</th><td>{{ $step8['total_rank_file_employees'] ?? '' }}</td><th>Total Manpower Complement</th><td>{{ $step8['total_manpower_complement'] ?? '' }}</td></tr>
+    </table>
+
+    <div class="page-no">Page 8 of 9</div>
+</div>
+
+<div>
+    <p class="title">GENERAL INFORMATION SHEET</p>
+    <p class="subtitle">STOCK CORPORATION</p>
+
+    <p class="small">
+        I, <span class="line">{{ $step9['certifier_name'] ?? '' }}</span>, Corporate Secretary of
+        <span class="line">{{ $step1['corporate_name'] ?? '' }}</span>, declare under penalty of perjury that all matters
+        set forth in this GIS have been made in good faith, duly verified by me and to the best of my knowledge and belief are true and correct.
+    </p>
+    <p class="small">I hereby attest that all the information in this GIS are being submitted in compliance with the rules and regulations of the Securities and Exchange Commission (SEC).</p>
+    <p class="small">I further attest that I have been authorized by the Board of Directors/Trustees to file this GIS with the SEC.</p>
+    <p class="small">I understand that the Commission may place the corporation under delinquent status for failure to submit reportorial requirements as provided under Section 177, RA No. 11232.</p>
+
+    <p class="small">
+        Done this <span class="line">{{ $step9['done_day'] ?? '' }}</span> day of
+        <span class="line">{{ $step9['done_month'] ?? '' }}</span>, 20
+        <span class="line" style="min-width:40px;">{{ $step9['done_year'] ?? '' }}</span>
+        in <span class="line">{{ $step9['done_place'] ?? '' }}</span>.
+    </p>
+
+    <div style="margin-top: 30px; text-align: center;" class="small">
+        <div class="line" style="min-width: 260px;">{{ $step9['certifier_name'] ?? '' }}</div>
+        <div>(Signature over printed name)</div>
+    </div>
+
+    <p class="small" style="margin-top:20px;">
+        SUBSCRIBED AND SWORN TO before me in <span class="line">{{ $step9['notary_place'] ?? '' }}</span>
+        on <span class="line">{{ $step9['notary_date'] ?? '' }}</span> by affiant who exhibited competent evidence of identity:
+        <span class="line">{{ $step9['competent_evidence'] ?? '' }}</span>, issued at
+        <span class="line">{{ $step9['issued_at'] ?? '' }}</span> on <span class="line">{{ $step9['issued_on'] ?? '' }}</span>.
+    </p>
+
+    <div style="margin-top: 26px; text-align: center;" class="small">
+        <div class="line" style="min-width: 220px;"></div>
+        <div>NOTARY PUBLIC</div>
+    </div>
+
+    <div class="page-no">Page 9 of 9</div>
+</div>
 </body>
 </html>

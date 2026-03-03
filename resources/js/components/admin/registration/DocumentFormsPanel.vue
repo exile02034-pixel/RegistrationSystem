@@ -58,23 +58,93 @@ const defaultAppointmentOfficers = () => ([
   { role: 'Corporate Secretary', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
 ])
 
-const defaultGisRows = () => ([
-  { name: '', nationality: '', shareholdings: '' },
-  { name: '', nationality: '', shareholdings: '' },
-  { name: '', nationality: '', shareholdings: '' },
+const defaultGisRows = () => Array.from({ length: 15 }, () => ({
+  name: '',
+  nationality: '',
+  incorporator: '',
+  board: '',
+  gender: '',
+  stockholder: '',
+  officer: '',
+  exec_comm: '',
+  tin: '',
+}))
+
+const defaultGisStockholderRows = (startNumber: number) => ([
+  { no: startNumber, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 1, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 2, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 3, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 4, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 5, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
+  { no: startNumber + 6, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
 ])
 
-const defaultGisOfficers = () => ([
-  { position: '', name: '', tin: '' },
-  { position: '', name: '', tin: '' },
-  { position: '', name: '', tin: '' },
-])
+const defaultCapitalRows = (count: number) => Array.from({ length: count }, () => ({
+  type_of_shares: '',
+  no_of_stockholders: '',
+  number_of_shares: '',
+  public_shares: '',
+  par_or_stated_value: '',
+  amount: '',
+  ownership_percent: '',
+}))
 
-const defaultGisStockholders = () => ([
-  { stockholder_name: '', shares: '' },
-  { stockholder_name: '', shares: '' },
-  { stockholder_name: '', shares: '' },
-])
+const amlaOptionGroups = {
+  one: [
+    { key: 'a', label: 'Banks' },
+    { key: 'b', label: 'Offshore Banking Units' },
+    { key: 'c', label: 'Quasi-Banks' },
+    { key: 'd', label: 'Trust Entities' },
+    { key: 'e', label: 'Non-Stock Savings and Loan Associations' },
+    { key: 'f', label: 'Pawnshops' },
+    { key: 'g', label: 'Foreign Exchange Dealers' },
+    { key: 'h', label: 'Money Changers' },
+    { key: 'i', label: 'Remittance Agents' },
+    { key: 'j', label: 'Electronic Money Issuers' },
+    { key: 'k', label: 'Financial institutions under BSP supervision/regulation, including subsidiaries/affiliates' },
+  ],
+  two: [
+    { key: 'a', label: 'Insurance Companies' },
+    { key: 'b', label: 'Insurance Agents' },
+    { key: 'c', label: 'Insurance Brokers' },
+    { key: 'd', label: 'Professional Reinsurers' },
+    { key: 'e', label: 'Reinsurance Brokers' },
+    { key: 'f', label: 'Holding Companies' },
+    { key: 'g', label: 'Holding Company Systems' },
+    { key: 'h', label: 'Pre-need Companies' },
+    { key: 'i', label: 'Mutual Benefit Association' },
+    { key: 'j', label: 'All other entities supervised and/or regulated by IC' },
+  ],
+  three: [
+    { key: 'a', label: 'Securities Dealers' },
+    { key: 'b', label: 'Securities Brokers' },
+    { key: 'c', label: 'Securities Salesman' },
+    { key: 'd', label: 'Investment Houses' },
+    { key: 'e', label: 'Investment Agents and Consultants' },
+    { key: 'f', label: 'Trading Advisors' },
+    { key: 'g', label: 'Other entities managing securities or similar services' },
+    { key: 'h', label: 'Mutual Funds / Open-end Investment Companies' },
+    { key: 'i', label: 'Close-end Investment Companies' },
+    { key: 'j', label: 'Common Trust Funds / Issuers and similar entities' },
+    { key: 'k', label: 'Transfer Companies and similar entities' },
+    { key: 'l', label: 'Entities dealing in currency/commodities/financial derivatives' },
+    { key: 'm', label: 'Entities dealing in valuable objects' },
+    { key: 'n', label: 'Entities dealing in cash substitutes and similar monetary instruments regulated by SEC' },
+  ],
+  six: [
+    { key: 'a', label: 'Acting as a formation agent of juridical persons' },
+    { key: 'b', label: 'Acting/arranging another as director/corporate secretary/partner/similar position' },
+    { key: 'c', label: 'Providing registered office/business/correspondence/administrative address' },
+    { key: 'd', label: 'Acting/arranging another as nominee shareholder' },
+  ],
+  seven: [
+    { key: 'a', label: 'Managing client money, securities or other assets' },
+    { key: 'b', label: 'Management of bank, savings or securities accounts' },
+    { key: 'c', label: 'Organization of contributions for creation/operation/management of companies' },
+    { key: 'd', label: 'Creation/operation/management of juridical persons and buying/selling business entities' },
+  ],
+} as const
 
 const defaultFields = (type: DocumentForm['type']) => {
   if (type === 'secretary_certificate') {
@@ -114,39 +184,135 @@ const defaultFields = (type: DocumentForm['type']) => {
   return {
     step_1: {
       corporate_name: '',
+      business_trade_name: '',
       sec_registration_number: '',
+      date_registered: '',
+      fiscal_year_end: '',
+      corporate_tin: '',
       principal_office_address: '',
       business_address: '',
       email: '',
+      alternate_email: '',
+      official_mobile: '',
+      alternate_mobile: '',
+      website_url: '',
+      fax_number: '',
+      primary_purpose: '',
+      industry_classification: '',
+      geographical_code: '',
+      external_auditor_name: '',
+      sec_accreditation_number: '',
       telephone: '',
       meeting_date_annual: '',
-      meeting_date_special: '',
+      meeting_date_actual: '',
+      intercompany_parent_company: '',
+      intercompany_parent_sec_no: '',
+      intercompany_parent_address: '',
+      intercompany_subsidiary: '',
+      intercompany_subsidiary_sec_no: '',
+      intercompany_subsidiary_address: '',
     },
     step_2: {
       amla_covered: false,
-      amla_reporting_entity: false,
+      cdd_complied: false,
+      amla_types: [] as string[],
+      amla_detailed: {
+        one: { a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false },
+        two: { a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false },
+        three: { a: false, b: false, c: false, d: false, e: false, f: false, g: false, h: false, i: false, j: false, k: false, l: false, m: false, n: false },
+        four: false,
+        five: false,
+        six: { a: false, b: false, c: false, d: false },
+        seven: { a: false, b: false, c: false, d: false },
+        eight: false,
+      },
       amla_other_details: '',
+      nature_of_business: '',
     },
     step_3: {
       authorized_capital_stock: '',
       subscribed_capital_stock: '',
       paid_up_capital_stock: '',
+      authorized_rows: defaultCapitalRows(3),
+      subscribed_filipino_rows: defaultCapitalRows(2),
+      subscribed_foreign_rows: defaultCapitalRows(2),
+      paidup_filipino_rows: defaultCapitalRows(2),
+      paidup_foreign_rows: defaultCapitalRows(2),
+      percentage_foreign_equity: '',
+      total_subscribed_capital: '',
+      total_paid_up_capital: '',
     },
     step_4: defaultGisRows(),
-    step_5: defaultGisOfficers(),
-    step_6: defaultGisStockholders(),
+    step_5: {
+      total_stockholders: '',
+      stockholders_with_100_plus: '',
+      total_assets: '',
+      rows: defaultGisStockholderRows(1),
+    },
+    step_6: {
+      rows: defaultGisStockholderRows(8),
+    },
     step_7: {
-      external_auditor_name: '',
-      external_auditor_tin: '',
+      rows: defaultGisStockholderRows(15),
+      others_count: '',
     },
     step_8: {
-      corporate_secretary_name: '',
-      corporate_secretary_tin: '',
+      investment_stocks: '',
+      investment_bonds: '',
+      investment_loans_advances: '',
+      investment_treasury_bills: '',
+      investment_others: '',
+      investment_board_resolution_date: '',
+      investment_stocks_board_resolution_date: '',
+      investment_bonds_board_resolution_date: '',
+      investment_loans_advances_board_resolution_date: '',
+      investment_treasury_bills_board_resolution_date: '',
+      investment_others_board_resolution_date: '',
+      secondary_purpose_activity: '',
+      secondary_purpose_board_resolution_date: '',
+      secondary_purpose_ratification_date: '',
+      treasury_shares_count: '',
+      treasury_shares_percent: '',
+      retained_earnings: '',
+      dividend_cash_amount: '',
+      dividend_cash_date: '',
+      dividend_stock_amount: '',
+      dividend_stock_date: '',
+      dividend_property_amount: '',
+      dividend_property_date: '',
+      dividend_total_amount: '',
+      additional_shares: [
+        { date: '', no_of_shares: '', amount: '' },
+        { date: '', no_of_shares: '', amount: '' },
+        { date: '', no_of_shares: '', amount: '' },
+        { date: '', no_of_shares: '', amount: '' },
+      ],
+      agency_name: '',
+      secondary_license_type: '',
+      secondary_license_date_issued: '',
+      secondary_license_date_started: '',
+      secondary_license_sec: false,
+      secondary_license_bsp: false,
+      secondary_license_ic: false,
+      total_annual_compensation_directors: '',
+      total_no_officers: '',
+      total_rank_file_employees: '',
+      total_manpower_complement: '',
     },
     step_9: {
       certifier_name: '',
       certifier_tin: '',
       certifier_date: '',
+      done_date: '',
+      done_day: '',
+      done_month: '',
+      done_year: '',
+      done_place: '',
+      notary_place: '',
+      notary_date: '',
+      competent_evidence: '',
+      issued_at: '',
+      issued_on: '',
     },
   }
 }
@@ -283,20 +449,33 @@ const validateAllGisSteps = (): string[] => {
   const step2 = fields.step_2 ?? {}
   const step3 = fields.step_3 ?? {}
   const step4 = Array.isArray(fields.step_4) ? fields.step_4 : []
-  const step5 = Array.isArray(fields.step_5) ? fields.step_5 : []
-  const step6 = Array.isArray(fields.step_6) ? fields.step_6 : []
-  const step8 = fields.step_8 ?? {}
+  const step5 = fields.step_5 ?? {}
+  const step5Rows = Array.isArray(step5.rows) ? step5.rows : []
+  const step6 = fields.step_6 ?? {}
+  const step6Rows = Array.isArray(step6.rows) ? step6.rows : []
+  const step7 = fields.step_7 ?? {}
+  const step7Rows = Array.isArray(step7.rows) ? step7.rows : []
   const step9 = fields.step_9 ?? {}
 
   if (isBlank(step1.corporate_name)) errors.push('Step 1: Corporate Name is required.')
   if (isBlank(step1.sec_registration_number)) errors.push('Step 1: SEC Registration Number is required.')
+  if (isBlank(step1.date_registered)) errors.push('Step 1: Date Registered is required.')
+  if (isBlank(step1.fiscal_year_end)) errors.push('Step 1: Fiscal Year End is required.')
   if (isBlank(step1.principal_office_address)) errors.push('Step 1: Principal Office Address is required.')
   if (isBlank(step1.business_address)) errors.push('Step 1: Business Address is required.')
   if (isBlank(step1.email) || !isValidEmail(String(step1.email ?? ''))) errors.push('Step 1: Valid Email is required.')
+  if (!isBlank(step1.alternate_email) && !isValidEmail(String(step1.alternate_email ?? ''))) errors.push('Step 1: Alternate Email must be valid.')
+  if (isBlank(step1.official_mobile)) errors.push('Step 1: Official Mobile Number is required.')
+  if (!isBlank(step1.official_mobile) && !isPhoneLike(step1.official_mobile)) errors.push('Step 1: Official Mobile Number format is invalid.')
+  if (!isBlank(step1.alternate_mobile) && !isPhoneLike(step1.alternate_mobile)) errors.push('Step 1: Alternate Mobile Number format is invalid.')
   if (!isBlank(step1.telephone) && !isPhoneLike(step1.telephone)) errors.push('Step 1: Telephone format is invalid.')
+  if (isBlank(step1.primary_purpose)) errors.push('Step 1: Primary Purpose/Activity is required.')
+  if (isBlank(step1.industry_classification)) errors.push('Step 1: Industry Classification is required.')
+  if (!isBlank(step1.meeting_date_annual) && !isIsoDate(step1.meeting_date_annual)) errors.push('Step 1: Annual Meeting Date must be a valid date.')
+  if (!isBlank(step1.meeting_date_actual) && !isIsoDate(step1.meeting_date_actual)) errors.push('Step 1: Actual Annual Meeting Date must be a valid date.')
 
   if (typeof step2.amla_covered !== 'boolean') errors.push('Step 2: AMLA Covered must be yes/no.')
-  if (typeof step2.amla_reporting_entity !== 'boolean') errors.push('Step 2: AMLA Reporting Entity must be yes/no.')
+  if (typeof step2.cdd_complied !== 'boolean') errors.push('Step 2: CDD/KYC compliance must be yes/no.')
 
   if (isBlank(step3.authorized_capital_stock)) errors.push('Step 3: Authorized Capital Stock is required.')
   if (!isBlank(step3.authorized_capital_stock) && !isNonNegativeNumber(step3.authorized_capital_stock)) errors.push('Step 3: Authorized Capital Stock must be a valid number.')
@@ -308,43 +487,38 @@ const validateAllGisSteps = (): string[] => {
   if (step4.length === 0) {
     errors.push('Step 4: At least one director row is required.')
   } else {
-    step4.forEach((row, index) => {
+    const filledStep4Rows = step4.filter((row) => Object.values(row ?? {}).some((value) => !isBlank(value)))
+    if (filledStep4Rows.length === 0) {
+      errors.push('Step 4: Please provide at least one Director/Officer row.')
+    }
+    filledStep4Rows.forEach((row, index) => {
       const i = index + 1
       if (isBlank(row.name)) errors.push(`Step 4 Row ${i}: Name is required.`)
       if (isBlank(row.nationality)) errors.push(`Step 4 Row ${i}: Nationality is required.`)
-      if (isBlank(row.shareholdings)) errors.push(`Step 4 Row ${i}: Shareholdings is required.`)
-      if (!isBlank(row.shareholdings) && !isNonNegativeNumber(row.shareholdings)) errors.push(`Step 4 Row ${i}: Shareholdings must be a valid number.`)
+      if (!isBlank(row.tin) && !isTinFormat(String(row.tin))) errors.push(`Step 4 Row ${i}: TIN must be in 000-000-000-000 format.`)
     })
   }
 
-  if (step5.length === 0) {
-    errors.push('Step 5: At least one officer row is required.')
+  if (step5Rows.length === 0) {
+    errors.push('Step 5: At least one stockholder row is required.')
   } else {
-    step5.forEach((row, index) => {
+    step5Rows.forEach((row, index) => {
       const i = index + 1
-      if (isBlank(row.position)) errors.push(`Step 5 Row ${i}: Position is required.`)
-      if (isBlank(row.name)) errors.push(`Step 5 Row ${i}: Name is required.`)
+      if (isBlank(row.name_address)) errors.push(`Step 5 Row ${i}: Name/Address is required.`)
+      if (isBlank(row.nationality)) errors.push(`Step 5 Row ${i}: Nationality is required.`)
       if (!isBlank(row.tin) && !isTinFormat(String(row.tin))) errors.push(`Step 5 Row ${i}: TIN must be in 000-000-000-000 format.`)
     })
   }
 
-  if (step6.length === 0) {
+  if (step6Rows.length === 0) {
     errors.push('Step 6: At least one stockholder row is required.')
-  } else {
-    step6.forEach((row, index) => {
-      const i = index + 1
-      if (isBlank(row.stockholder_name)) errors.push(`Step 6 Row ${i}: Stockholder Name is required.`)
-      if (isBlank(row.shares)) errors.push(`Step 6 Row ${i}: Shares is required.`)
-      if (!isBlank(row.shares) && !isNonNegativeNumber(row.shares)) errors.push(`Step 6 Row ${i}: Shares must be a valid number.`)
-    })
   }
 
-  if (isBlank(step8.corporate_secretary_name)) errors.push('Step 8: Corporate Secretary Name is required.')
-  if (!isBlank(step8.corporate_secretary_tin) && !isTinFormat(String(step8.corporate_secretary_tin))) errors.push('Step 8: Corporate Secretary TIN must be in 000-000-000-000 format.')
-  if (isBlank(step9.certifier_name)) errors.push('Step 9: Certifier Name is required.')
-  if (isBlank(step9.certifier_tin)) errors.push('Step 9: Certifier TIN is required.')
-  if (!isBlank(step9.certifier_tin) && !isTinFormat(String(step9.certifier_tin))) errors.push('Step 9: Certifier TIN must be in 000-000-000-000 format.')
-  if (isBlank(step9.certifier_date)) errors.push('Step 9: Certification Date is required.')
+  if (step7Rows.length === 0) {
+    errors.push('Step 7: At least one stockholder row is required.')
+  }
+
+  if (isBlank(step9.done_date)) errors.push('Step 9: Done this date is required.')
 
   return errors
 }
@@ -354,7 +528,7 @@ const validateCurrentGisStep = (): string | null => {
 
   if (gisStep.value === 1) {
     const step = form.fields.step_1 ?? {}
-    if (!step.corporate_name || !step.sec_registration_number || !step.principal_office_address || !step.business_address || !step.email) {
+    if (!step.corporate_name || !step.sec_registration_number || !step.date_registered || !step.fiscal_year_end || !step.principal_office_address || !step.business_address || !step.email || !step.official_mobile || !step.primary_purpose || !step.industry_classification) {
       return 'Please complete all required corporate information fields.'
     }
   }
@@ -366,10 +540,17 @@ const validateCurrentGisStep = (): string | null => {
     }
   }
 
+  if (gisStep.value === 5) {
+    const step = form.fields.step_5 ?? {}
+    if (!step.total_stockholders || !step.total_assets) {
+      return 'Please complete stockholder totals before continuing.'
+    }
+  }
+
   if (gisStep.value === 9) {
     const step = form.fields.step_9 ?? {}
-    if (!step.certifier_name || !step.certifier_tin || !step.certifier_date) {
-      return 'Please complete certifier details before generating the GIS PDF.'
+    if (!step.done_date) {
+      return 'Please provide the done-this date before generating the GIS PDF.'
     }
   }
 
@@ -377,12 +558,8 @@ const validateCurrentGisStep = (): string | null => {
 }
 
 const nextGisStep = () => {
-  const error = validateCurrentGisStep()
-  if (error) {
-    toast.error(error)
-    return
-  }
-
+  // GIS validation is temporarily disabled per request.
+  void validateCurrentGisStep
   gisStep.value = Math.min(9, gisStep.value + 1)
 }
 
@@ -392,12 +569,14 @@ const previousGisStep = () => {
 
 const submit = () => {
   if (!activeType.value) return
+  // GIS validation is temporarily disabled per request.
+  void validateAllGisSteps
 
   const errors = activeType.value === 'secretary_certificate'
     ? validateSecretaryForm()
     : activeType.value === 'appointment_form_opc'
       ? validateAppointmentForm()
-      : validateAllGisSteps()
+      : []
 
   if (errors.length > 0) {
     toast.error(errors[0])
@@ -630,7 +809,7 @@ const submit = () => {
 
       <div v-else-if="activeType === 'gis_stock_corporation'" class="space-y-4">
         <div class="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]">
-          Step {{ gisStep }} of 9
+          GIS Page {{ gisStep }} of 9
         </div>
 
         <div v-if="gisStep === 1" class="grid gap-4 md:grid-cols-2">
@@ -639,139 +818,642 @@ const submit = () => {
             <Input v-model="form.fields.step_1.corporate_name" />
           </div>
           <div class="space-y-2">
+            <Label>Business / Trade Name</Label>
+            <Input v-model="form.fields.step_1.business_trade_name" />
+          </div>
+          <div class="space-y-2">
             <Label>SEC Registration Number</Label>
             <Input v-model="form.fields.step_1.sec_registration_number" />
           </div>
+          <div class="space-y-2">
+            <Label>Date Registered</Label>
+            <Input v-model="form.fields.step_1.date_registered" type="date" />
+          </div>
+          <div class="space-y-2">
+            <Label>Fiscal Year End</Label>
+            <Input v-model="form.fields.step_1.fiscal_year_end" type="date" />
+          </div>
           <div class="space-y-2 md:col-span-2">
-            <Label>Principal Office Address</Label>
+            <Label>Complete Principal Office Address</Label>
             <textarea v-model="form.fields.step_1.principal_office_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <div class="space-y-2 md:col-span-2">
-            <Label>Business Address</Label>
+            <Label>Complete Business Address</Label>
             <textarea v-model="form.fields.step_1.business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <div class="space-y-2">
-            <Label>Email</Label>
+            <Label>Official Email</Label>
             <Input v-model="form.fields.step_1.email" type="email" />
+          </div>
+          <div class="space-y-2">
+            <Label>Alternate Email</Label>
+            <Input v-model="form.fields.step_1.alternate_email" type="email" />
+          </div>
+          <div class="space-y-2">
+            <Label>Corporate TIN</Label>
+            <Input v-model="form.fields.step_1.corporate_tin" />
+          </div>
+          <div class="space-y-2">
+            <Label>Official Mobile Number</Label>
+            <Input v-model="form.fields.step_1.official_mobile" type="tel" />
+          </div>
+          <div class="space-y-2">
+            <Label>Alternate Mobile Number</Label>
+            <Input v-model="form.fields.step_1.alternate_mobile" type="tel" />
           </div>
           <div class="space-y-2">
             <Label>Telephone</Label>
             <Input v-model="form.fields.step_1.telephone" type="tel" />
           </div>
           <div class="space-y-2">
-            <Label>Annual Meeting Date</Label>
+            <Label>Website / URL Address</Label>
+            <Input v-model="form.fields.step_1.website_url" />
+          </div>
+          <div class="space-y-2">
+            <Label>Fax Number</Label>
+            <Input v-model="form.fields.step_1.fax_number" />
+          </div>
+          <div class="space-y-2">
+            <Label>Date of Annual Meeting per By-Laws</Label>
             <Input v-model="form.fields.step_1.meeting_date_annual" type="date" />
           </div>
           <div class="space-y-2">
-            <Label>Special Meeting Date</Label>
-            <Input v-model="form.fields.step_1.meeting_date_special" type="date" />
+            <Label>Actual Date of Annual Meeting</Label>
+            <Input v-model="form.fields.step_1.meeting_date_actual" type="date" />
+          </div>
+          <div class="space-y-2 md:col-span-2">
+            <Label>Primary Purpose / Activity / Industry Engaged In</Label>
+            <textarea v-model="form.fields.step_1.primary_purpose" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+          <div class="space-y-2 md:col-span-2">
+            <Label>Industry Classification</Label>
+            <Input v-model="form.fields.step_1.industry_classification" />
+          </div>
+          <div class="space-y-2">
+            <Label>Geographical Code</Label>
+            <Input v-model="form.fields.step_1.geographical_code" />
+          </div>
+          <div class="space-y-2">
+            <Label>External Auditor & Signing Partner</Label>
+            <Input v-model="form.fields.step_1.external_auditor_name" />
+          </div>
+          <div class="space-y-2">
+            <Label>SEC Accreditation No.</Label>
+            <Input v-model="form.fields.step_1.sec_accreditation_number" />
+          </div>
+          <div class="space-y-2 md:col-span-2">
+            <Label>Intercompany Affiliation - Parent Company</Label>
+            <div class="grid gap-2 md:grid-cols-3">
+              <Input v-model="form.fields.step_1.intercompany_parent_company" placeholder="Parent Company" />
+              <Input v-model="form.fields.step_1.intercompany_parent_sec_no" placeholder="SEC Reg No." />
+              <Input v-model="form.fields.step_1.intercompany_parent_address" placeholder="Address" />
+            </div>
+          </div>
+          <div class="space-y-2 md:col-span-2">
+            <Label>Intercompany Affiliation - Subsidiary/Affiliate</Label>
+            <div class="grid gap-2 md:grid-cols-3">
+              <Input v-model="form.fields.step_1.intercompany_subsidiary" placeholder="Subsidiary/Affiliate" />
+              <Input v-model="form.fields.step_1.intercompany_subsidiary_sec_no" placeholder="SEC Reg No." />
+              <Input v-model="form.fields.step_1.intercompany_subsidiary_address" placeholder="Address" />
+            </div>
           </div>
         </div>
 
         <div v-else-if="gisStep === 2" class="space-y-3">
+          <p class="text-sm font-medium">A. Is the corporation a covered person under AMLA?</p>
           <label class="flex items-center gap-2 text-sm">
             <input v-model="form.fields.step_2.amla_covered" type="checkbox">
-            AMLA Covered Person/Entity
+            Yes, covered under AMLA
           </label>
+
+          <p class="text-sm font-medium">No. 1 - Financial Institutions under BSP</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label v-for="option in amlaOptionGroups.one" :key="`one-${option.key}`" class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.one[option.key]" type="checkbox">
+              {{ option.key }}. {{ option.label }}
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 2 - Insurance Commission Regulated Entities</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label v-for="option in amlaOptionGroups.two" :key="`two-${option.key}`" class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.two[option.key]" type="checkbox">
+              {{ option.key }}. {{ option.label }}
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 3 - SEC Regulated Entities</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label v-for="option in amlaOptionGroups.three" :key="`three-${option.key}`" class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.three[option.key]" type="checkbox">
+              {{ option.key }}. {{ option.label }}
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 4 and 5 - Jewelry Dealers</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.four" type="checkbox">
+              4. Jewelry dealers in precious metals
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.five" type="checkbox">
+              5. Jewelry dealers in precious stones
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 6 - Company Service Providers</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label v-for="option in amlaOptionGroups.six" :key="`six-${option.key}`" class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.six[option.key]" type="checkbox">
+              {{ option.key }}. {{ option.label }}
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 7 - Persons who provide AMLA-covered services</p>
+          <div class="grid gap-2 md:grid-cols-2">
+            <label v-for="option in amlaOptionGroups.seven" :key="`seven-${option.key}`" class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.seven[option.key]" type="checkbox">
+              {{ option.key }}. {{ option.label }}
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">No. 8</p>
+          <div>
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_2.amla_detailed.eight" type="checkbox">
+              8. None of the above
+            </label>
+          </div>
+
+          <p class="text-sm font-medium">B. Has the corporation complied with CDD/KYC requirements since last GIS?</p>
           <label class="flex items-center gap-2 text-sm">
-            <input v-model="form.fields.step_2.amla_reporting_entity" type="checkbox">
-            AMLA Reporting Entity
+            <input v-model="form.fields.step_2.cdd_complied" type="checkbox">
+            Yes, complied with CDD/KYC
           </label>
           <div class="space-y-2">
             <Label>Other AMLA Details</Label>
             <textarea v-model="form.fields.step_2.amla_other_details" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
+          <div class="space-y-2">
+            <Label>Describe Nature of Business</Label>
+            <textarea v-model="form.fields.step_2.nature_of_business" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
         </div>
 
-        <div v-else-if="gisStep === 3" class="grid gap-4 md:grid-cols-3">
+        <div v-else-if="gisStep === 3" class="space-y-4">
           <div class="space-y-2">
-            <Label>Authorized Capital Stock</Label>
-            <Input v-model="form.fields.step_3.authorized_capital_stock" type="number" />
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
           </div>
-          <div class="space-y-2">
-            <Label>Subscribed Capital Stock</Label>
-            <Input v-model="form.fields.step_3.subscribed_capital_stock" type="number" />
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>Authorized Capital Stock (Total)</Label>
+              <Input v-model="form.fields.step_3.authorized_capital_stock" type="number" />
+            </div>
+            <div class="space-y-2">
+              <Label>Subscribed Capital Stock (Total)</Label>
+              <Input v-model="form.fields.step_3.subscribed_capital_stock" type="number" />
+            </div>
+            <div class="space-y-2">
+              <Label>Paid-Up Capital Stock (Total)</Label>
+              <Input v-model="form.fields.step_3.paid_up_capital_stock" type="number" />
+            </div>
           </div>
+
           <div class="space-y-2">
-            <Label>Paid-Up Capital Stock</Label>
-            <Input v-model="form.fields.step_3.paid_up_capital_stock" type="number" />
+            <Label>Authorized Capital Stock - Breakdown</Label>
+            <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-4">
+              <div>Type of Shares</div>
+              <div>Number of Shares</div>
+              <div>Par/Stated Value</div>
+              <div>Amount</div>
+            </div>
+            <div v-for="(row, index) in form.fields.step_3.authorized_rows" :key="`auth-${index}`" class="grid gap-2 md:grid-cols-4">
+              <Input v-model="row.type_of_shares" />
+              <Input v-model="row.number_of_shares" />
+              <Input v-model="row.par_or_stated_value" />
+              <Input v-model="row.amount" />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Subscribed Capital - Filipino</Label>
+            <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-7">
+              <div>No. of Stockholders</div>
+              <div>Type</div>
+              <div>Number of Shares</div>
+              <div>Public Shares</div>
+              <div>Par/Stated</div>
+              <div>Amount</div>
+              <div>% Ownership</div>
+            </div>
+            <div v-for="(row, index) in form.fields.step_3.subscribed_filipino_rows" :key="`sub-fil-${index}`" class="grid gap-2 md:grid-cols-7">
+              <Input v-model="row.no_of_stockholders" />
+              <Input v-model="row.type_of_shares" />
+              <Input v-model="row.number_of_shares" />
+              <Input v-model="row.public_shares" />
+              <Input v-model="row.par_or_stated_value" />
+              <Input v-model="row.amount" />
+              <Input v-model="row.ownership_percent" />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Subscribed Capital - Foreign</Label>
+            <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-7">
+              <div>No. of Stockholders</div>
+              <div>Type</div>
+              <div>Number of Shares</div>
+              <div>Public Shares</div>
+              <div>Par/Stated</div>
+              <div>Amount</div>
+              <div>% Ownership</div>
+            </div>
+            <div v-for="(row, index) in form.fields.step_3.subscribed_foreign_rows" :key="`sub-for-${index}`" class="grid gap-2 md:grid-cols-7">
+              <Input v-model="row.no_of_stockholders" />
+              <Input v-model="row.type_of_shares" />
+              <Input v-model="row.number_of_shares" />
+              <Input v-model="row.public_shares" />
+              <Input v-model="row.par_or_stated_value" />
+              <Input v-model="row.amount" />
+              <Input v-model="row.ownership_percent" />
+            </div>
+            <div class="grid gap-2 md:grid-cols-2">
+              <div class="space-y-2">
+                <Label>Percentage of Foreign Equity</Label>
+                <Input v-model="form.fields.step_3.percentage_foreign_equity" />
+              </div>
+              <div class="space-y-2">
+                <Label>Total Subscribed Capital</Label>
+                <Input v-model="form.fields.step_3.total_subscribed_capital" />
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Paid-Up Capital - Filipino</Label>
+            <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-6">
+              <div>No. of Stockholders</div>
+              <div>Type</div>
+              <div>Number of Shares</div>
+              <div>Par/Stated</div>
+              <div>Amount</div>
+              <div>% Ownership</div>
+            </div>
+            <div v-for="(row, index) in form.fields.step_3.paidup_filipino_rows" :key="`paid-fil-${index}`" class="grid gap-2 md:grid-cols-6">
+              <Input v-model="row.no_of_stockholders" />
+              <Input v-model="row.type_of_shares" />
+              <Input v-model="row.number_of_shares" />
+              <Input v-model="row.par_or_stated_value" />
+              <Input v-model="row.amount" />
+              <Input v-model="row.ownership_percent" />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <Label>Paid-Up Capital - Foreign</Label>
+            <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-6">
+              <div>No. of Stockholders</div>
+              <div>Type</div>
+              <div>Number of Shares</div>
+              <div>Par/Stated</div>
+              <div>Amount</div>
+              <div>% Ownership</div>
+            </div>
+            <div v-for="(row, index) in form.fields.step_3.paidup_foreign_rows" :key="`paid-for-${index}`" class="grid gap-2 md:grid-cols-6">
+              <Input v-model="row.no_of_stockholders" />
+              <Input v-model="row.type_of_shares" />
+              <Input v-model="row.number_of_shares" />
+              <Input v-model="row.par_or_stated_value" />
+              <Input v-model="row.amount" />
+              <Input v-model="row.ownership_percent" />
+            </div>
+            <div class="space-y-2">
+              <Label>Total Paid-Up Capital</Label>
+              <Input v-model="form.fields.step_3.total_paid_up_capital" />
+            </div>
           </div>
         </div>
 
         <div v-else-if="gisStep === 4" class="space-y-2">
-          <Label>Directors</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-3">
-            <div>Name</div>
+          <div class="space-y-2">
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
+          </div>
+          <Label>Directors / Officers (Page 4 Layout)</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-9">
+            <div>Name / Current Residential Address</div>
             <div>Nationality</div>
-            <div>Shareholdings</div>
-          </div>
-          <div v-for="(row, index) in form.fields.step_4" :key="`dir-${index}`" class="grid gap-2 md:grid-cols-3">
-            <Input v-model="row.name" />
-            <Input v-model="row.nationality" />
-            <Input v-model="row.shareholdings" type="number" />
-          </div>
-        </div>
-
-        <div v-else-if="gisStep === 5" class="space-y-2">
-          <Label>Officers</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-3">
-            <div>Position</div>
-            <div>Name</div>
+            <div>INC'R</div>
+            <div>Board</div>
+            <div>Gender</div>
+            <div>Stockholder</div>
+            <div>Officer</div>
+            <div>Exec. Comm.</div>
             <div>TIN</div>
           </div>
-          <div v-for="(row, index) in form.fields.step_5" :key="`off-${index}`" class="grid gap-2 md:grid-cols-3">
-            <Input v-model="row.position" />
-            <Input v-model="row.name" />
+          <div v-for="(row, index) in form.fields.step_4" :key="`dir-${index}`" class="grid gap-2 md:grid-cols-9">
+            <Input v-model="row.name" :placeholder="`${index + 1}.`" />
+            <Input v-model="row.nationality" />
+            <Input v-model="row.incorporator" placeholder="Y/N" />
+            <Input v-model="row.board" placeholder="C/M/I" />
+            <Input v-model="row.gender" placeholder="F/M" />
+            <Input v-model="row.stockholder" placeholder="Y/N" />
+            <Input v-model="row.officer" placeholder="Position" />
+            <Input v-model="row.exec_comm" placeholder="C/A/N" />
             <Input v-model="row.tin" />
           </div>
         </div>
 
-        <div v-else-if="gisStep === 6" class="space-y-2">
-          <Label>Stockholders</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-2">
-            <div>Stockholder Name</div>
-            <div>Shares</div>
+        <div v-else-if="gisStep === 5" class="space-y-3">
+          <div class="space-y-2">
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
           </div>
-          <div v-for="(row, index) in form.fields.step_6" :key="`stk-${index}`" class="grid gap-2 md:grid-cols-2">
-            <Input v-model="row.stockholder_name" />
-            <Input v-model="row.shares" type="number" />
+          <div class="grid gap-2 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>Total Number of Stockholders</Label>
+              <Input v-model="form.fields.step_5.total_stockholders" />
+            </div>
+            <div class="space-y-2">
+              <Label>No. of Stockholders with 100+ Shares</Label>
+              <Input v-model="form.fields.step_5.stockholders_with_100_plus" />
+            </div>
+            <div class="space-y-2">
+              <Label>Total Assets (Latest Audited FS)</Label>
+              <Input v-model="form.fields.step_5.total_assets" />
+            </div>
+          </div>
+          <Label>Stockholder Information (1-7)</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
+            <div>Name / Address</div>
+            <div>Nationality</div>
+            <div>Type of Shares</div>
+            <div>No. of Shares</div>
+            <div>Amount Subscribed (PhP)</div>
+            <div>% Ownership</div>
+            <div>Amount Paid (PhP)</div>
+            <div>TIN</div>
+          </div>
+          <div v-for="(row, index) in form.fields.step_5.rows" :key="`stk5-${index}`" class="grid gap-2 md:grid-cols-8">
+            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+            <Input v-model="row.nationality" />
+            <Input v-model="row.share_type" />
+            <Input v-model="row.number_of_shares" />
+            <Input v-model="row.amount_subscribed" />
+            <Input v-model="row.percent_ownership" />
+            <Input v-model="row.amount_paid" />
+            <Input v-model="row.tin" />
           </div>
         </div>
 
-        <div v-else-if="gisStep === 7" class="grid gap-4 md:grid-cols-2">
+        <div v-else-if="gisStep === 6" class="space-y-3">
           <div class="space-y-2">
-            <Label>External Auditor Name</Label>
-            <Input v-model="form.fields.step_7.external_auditor_name" />
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
           </div>
-          <div class="space-y-2">
-            <Label>External Auditor TIN (000-000-000-000)</Label>
-            <Input v-model="form.fields.step_7.external_auditor_tin" />
+          <div class="grid gap-2 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>Total Number of Stockholders</Label>
+              <Input v-model="form.fields.step_5.total_stockholders" />
+            </div>
+            <div class="space-y-2">
+              <Label>No. of Stockholders with 100+ Shares</Label>
+              <Input v-model="form.fields.step_5.stockholders_with_100_plus" />
+            </div>
+            <div class="space-y-2">
+              <Label>Total Assets (Latest Audited FS)</Label>
+              <Input v-model="form.fields.step_5.total_assets" />
+            </div>
+          </div>
+          <Label>Stockholder Information (8-14)</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
+            <div>Name / Address</div>
+            <div>Nationality</div>
+            <div>Type of Shares</div>
+            <div>No. of Shares</div>
+            <div>Amount Subscribed (PhP)</div>
+            <div>% Ownership</div>
+            <div>Amount Paid (PhP)</div>
+            <div>TIN</div>
+          </div>
+          <div v-for="(row, index) in form.fields.step_6.rows" :key="`stk6-${index}`" class="grid gap-2 md:grid-cols-8">
+            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+            <Input v-model="row.nationality" />
+            <Input v-model="row.share_type" />
+            <Input v-model="row.number_of_shares" />
+            <Input v-model="row.amount_subscribed" />
+            <Input v-model="row.percent_ownership" />
+            <Input v-model="row.amount_paid" />
+            <Input v-model="row.tin" />
           </div>
         </div>
 
-        <div v-else-if="gisStep === 8" class="grid gap-4 md:grid-cols-2">
+        <div v-else-if="gisStep === 7" class="space-y-3">
           <div class="space-y-2">
-            <Label>Corporate Secretary Name</Label>
-            <Input v-model="form.fields.step_8.corporate_secretary_name" />
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
+          </div>
+          <div class="grid gap-2 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>Total Number of Stockholders</Label>
+              <Input v-model="form.fields.step_5.total_stockholders" />
+            </div>
+            <div class="space-y-2">
+              <Label>No. of Stockholders with 100+ Shares</Label>
+              <Input v-model="form.fields.step_5.stockholders_with_100_plus" />
+            </div>
+            <div class="space-y-2">
+              <Label>Total Assets (Latest Audited FS)</Label>
+              <Input v-model="form.fields.step_5.total_assets" />
+            </div>
+          </div>
+          <Label>Stockholder Information (15-21 / Others)</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
+            <div>Name / Address</div>
+            <div>Nationality</div>
+            <div>Type of Shares</div>
+            <div>No. of Shares</div>
+            <div>Amount Subscribed (PhP)</div>
+            <div>% Ownership</div>
+            <div>Amount Paid (PhP)</div>
+            <div>TIN</div>
+          </div>
+          <div v-for="(row, index) in form.fields.step_7.rows" :key="`stk7-${index}`" class="grid gap-2 md:grid-cols-8">
+            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+            <Input v-model="row.nationality" />
+            <Input v-model="row.share_type" />
+            <Input v-model="row.number_of_shares" />
+            <Input v-model="row.amount_subscribed" />
+            <Input v-model="row.percent_ownership" />
+            <Input v-model="row.amount_paid" />
+            <Input v-model="row.tin" />
           </div>
           <div class="space-y-2">
-            <Label>Corporate Secretary TIN (000-000-000-000)</Label>
-            <Input v-model="form.fields.step_8.corporate_secretary_tin" />
+            <Label>Others (remaining stockholders count)</Label>
+            <Input v-model="form.fields.step_7.others_count" />
           </div>
         </div>
 
-        <div v-else class="grid gap-4 md:grid-cols-3">
+        <div v-else-if="gisStep === 8" class="space-y-3">
           <div class="space-y-2">
-            <Label>Certifier Name</Label>
-            <Input v-model="form.fields.step_9.certifier_name" />
+            <Label>Corporate Name (from Page 1)</Label>
+            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
+          </div>
+
+          <Label>1. Investment of Corporate Funds in Another Corporation</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-3">
+            <div>Item</div>
+            <div>Amount (PhP)</div>
+            <div>Date of Board Resolution</div>
+          </div>
+          <div class="grid gap-2 md:grid-cols-3">
+            <Label>1.1 Stocks</Label>
+            <Input v-model="form.fields.step_8.investment_stocks" />
+            <Input v-model="form.fields.step_8.investment_stocks_board_resolution_date" type="date" />
+
+            <Label>1.2 Bonds/Commercial Paper</Label>
+            <Input v-model="form.fields.step_8.investment_bonds" />
+            <Input v-model="form.fields.step_8.investment_bonds_board_resolution_date" type="date" />
+
+            <Label>1.3 Loans/Credits/Advances</Label>
+            <Input v-model="form.fields.step_8.investment_loans_advances" />
+            <Input v-model="form.fields.step_8.investment_loans_advances_board_resolution_date" type="date" />
+
+            <Label>1.4 Government Treasury Bills</Label>
+            <Input v-model="form.fields.step_8.investment_treasury_bills" />
+            <Input v-model="form.fields.step_8.investment_treasury_bills_board_resolution_date" type="date" />
+
+            <Label>1.5 Others</Label>
+            <Input v-model="form.fields.step_8.investment_others" />
+            <Input v-model="form.fields.step_8.investment_others_board_resolution_date" type="date" />
           </div>
           <div class="space-y-2">
-            <Label>Certifier TIN (000-000-000-000)</Label>
-            <Input v-model="form.fields.step_9.certifier_tin" />
+            <Label>Fallback Date of Board Resolution (if single date only)</Label>
+            <Input v-model="form.fields.step_8.investment_board_resolution_date" type="date" />
+          </div>
+
+          <Label>2. Investment of Corporate Funds in Activities under Secondary Purpose</Label>
+          <div class="grid gap-2 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>Activity / Specification</Label>
+              <Input v-model="form.fields.step_8.secondary_purpose_activity" />
+            </div>
+            <div class="space-y-2">
+              <Label>Date of Board Resolution</Label>
+              <Input v-model="form.fields.step_8.secondary_purpose_board_resolution_date" type="date" />
+            </div>
+            <div class="space-y-2">
+              <Label>Date of Stockholders Ratification</Label>
+              <Input v-model="form.fields.step_8.secondary_purpose_ratification_date" type="date" />
+            </div>
+          </div>
+
+          <Label>3 & 4. Treasury Shares / Retained Earnings</Label>
+          <div class="grid gap-2 md:grid-cols-3">
+            <div class="space-y-2">
+              <Label>3. Treasury Shares - No. of Shares</Label>
+              <Input v-model="form.fields.step_8.treasury_shares_count" />
+            </div>
+            <div class="space-y-2">
+              <Label>3. Treasury Shares - % as to Total Shares Issued</Label>
+              <Input v-model="form.fields.step_8.treasury_shares_percent" />
+            </div>
+            <div class="space-y-2">
+              <Label>4. Unrestricted/Unappropriated Retained Earnings</Label>
+              <Input v-model="form.fields.step_8.retained_earnings" />
+            </div>
+          </div>
+
+          <Label>5. Dividends Declared During Immediately Preceding Year</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-3">
+            <div>Type of Dividend</div>
+            <div>Amount (PhP)</div>
+            <div>Date Declared</div>
+          </div>
+          <div class="grid gap-2 md:grid-cols-3">
+            <Label>5.1 Cash</Label>
+            <Input v-model="form.fields.step_8.dividend_cash_amount" />
+            <Input v-model="form.fields.step_8.dividend_cash_date" type="date" />
+
+            <Label>5.2 Stock</Label>
+            <Input v-model="form.fields.step_8.dividend_stock_amount" />
+            <Input v-model="form.fields.step_8.dividend_stock_date" type="date" />
+
+            <Label>5.3 Property</Label>
+            <Input v-model="form.fields.step_8.dividend_property_amount" />
+            <Input v-model="form.fields.step_8.dividend_property_date" type="date" />
           </div>
           <div class="space-y-2">
-            <Label>Certification Date</Label>
-            <Input v-model="form.fields.step_9.certifier_date" type="date" />
+            <Label>5. Total Dividends Amount (PhP)</Label>
+            <Input v-model="form.fields.step_8.dividend_total_amount" />
+          </div>
+
+          <Label>6. Additional Shares Issued During the Period</Label>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-3">
+            <div>Date</div>
+            <div>No. of Shares</div>
+            <div>Amount</div>
+          </div>
+          <div
+            v-for="(row, index) in form.fields.step_8.additional_shares"
+            :key="`add-shares-${index}`"
+            class="grid gap-2 md:grid-cols-3"
+          >
+            <Input v-model="row.date" type="date" />
+            <Input v-model="row.no_of_shares" />
+            <Input v-model="row.amount" />
+          </div>
+
+          <Label>Secondary License/Registration with SEC and Other Gov't Agency</Label>
+          <div class="grid gap-2 md:grid-cols-2">
+            <div class="space-y-2">
+              <Label>Name of Agency</Label>
+              <Input v-model="form.fields.step_8.agency_name" />
+            </div>
+            <div class="space-y-2">
+              <Label>Type of License/Registration</Label>
+              <Input v-model="form.fields.step_8.secondary_license_type" />
+            </div>
+            <div class="space-y-2">
+              <Label>Date Issued</Label>
+              <Input v-model="form.fields.step_8.secondary_license_date_issued" type="date" />
+            </div>
+            <div class="space-y-2">
+              <Label>Date Started Operations</Label>
+              <Input v-model="form.fields.step_8.secondary_license_date_started" type="date" />
+            </div>
+          </div>
+          <div class="grid gap-2 md:grid-cols-3">
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_8.secondary_license_sec" type="checkbox">
+              SEC
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_8.secondary_license_bsp" type="checkbox">
+              BSP
+            </label>
+            <label class="flex items-center gap-2 text-sm">
+              <input v-model="form.fields.step_8.secondary_license_ic" type="checkbox">
+              IC
+            </label>
+          </div>
+
+          <Label>Total Annual Compensation / Officers / Employees / Manpower</Label>
+          <div class="grid gap-2 md:grid-cols-4">
+            <Input v-model="form.fields.step_8.total_annual_compensation_directors" placeholder="Total Annual Compensation of Directors" />
+            <Input v-model="form.fields.step_8.total_no_officers" placeholder="Total No. of Officers" />
+            <Input v-model="form.fields.step_8.total_rank_file_employees" placeholder="Total No. of Rank & File Employees" />
+            <Input v-model="form.fields.step_8.total_manpower_complement" placeholder="Total Manpower Complement" />
+          </div>
+        </div>
+
+        <div v-else class="grid gap-4 md:grid-cols-2">
+          <div class="space-y-2">
+            <Label>Done This Date</Label>
+            <Input v-model="form.fields.step_9.done_date" type="date" />
           </div>
         </div>
 
@@ -786,7 +1468,7 @@ const submit = () => {
               :disabled="form.processing"
               @click="nextGisStep"
             >
-              Next Step
+              Next Page
             </Button>
             <Button
               v-else
