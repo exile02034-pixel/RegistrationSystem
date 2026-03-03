@@ -19,8 +19,21 @@
         .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 8px; }
         .check-item { display: flex; align-items: center; gap: 6px; }
         .box { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; text-align: center; line-height: 11px; font-size: 9px; }
+        .box.tight { width: 10px; height: 10px; line-height: 10px; font-size: 8px; }
         .line { border-bottom: 1px solid #000; min-height: 16px; display: inline-block; min-width: 160px; padding: 0 4px; }
         .indent { margin-left: 14px; }
+        .gis-amla { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        .gis-amla td, .gis-amla th { border: 1px solid #000; padding: 3px; vertical-align: top; }
+        .gis-amla .num { width: 5%; text-align: center; font-weight: 700; }
+        .gis-amla .detail { width: 95%; }
+        .gis-amla .option-line { margin: 0 0 2px; line-height: 1.25; }
+        .gis-amla .option-line:last-child { margin-bottom: 0; }
+        .gis-amla .option-line .box { margin-right: 4px; vertical-align: middle; }
+        .gis-amla .option-key { display: inline-block; width: 14px; font-weight: 700; }
+        .cap-table th, .cap-table td { padding: 3px; font-size: 8.5px; }
+        .cap-label { font-weight: 700; text-transform: uppercase; background: #f3f3f3; }
+        .cap-sub { font-weight: 700; text-align: left; }
+        .num { text-align: right; }
     </style>
 </head>
 <body>
@@ -36,10 +49,40 @@
     $step9 = $fields['step_9'] ?? [];
 
     $amlaTypes = is_array($step2['amla_types'] ?? null) ? $step2['amla_types'] : [];
+    $amlaDetailed = is_array($step2['amla_detailed'] ?? null) ? $step2['amla_detailed'] : [];
     $stockRows5 = is_array($step5['rows'] ?? null) ? $step5['rows'] : [];
     $stockRows6 = is_array($step6['rows'] ?? null) ? $step6['rows'] : [];
     $stockRows7 = is_array($step7['rows'] ?? null) ? $step7['rows'] : [];
     $additionalShares = is_array($step8['additional_shares'] ?? null) ? $step8['additional_shares'] : [];
+    $authorizedRows = array_values(is_array($step3['authorized_rows'] ?? null) ? $step3['authorized_rows'] : []);
+    $subscribedFilipinoRows = array_values(is_array($step3['subscribed_filipino_rows'] ?? null) ? $step3['subscribed_filipino_rows'] : []);
+    $subscribedForeignRows = array_values(is_array($step3['subscribed_foreign_rows'] ?? null) ? $step3['subscribed_foreign_rows'] : []);
+    $paidupFilipinoRows = array_values(is_array($step3['paidup_filipino_rows'] ?? null) ? $step3['paidup_filipino_rows'] : []);
+    $paidupForeignRows = array_values(is_array($step3['paidup_foreign_rows'] ?? null) ? $step3['paidup_foreign_rows'] : []);
+
+    $isChecked = static function ($value): bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+        if (is_string($value)) {
+            return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on', 'x'], true);
+        }
+
+        return false;
+    };
+
+    $amla = static function ($group, $key = null) use ($amlaDetailed, $isChecked): bool {
+        $value = $key === null ? ($amlaDetailed[$group] ?? false) : ($amlaDetailed[$group][$key] ?? false);
+
+        return $isChecked($value);
+    };
+
+    $legacyTypeChecked = static function (string $label) use ($amlaTypes): bool {
+        return in_array($label, $amlaTypes, true);
+    };
 @endphp
 
 <div class="page">
@@ -123,44 +166,94 @@
         <span class="box">{{ ($step2['amla_covered'] ?? false) ? 'X' : '' }}</span>
         Covered person under AMLA
     </div>
-    <div class="small" style="margin-bottom: 4px;">Please check the appropriate box:</div>
+    <div class="small" style="margin-bottom: 4px;">Please check all applicable boxes:</div>
 
-    <table class="small">
+    <table class="gis-amla small">
         <tr>
-            <th colspan="3" style="width:50%; text-align:left;">No. 1 - AMLA Categories</th>
-            <th colspan="3" style="width:50%; text-align:left;">Continuation</th>
+            <td class="num">1</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('one', 'a') || $legacyTypeChecked('Banks and Other Financial Institutions under BSP')) ? 'X' : '' }}</span> <span class="option-key">a.</span> Banks</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'b') ? 'X' : '' }}</span> <span class="option-key">b.</span> Offshore Banking Units</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'c') ? 'X' : '' }}</span> <span class="option-key">c.</span> Quasi-Banks</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'd') ? 'X' : '' }}</span> <span class="option-key">d.</span> Trust Entities</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'e') ? 'X' : '' }}</span> <span class="option-key">e.</span> Non-Stock Savings and Loan Associations</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'f') ? 'X' : '' }}</span> <span class="option-key">f.</span> Pawnshops</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'g') ? 'X' : '' }}</span> <span class="option-key">g.</span> Foreign Exchange Dealers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'h') ? 'X' : '' }}</span> <span class="option-key">h.</span> Money Changers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'i') ? 'X' : '' }}</span> <span class="option-key">i.</span> Remittance Agents</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'j') ? 'X' : '' }}</span> <span class="option-key">j.</span> Electronic Money Issuers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('one', 'k') ? 'X' : '' }}</span> <span class="option-key">k.</span> Financial institutions under BSP supervision/regulation, including subsidiaries/affiliates</div>
+            </td>
         </tr>
         <tr>
-            <td style="width:5%;">1.</td>
-            <td style="width:7%; text-align:center;"><span class="box">{{ in_array('Banks and Other Financial Institutions under BSP', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td style="width:38%;">Banks / OBU / Quasi-Banks / Trust Entities / NSSLAs / Pawnshops / FX Dealers / Money Changers / Remittance / EMI / BSP-supervised entities</td>
-            <td style="width:5%;">5.</td>
-            <td style="width:7%; text-align:center;"><span class="box">{{ in_array('Company Service Providers', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td style="width:38%;">Company service providers acting as formation agent / nominee director / registered office / nominee shareholder provider</td>
+            <td class="num">2</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('two', 'a') || $legacyTypeChecked('Insurance Commission Regulated Entities')) ? 'X' : '' }}</span> <span class="option-key">a.</span> Insurance Companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'b') ? 'X' : '' }}</span> <span class="option-key">b.</span> Insurance Agents</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'c') ? 'X' : '' }}</span> <span class="option-key">c.</span> Insurance Brokers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'd') ? 'X' : '' }}</span> <span class="option-key">d.</span> Professional Reinsurers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'e') ? 'X' : '' }}</span> <span class="option-key">e.</span> Reinsurance Brokers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'f') ? 'X' : '' }}</span> <span class="option-key">f.</span> Holding Companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'g') ? 'X' : '' }}</span> <span class="option-key">g.</span> Holding Company Systems</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'h') ? 'X' : '' }}</span> <span class="option-key">h.</span> Pre-need Companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'i') ? 'X' : '' }}</span> <span class="option-key">i.</span> Mutual Benefit Association</div>
+                <div class="option-line"><span class="box tight">{{ $amla('two', 'j') ? 'X' : '' }}</span> <span class="option-key">j.</span> All other entities supervised and/or regulated by IC</div>
+            </td>
         </tr>
         <tr>
-            <td>2.</td>
-            <td style="text-align:center;"><span class="box">{{ in_array('Insurance Commission Regulated Entities', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td>Insurance companies/agents/brokers/reinsurers/holding company systems/pre-need/mutual benefit associations and all IC-regulated entities</td>
-            <td>6.</td>
-            <td style="text-align:center;"><span class="box">{{ in_array('Persons Providing AMLA-Covered Services', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td>Persons providing services: managing client money/assets, bank/securities accounts, organizing company contributions, creating/operating juridical persons</td>
+            <td class="num">3</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('three', 'a') || $legacyTypeChecked('SEC Regulated Securities Entities')) ? 'X' : '' }}</span> <span class="option-key">a.</span> Securities Dealers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'b') ? 'X' : '' }}</span> <span class="option-key">b.</span> Securities Brokers</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'c') ? 'X' : '' }}</span> <span class="option-key">c.</span> Securities Salesman</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'd') ? 'X' : '' }}</span> <span class="option-key">d.</span> Investment Houses</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'e') ? 'X' : '' }}</span> <span class="option-key">e.</span> Investment Agents and Consultants</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'f') ? 'X' : '' }}</span> <span class="option-key">f.</span> Trading Advisors</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'g') ? 'X' : '' }}</span> <span class="option-key">g.</span> Other entities managing securities or similar services</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'h') ? 'X' : '' }}</span> <span class="option-key">h.</span> Mutual Funds / Open-end Investment Companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'i') ? 'X' : '' }}</span> <span class="option-key">i.</span> Close-end Investment Companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'j') ? 'X' : '' }}</span> <span class="option-key">j.</span> Common Trust Funds / Issuers and similar entities</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'k') ? 'X' : '' }}</span> <span class="option-key">k.</span> Transfer Companies and similar entities</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'l') ? 'X' : '' }}</span> <span class="option-key">l.</span> Entities dealing in currency/commodities/financial derivatives</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'm') ? 'X' : '' }}</span> <span class="option-key">m.</span> Entities dealing in valuable objects</div>
+                <div class="option-line"><span class="box tight">{{ $amla('three', 'n') ? 'X' : '' }}</span> <span class="option-key">n.</span> Entities dealing in cash substitutes and similar monetary instruments regulated by SEC</div>
+            </td>
         </tr>
         <tr>
-            <td>3.</td>
-            <td style="text-align:center;"><span class="box">{{ in_array('SEC Regulated Securities Entities', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td>Securities dealers/brokers/salesman/investment houses/agents/trading advisors/mutual funds/close-end funds/trust funds/transfer companies/SEC-regulated entities</td>
-            <td>7.</td>
-            <td style="text-align:center;"><span class="box">{{ in_array('None of the above', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td>None of the above</td>
+            <td class="num">4</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('four') || $legacyTypeChecked('Jewelry Dealers (Precious Metals/Stones)')) ? 'X' : '' }}</span> Jewelry dealers in precious metals</div>
+            </td>
         </tr>
         <tr>
-            <td>4.</td>
-            <td style="text-align:center;"><span class="box">{{ in_array('Jewelry Dealers (Precious Metals/Stones)', $amlaTypes, true) ? 'X' : '' }}</span></td>
-            <td>Jewelry dealers in precious metals and/or precious stones</td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td class="num">5</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('five') || $legacyTypeChecked('Jewelry Dealers (Precious Metals/Stones)')) ? 'X' : '' }}</span> Jewelry dealers in precious stones</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('six', 'a') || $legacyTypeChecked('Company Service Providers')) ? 'X' : '' }}</span> <span class="option-key">a.</span> Acting as a formation agent of juridical persons</div>
+                <div class="option-line"><span class="box tight">{{ $amla('six', 'b') ? 'X' : '' }}</span> <span class="option-key">b.</span> Acting/arranging another as director/corporate secretary/partner/similar position</div>
+                <div class="option-line"><span class="box tight">{{ $amla('six', 'c') ? 'X' : '' }}</span> <span class="option-key">c.</span> Providing registered office/business/correspondence/administrative address</div>
+                <div class="option-line"><span class="box tight">{{ $amla('six', 'd') ? 'X' : '' }}</span> <span class="option-key">d.</span> Acting/arranging another as nominee shareholder</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('seven', 'a') || $legacyTypeChecked('Persons Providing AMLA-Covered Services')) ? 'X' : '' }}</span> <span class="option-key">a.</span> Managing client money, securities or other assets</div>
+                <div class="option-line"><span class="box tight">{{ $amla('seven', 'b') ? 'X' : '' }}</span> <span class="option-key">b.</span> Management of bank, savings or securities accounts</div>
+                <div class="option-line"><span class="box tight">{{ $amla('seven', 'c') ? 'X' : '' }}</span> <span class="option-key">c.</span> Organization of contributions for creation/operation/management of companies</div>
+                <div class="option-line"><span class="box tight">{{ $amla('seven', 'd') ? 'X' : '' }}</span> <span class="option-key">d.</span> Creation/operation/management of juridical persons and buying/selling business entities</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="detail">
+                <div class="option-line"><span class="box tight">{{ ($amla('eight') || $legacyTypeChecked('None of the above')) ? 'X' : '' }}</span> None of the above</div>
+            </td>
         </tr>
     </table>
 
@@ -184,12 +277,154 @@
     <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
 
     <div class="section-title">Capital Structure</div>
-    <table>
-        <tr><th>AUTHORIZED CAPITAL STOCK</th><th>SUBSCRIBED CAPITAL STOCK</th><th>PAID-UP CAPITAL STOCK</th></tr>
+    <table class="cap-table">
         <tr>
-            <td>{{ $step3['authorized_capital_stock'] ?? '' }}</td>
-            <td>{{ $step3['subscribed_capital_stock'] ?? '' }}</td>
-            <td>{{ $step3['paid_up_capital_stock'] ?? '' }}</td>
+            <th style="width:22%">CORPORATE NAME:</th>
+            <td colspan="7">{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+        <tr>
+            <th class="cap-label">AUTHORIZED CAPITAL STOCK</th>
+            <th class="cap-label">SUBSCRIBED CAPITAL STOCK</th>
+            <th class="cap-label">PAID-UP CAPITAL STOCK</th>
+            <td colspan="5"></td>
+        </tr>
+        <tr>
+            <td class="num">{{ $step3['authorized_capital_stock'] ?? '' }}</td>
+            <td class="num">{{ $step3['subscribed_capital_stock'] ?? '' }}</td>
+            <td class="num">{{ $step3['paid_up_capital_stock'] ?? '' }}</td>
+            <td colspan="5"></td>
+        </tr>
+    </table>
+
+    <table class="cap-table">
+        <tr>
+            <th colspan="8" class="cap-label">AUTHORIZED CAPITAL STOCK</th>
+        </tr>
+        <tr>
+            <th style="width:21%">TYPE OF SHARES *</th>
+            <th style="width:13%">NUMBER OF SHARES</th>
+            <th style="width:16%">PAR/STATED VALUE</th>
+            <th style="width:18%">AMOUNT (PhP)</th>
+            <th colspan="4"></th>
+        </tr>
+        @for($i = 0; $i < 3; $i++)
+            @php($row = $authorizedRows[$i] ?? [])
+            <tr>
+                <td>{{ $row['type_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['par_or_stated_value'] ?? '' }}</td>
+                <td class="num">{{ $row['amount'] ?? '' }}</td>
+                <td colspan="4"></td>
+            </tr>
+        @endfor
+    </table>
+
+    <table class="cap-table">
+        <tr>
+            <th colspan="7" class="cap-label">SUBSCRIBED CAPITAL - FILIPINO</th>
+        </tr>
+        <tr>
+            <th style="width:12%">NO. OF STOCKHOLDERS</th>
+            <th style="width:17%">TYPE OF SHARES *</th>
+            <th style="width:12%">NUMBER OF SHARES</th>
+            <th style="width:15%">NO. OF SHARES IN PUBLIC **</th>
+            <th style="width:14%">PAR/STATED VALUE</th>
+            <th style="width:16%">AMOUNT (PhP)</th>
+            <th style="width:14%">% OF OWNERSHIP</th>
+        </tr>
+        @for($i = 0; $i < 2; $i++)
+            @php($row = $subscribedFilipinoRows[$i] ?? [])
+            <tr>
+                <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
+                <td>{{ $row['type_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['public_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['par_or_stated_value'] ?? '' }}</td>
+                <td class="num">{{ $row['amount'] ?? '' }}</td>
+                <td class="num">{{ $row['ownership_percent'] ?? '' }}</td>
+            </tr>
+        @endfor
+        <tr>
+            <th class="cap-sub" colspan="2">SUBSCRIBED CAPITAL - FOREIGN (INDICATE BY NATIONALITY)</th>
+            <th colspan="5"></th>
+        </tr>
+        <tr>
+            <th>NO. OF STOCKHOLDERS</th>
+            <th>TYPE OF SHARES *</th>
+            <th>NUMBER OF SHARES</th>
+            <th>NO. OF SHARES IN PUBLIC **</th>
+            <th>PAR/STATED VALUE</th>
+            <th>AMOUNT (PhP)</th>
+            <th>% OF OWNERSHIP</th>
+        </tr>
+        @for($i = 0; $i < 2; $i++)
+            @php($row = $subscribedForeignRows[$i] ?? [])
+            <tr>
+                <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
+                <td>{{ $row['type_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['public_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['par_or_stated_value'] ?? '' }}</td>
+                <td class="num">{{ $row['amount'] ?? '' }}</td>
+                <td class="num">{{ $row['ownership_percent'] ?? '' }}</td>
+            </tr>
+        @endfor
+        <tr>
+            <th colspan="2" class="cap-sub">PERCENTAGE OF FOREIGN EQUITY:</th>
+            <td class="num">{{ $step3['percentage_foreign_equity'] ?? '' }}</td>
+            <th colspan="2" class="cap-sub">TOTAL SUBSCRIBED CAPITAL (PhP)</th>
+            <td class="num" colspan="2">{{ $step3['total_subscribed_capital'] ?? '' }}</td>
+        </tr>
+    </table>
+
+    <table class="cap-table">
+        <tr>
+            <th colspan="6" class="cap-label">PAID-UP CAPITAL - FILIPINO</th>
+        </tr>
+        <tr>
+            <th style="width:14%">NO. OF STOCKHOLDERS</th>
+            <th style="width:20%">TYPE OF SHARES *</th>
+            <th style="width:14%">NUMBER OF SHARES</th>
+            <th style="width:16%">PAR/STATED VALUE</th>
+            <th style="width:20%">AMOUNT (PhP)</th>
+            <th style="width:16%">% OF OWNERSHIP</th>
+        </tr>
+        @for($i = 0; $i < 2; $i++)
+            @php($row = $paidupFilipinoRows[$i] ?? [])
+            <tr>
+                <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
+                <td>{{ $row['type_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['par_or_stated_value'] ?? '' }}</td>
+                <td class="num">{{ $row['amount'] ?? '' }}</td>
+                <td class="num">{{ $row['ownership_percent'] ?? '' }}</td>
+            </tr>
+        @endfor
+        <tr>
+            <th colspan="6" class="cap-sub">PAID-UP CAPITAL - FOREIGN (INDICATE BY NATIONALITY)</th>
+        </tr>
+        <tr>
+            <th>NO. OF STOCKHOLDERS</th>
+            <th>TYPE OF SHARES *</th>
+            <th>NUMBER OF SHARES</th>
+            <th>PAR/STATED VALUE</th>
+            <th>AMOUNT (PhP)</th>
+            <th>% OF OWNERSHIP</th>
+        </tr>
+        @for($i = 0; $i < 2; $i++)
+            @php($row = $paidupForeignRows[$i] ?? [])
+            <tr>
+                <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
+                <td>{{ $row['type_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
+                <td class="num">{{ $row['par_or_stated_value'] ?? '' }}</td>
+                <td class="num">{{ $row['amount'] ?? '' }}</td>
+                <td class="num">{{ $row['ownership_percent'] ?? '' }}</td>
+            </tr>
+        @endfor
+        <tr>
+            <th colspan="4" class="cap-sub">TOTAL PAID-UP CAPITAL (PhP)</th>
+            <td class="num" colspan="2">{{ $step3['total_paid_up_capital'] ?? '' }}</td>
         </tr>
     </table>
 
@@ -302,6 +537,10 @@
             </tr>
         @endforeach
     </table>
+    <table>
+        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
+        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
+    </table>
 
     <div class="page-no">Page 6 of 9</div>
 </div>
@@ -335,6 +574,10 @@
                 <td>{{ $row['tin'] ?? '' }}</td>
             </tr>
         @endforeach
+    </table>
+    <table>
+        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
+        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
     </table>
     <table>
         <tr><th style="width:40%">OTHERS (remaining stockholders count)</th><td>{{ $step7['others_count'] ?? '' }}</td></tr>
