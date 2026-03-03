@@ -89,42 +89,49 @@ const maxConfiguredIndex = (prefix: 'incorporator'): number => {
   }, 0)
 }
 
-const maxIncorporatorCount = computed(() => Math.min(MAX_REGULAR_CORP_ENTRIES, Math.max(MIN_REGULAR_CORP_ENTRIES, maxConfiguredIndex('incorporator'))))
+const maxIncorporatorCount = computed(() => Math.min(MAX_REGULAR_CORP_ENTRIES, maxConfiguredIndex('incorporator')))
 
-const highestFilledIndex = (prefix: 'incorporator'): number => {
-  return props.section.fields.reduce((max, field) => {
-    const index = parseIndexedField(field.name, prefix)
+const configuredIncorporatorIndexes = computed(() => {
+  return Array.from({ length: maxIncorporatorCount.value }, (_, index) => index + 1)
+})
+
+const filledIncorporatorIndexes = computed(() => {
+  const indexes = new Set<number>()
+
+  props.section.fields.forEach((field) => {
+    const index = parseIndexedField(field.name, 'incorporator')
 
     if (index === null) {
-      return max
+      return
     }
 
     const value = String(props.modelValue[field.name] ?? '').trim()
 
-    if (value === '') {
-      return max
+    if (value !== '') {
+      indexes.add(index)
     }
+  })
 
-    return Math.max(max, index)
-  }, 0)
-}
+  return Array.from(indexes).sort((a, b) => a - b)
+})
 
-const visibleIncorporatorCount = ref(MIN_REGULAR_CORP_ENTRIES)
+const manuallyAddedIncorporatorIndexes = ref<number[]>([])
 
 const syncRegularCorporationVisibility = () => {
   if (!isRegularCorporationSection.value) {
+    manuallyAddedIncorporatorIndexes.value = []
     return
   }
 
-  const incorporatorHighest = highestFilledIndex('incorporator')
-
-  visibleIncorporatorCount.value = Math.min(
-    maxIncorporatorCount.value,
-    Math.max(MIN_REGULAR_CORP_ENTRIES, visibleIncorporatorCount.value, incorporatorHighest),
-  )
+  const configured = new Set(configuredIncorporatorIndexes.value)
+  manuallyAddedIncorporatorIndexes.value = manuallyAddedIncorporatorIndexes.value.filter((index) => configured.has(index))
 }
 
-watch(() => props.section.name, syncRegularCorporationVisibility, { immediate: true })
+watch(
+  [() => props.section.name, configuredIncorporatorIndexes],
+  syncRegularCorporationVisibility,
+  { immediate: true },
+)
 
 const regularCorporationStaticFields = computed(() => {
   if (!isRegularCorporationSection.value) {
@@ -139,27 +146,108 @@ const incorporatorGroups = computed(() => {
     return []
   }
 
+  const defaultIndexes = configuredIncorporatorIndexes.value.slice(0, MIN_REGULAR_CORP_ENTRIES)
+  const visibleIndexes = Array.from(new Set([
+    ...defaultIndexes,
+    ...filledIncorporatorIndexes.value,
+    ...manuallyAddedIncorporatorIndexes.value,
+  ])).sort((a, b) => a - b)
+
   const groups: Array<{ index: number; fields: FieldSchema[] }> = []
 
-  for (let index = 1; index <= visibleIncorporatorCount.value; index += 1) {
+  visibleIndexes.forEach((index) => {
     const fields = props.section.fields.filter((field) => parseIndexedField(field.name, 'incorporator') === index)
 
     if (fields.length > 0) {
       groups.push({ index, fields })
     }
-  }
+  })
 
   return groups
 })
 
-const canAddIncorporator = computed(() => isRegularCorporationSection.value && visibleIncorporatorCount.value < maxIncorporatorCount.value)
+const canAddIncorporator = computed(() => {
+  if (!isRegularCorporationSection.value) {
+    return false
+  }
+
+  const visibleIndexes = new Set([
+    ...filledIncorporatorIndexes.value,
+    ...manuallyAddedIncorporatorIndexes.value,
+  ])
+
+  return configuredIncorporatorIndexes.value.some((index) => !visibleIndexes.has(index))
+})
 
 const addIncorporator = () => {
   if (!canAddIncorporator.value) {
     return
   }
 
-  visibleIncorporatorCount.value += 1
+  const visibleIndexes = new Set([
+    ...filledIncorporatorIndexes.value,
+    ...manuallyAddedIncorporatorIndexes.value,
+  ])
+
+  const nextIndex = configuredIncorporatorIndexes.value.find((index) => !visibleIndexes.has(index))
+
+  if (nextIndex === undefined) {
+    return
+  }
+
+  manuallyAddedIncorporatorIndexes.value = [
+    ...manuallyAddedIncorporatorIndexes.value,
+    nextIndex,
+  ]
+}
+
+const canDeleteIncorporator = computed(() => {
+  if (!isRegularCorporationSection.value) {
+    return false
+  }
+
+  const visibleIndexes = new Set([
+    ...configuredIncorporatorIndexes.value.slice(0, MIN_REGULAR_CORP_ENTRIES),
+    ...filledIncorporatorIndexes.value,
+    ...manuallyAddedIncorporatorIndexes.value,
+  ])
+
+  return Array.from(visibleIndexes).some((index) => index > MIN_REGULAR_CORP_ENTRIES)
+})
+
+const deleteIncorporator = () => {
+  if (!canDeleteIncorporator.value) {
+    return
+  }
+
+  const visibleIndexes = Array.from(new Set([
+    ...configuredIncorporatorIndexes.value.slice(0, MIN_REGULAR_CORP_ENTRIES),
+    ...filledIncorporatorIndexes.value,
+    ...manuallyAddedIncorporatorIndexes.value,
+  ]))
+    .filter((index) => index > MIN_REGULAR_CORP_ENTRIES)
+    .sort((a, b) => b - a)
+
+  const targetIndex = visibleIndexes[0]
+
+  if (targetIndex === undefined) {
+    return
+  }
+
+  const clearedValues = props.section.fields.reduce<Record<string, string>>((carry, field) => {
+    if (parseIndexedField(field.name, 'incorporator') === targetIndex) {
+      carry[field.name] = ''
+    }
+
+    return carry
+  }, {})
+
+  manuallyAddedIncorporatorIndexes.value = manuallyAddedIncorporatorIndexes.value.filter((index) => index !== targetIndex)
+
+  emit('update:modelValue', {
+    ...props.modelValue,
+    ...clearedValues,
+  })
 }
 
 const applyOpcPersonSelection = (
@@ -278,6 +366,17 @@ const clearSectionValues = () => {
               @update:model-value="(value) => updateField(field.name, value)"
             />
           </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button
+            type="button"
+            class="rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+            :disabled="!canDeleteIncorporator"
+            @click="deleteIncorporator"
+          >
+            Delete Incorporator
+          </button>
         </div>
       </div>
 

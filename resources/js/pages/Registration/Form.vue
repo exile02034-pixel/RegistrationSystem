@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import FormSection from '@/components/registration/FormSection.vue'
 import FormStepper from '@/components/registration/FormStepper.vue'
 import { Button } from '@/components/ui/button'
@@ -51,6 +52,51 @@ const {
 )
 
 const isLastStep = () => currentStep.value === stepItems.value.length - 1
+
+const filledRegularCorporationIncorporatorIndexes = computed(() => {
+  const values = form.sections.regular_corporation ?? {}
+  const indexes = new Set<number>()
+
+  Object.entries(values).forEach(([fieldName, rawValue]) => {
+    const match = fieldName.match(/^incorporator_(\d+)_/)
+    if (!match) {
+      return
+    }
+
+    const value = String(rawValue ?? '').trim()
+    if (value === '') {
+      return
+    }
+
+    indexes.add(Number.parseInt(match[1], 10))
+  })
+
+  return indexes
+})
+
+const reviewFieldsForSection = (section: SectionSchema) => {
+  if (section.name === 'opc_details') {
+    return section.fields.filter((field) => {
+      return field.name !== 'nominee_person_choice'
+        && field.name !== 'alternate_nominee_person_choice'
+    })
+  }
+
+  if (section.name !== 'regular_corporation') {
+    return section.fields
+  }
+
+  return section.fields.filter((field) => {
+    const match = field.name.match(/^incorporator_(\d+)_/)
+    if (!match) {
+      return true
+    }
+
+    const index = Number.parseInt(match[1], 10)
+
+    return filledRegularCorporationIncorporatorIndexes.value.has(index)
+  })
+}
 </script>
 
 <template>
@@ -116,7 +162,7 @@ const isLastStep = () => currentStep.value === stepItems.value.length - 1
             <h3 class="font-semibold">{{ section.label }}</h3>
 
             <div class="grid gap-2 text-sm md:grid-cols-2">
-              <div v-for="field in section.fields" :key="field.name" class="rounded-md bg-[#F8FAFC] px-3 py-2 dark:bg-[#0F2747]">
+              <div v-for="field in reviewFieldsForSection(section)" :key="field.name" class="rounded-md bg-[#F8FAFC] px-3 py-2 dark:bg-[#0F2747]">
                 <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ field.label }}</p>
                 <p class="font-medium">{{ form.sections[section.name][field.name] || '—' }}</p>
               </div>

@@ -110,13 +110,6 @@ const formatDateTime = (value: string | null) => {
     minute: '2-digit',
   })
 }
-
-const submissionStatusClass = (status: 'pending' | 'incomplete' | 'completed') => {
-  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-  if (status === 'incomplete') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-
-  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-}
 </script>
 
 <template>
@@ -195,12 +188,7 @@ const submissionStatusClass = (status: 'pending' | 'incomplete' | 'completed') =
                     <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">Registration #{{ entry.registration_id }}</p>
                   </div>
                   <div class="flex items-center gap-2">
-                    <span
-                      class="inline-flex rounded-full px-2 py-1 text-xs font-medium uppercase"
-                      :class="submissionStatusClass(entry.form_submission?.status ?? entry.registration_status)"
-                    >
-                      {{ entry.form_submission?.status ?? entry.registration_status }}
-                    </span>
+
                     <ChevronDown class="h-4 w-4 text-[#2563EB] group-data-[state=open]:hidden dark:text-[#60A5FA]" />
                     <ChevronUp class="hidden h-4 w-4 text-[#2563EB] group-data-[state=open]:block dark:text-[#60A5FA]" />
                   </div>

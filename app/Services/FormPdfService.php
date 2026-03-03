@@ -127,7 +127,13 @@ class FormPdfService
             ->pluck('field_value', 'field_name');
 
         $sectionConfig = Arr::get(config('registration_forms.sections', []), $section, []);
-        $rows = collect($sectionConfig['fields'] ?? [])
+        $configuredFields = $sectionConfig['fields'] ?? [];
+
+        if ($section === 'regular_corporation') {
+            $configuredFields = $this->filterRegularCorporationFields($configuredFields, $fields->all());
+        }
+
+        $rows = collect($configuredFields)
             ->map(function (array $field) use ($fields): array {
                 $value = $fields->get($field['name']);
 
@@ -144,6 +150,53 @@ class FormPdfService
             'view' => $this->getViewForSection($section),
             'rows' => $rows,
         ];
+    }
+
+    /**
+     * Keep static regular corporation fields and only include incorporator groups
+     * that have at least one non-empty value from the client.
+     *
+     * @param array<int, array<string, mixed>> $configuredFields
+     * @param array<string, mixed> $valuesByFieldName
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterRegularCorporationFields(array $configuredFields, array $valuesByFieldName): array
+    {
+        $filledIncorporatorIndexes = collect(array_keys($valuesByFieldName))
+            ->map(function (string $fieldName) use ($valuesByFieldName): ?int {
+                if (! preg_match('/^incorporator_(\d+)_/', $fieldName, $matches)) {
+                    return null;
+                }
+
+                $value = $valuesByFieldName[$fieldName] ?? null;
+
+                if (! is_string($value) || trim($value) === '') {
+                    return null;
+                }
+
+                return (int) $matches[1];
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return collect($configuredFields)
+            ->filter(function (array $field) use ($filledIncorporatorIndexes): bool {
+                $name = $field['name'] ?? null;
+
+                if (! is_string($name)) {
+                    return false;
+                }
+
+                if (! preg_match('/^incorporator_(\d+)_/', $name, $matches)) {
+                    return true;
+                }
+
+                return in_array((int) $matches[1], $filledIncorporatorIndexes, true);
+            })
+            ->values()
+            ->all();
     }
 
     private function makeDompdf(): Dompdf
