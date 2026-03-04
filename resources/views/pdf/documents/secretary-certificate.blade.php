@@ -148,7 +148,7 @@
         <span class="line" style="min-width: 260px;">{{ $corpAddress }}</span>.
     </li>
     <li>
-        Resolved that <span class="line" style="min-width: 180px;">{{ $fields['authorized_person_name'] ?? '' }}</span>
+        Resolved that <span class="line" style="min-width: 180px;">Ronnel Landa</span>
         is / are hereby authorized to transact and process documents with the Bureau of Internal Revenue (BIR), including but not limited to:
         business registration, updating of registration, case monitoring system updates, submission of requirements, closure of business,
         application for Permit to Use (PTU), and application for Authority to Print (ATP).
@@ -178,14 +178,14 @@
 
 <p class="sworn">
     SUBSCRIBED AND SWORN TO before me this ______ day of ____________ 2026, affiant exhibiting to me
-    her/his Tax Identification Number (TIN) <span class="line">{{ $fields['tin'] ?? '' }}</span>.
+    her/his Tax Identification Number (TIN) <span class="line">765-241-127-000</span>.
 </p>
 
 <div class="meta">
-    <div>DOC. NO. <span class="line" style="min-width: 120px;">{{ $fields['doc_no'] ?? '' }}</span>;</div>
-    <div>PAGE NO. <span class="line" style="min-width: 120px;">{{ $fields['page_no'] ?? '' }}</span>;</div>
-    <div>BOOK NO. <span class="line" style="min-width: 120px;">{{ $fields['book_no'] ?? '' }}</span>.</div>
-    <div>SERIES OF <span class="line" style="min-width: 120px;">{{ $fields['series'] ?? '' }}</span>.</div>
+    <div>DOC. NO.</div>
+    <div>PAGE NO.</div>
+    <div>BOOK NO.</div>
+    <div>SERIES OF</div>
 </div>
 
 </body>

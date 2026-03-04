@@ -28,10 +28,10 @@ class GenerateRegistrationDocumentRequest extends FormRequest
                 'fields.authorized_person_name' => ['required', 'string', 'max:255'],
                 'fields.signing_date' => ['required', 'date'],
                 'fields.tin' => ['required', 'string', 'max:50', 'regex:/^\d{3}-\d{3}-\d{3}(?:-\d{3,4})?$/'],
-                'fields.doc_no' => ['required', 'digits_between:1,20'],
-                'fields.page_no' => ['required', 'digits_between:1,20'],
-                'fields.book_no' => ['required', 'digits_between:1,20'],
-                'fields.series' => ['required', 'digits_between:1,20'],
+                'fields.doc_no' => ['nullable', 'digits_between:1,20'],
+                'fields.page_no' => ['nullable', 'digits_between:1,20'],
+                'fields.book_no' => ['nullable', 'digits_between:1,20'],
+                'fields.series' => ['nullable', 'digits_between:1,20'],
             ]);
         }
 

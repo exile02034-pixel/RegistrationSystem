@@ -53,9 +53,9 @@ const form = useForm<{ fields: Record<string, any> }>({
 })
 
 const defaultAppointmentOfficers = () => ([
-  { position: 'President', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
-  { position: 'Treasurer', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
-  { position: 'Corporate Secretary', name_and_residential_address: '', nationality: '', gender: '', tin: '' },
+  { position: 'President', name_and_residential_address: '', nationality: 'Filipino', gender: '', tin: '' },
+  { position: 'Treasurer', name_and_residential_address: '', nationality: 'Filipino', gender: '', tin: '' },
+  { position: 'Corporate Secretary', name_and_residential_address: '', nationality: 'Filipino', gender: '', tin: '' },
 ])
 
 const defaultGisRows = () => Array.from({ length: 15 }, () => ({
@@ -153,9 +153,9 @@ const defaultFields = (type: DocumentForm['type']) => {
       secretary_address: '',
       corporation_name: '',
       corporation_address: '',
-      authorized_person_name: '',
+      authorized_person_name: 'Ronnel Landa',
       signing_date: '',
-      tin: '',
+      tin: '765-241-127-000',
       doc_no: '',
       page_no: '',
       book_no: '',
@@ -391,13 +391,9 @@ const validateSecretaryForm = (): string[] => {
   }
   if (isBlank(fields.tin)) errors.push('TIN is required.')
   if (!isBlank(fields.tin) && !isTinFormat(String(fields.tin))) errors.push('TIN must be in 000-000-000-000 format.')
-  if (isBlank(fields.doc_no)) errors.push('Doc No. is required.')
   if (!isBlank(fields.doc_no) && !isDigitsOnly(fields.doc_no)) errors.push('Doc No. must contain numbers only.')
-  if (isBlank(fields.page_no)) errors.push('Page No. is required.')
   if (!isBlank(fields.page_no) && !isDigitsOnly(fields.page_no)) errors.push('Page No. must contain numbers only.')
-  if (isBlank(fields.book_no)) errors.push('Book No. is required.')
   if (!isBlank(fields.book_no) && !isDigitsOnly(fields.book_no)) errors.push('Book No. must contain numbers only.')
-  if (isBlank(fields.series)) errors.push('Series is required.')
   if (!isBlank(fields.series) && !isDigitsOnly(fields.series)) errors.push('Series must contain numbers only.')
 
   return errors
@@ -715,7 +711,7 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>Authorized Person Name</Label>
-          <Input v-model="form.fields.authorized_person_name" />
+          <Input v-model="form.fields.authorized_person_name" readonly />
         </div>
         <div class="space-y-2">
           <Label>Signing Date</Label>
@@ -723,30 +719,30 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>TIN (000-000-000-000)</Label>
-          <Input v-model="form.fields.tin" />
+          <Input v-model="form.fields.tin" readonly />
         </div>
         <div class="space-y-2">
           <Label>Doc No.</Label>
-          <Input v-model="form.fields.doc_no" type="number" min="0" step="1" />
+          <Input v-model="form.fields.doc_no" type="number" min="0" step="1" readonly />
         </div>
         <div class="space-y-2">
           <Label>Page No.</Label>
-          <Input v-model="form.fields.page_no" type="number" min="0" step="1" />
+          <Input v-model="form.fields.page_no" type="number" min="0" step="1" readonly />
         </div>
         <div class="space-y-2">
           <Label>Book No.</Label>
-          <Input v-model="form.fields.book_no" type="number" min="0" step="1" />
+          <Input v-model="form.fields.book_no" type="number" min="0" step="1" readonly />
         </div>
         <div class="space-y-2">
           <Label>Series</Label>
-          <Input v-model="form.fields.series" type="number" min="0" step="1" />
+          <Input v-model="form.fields.series" type="number" min="0" step="1" readonly />
         </div>
       </div>
 
       <div v-else-if="activeType === 'appointment_form_opc'" class="grid gap-4 md:grid-cols-2">
         <div class="space-y-2">
           <Label>For The Year</Label>
-          <Input v-model="form.fields.for_the_year" />
+          <Input v-model="form.fields.for_the_year" readonly />
         </div>
         <div class="space-y-2">
           <Label>Corporate Name</Label>
@@ -762,7 +758,7 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>Fiscal Year End</Label>
-          <Input v-model="form.fields.fiscal_year_end" type="date" />
+          <Input v-model="form.fields.fiscal_year_end" type="date" readonly />
         </div>
         <div class="space-y-2">
           <Label>SEC Registration Number</Label>
@@ -770,7 +766,7 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>Email Address</Label>
-          <Input v-model="form.fields.email_address" type="email" />
+          <Input v-model="form.fields.email_address" type="email" readonly />
         </div>
         <div class="space-y-2">
           <Label>Corporate TIN</Label>
@@ -782,7 +778,7 @@ const submit = () => {
         </div>
         <div class="space-y-2 md:col-span-2">
           <Label>Complete Business Address</Label>
-          <textarea v-model="form.fields.complete_business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          <textarea v-model="form.fields.complete_business_address" readonly class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
         </div>
         <div class="space-y-2">
           <Label>Primary Purpose / Activity / Industry Presently Engaged In</Label>
@@ -806,7 +802,7 @@ const submit = () => {
             >
               <Input v-model="officer.position" readonly />
               <Input v-model="officer.name_and_residential_address" />
-              <Input v-model="officer.nationality" />
+              <Input v-model="officer.nationality" readonly />
               <Input v-model="officer.gender" />
               <Input v-model="officer.tin" />
             </div>
@@ -815,31 +811,31 @@ const submit = () => {
 
         <div class="space-y-2">
           <Label>Certifier Name</Label>
-          <Input v-model="form.fields.certifier_name" />
+          <Input v-model="form.fields.certifier_name" readonly />
         </div>
         <div class="space-y-2">
           <Label>Certifier TIN (000-000-000-000)</Label>
-          <Input v-model="form.fields.certifier_tin" />
+          <Input v-model="form.fields.certifier_tin" readonly />
         </div>
         <div class="space-y-2">
           <Label>Subscribed and Sworn Place</Label>
-          <Input v-model="form.fields.sworn_place" />
+          <Input v-model="form.fields.sworn_place" readonly />
         </div>
         <div class="space-y-2">
           <Label>Subscribed and Sworn Date</Label>
-          <Input v-model="form.fields.sworn_date" type="date" />
+          <Input v-model="form.fields.sworn_date" type="date" readonly />
         </div>
         <div class="space-y-2 md:col-span-2">
           <Label>Competent Evidence of Identity</Label>
-          <Input v-model="form.fields.competent_evidence" />
+          <Input v-model="form.fields.competent_evidence" readonly />
         </div>
         <div class="space-y-2">
           <Label>Issued At</Label>
-          <Input v-model="form.fields.issued_at" />
+          <Input v-model="form.fields.issued_at" readonly />
         </div>
         <div class="space-y-2">
           <Label>Issued On</Label>
-          <Input v-model="form.fields.issued_on" type="date" />
+          <Input v-model="form.fields.issued_on" type="date" readonly />
         </div>
       </div>
 
