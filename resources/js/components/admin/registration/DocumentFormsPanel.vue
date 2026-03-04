@@ -197,10 +197,10 @@ const defaultFields = (type: DocumentForm['type']) => {
       corporate_tin: '',
       principal_office_address: '',
       business_address: '',
-      email: '',
-      alternate_email: '',
-      official_mobile: '',
-      alternate_mobile: '',
+      email: 'vafeir27@gmail.com',
+      alternate_email: 'tfcitaxteam@gmail.com',
+      official_mobile: '09271713690',
+      alternate_mobile: '09682312875',
       website_url: '',
       fax_number: '',
       primary_purpose: '',
@@ -528,6 +528,7 @@ const validateAllGisSteps = (): string[] => {
   }
 
   if (isBlank(step9.done_date)) errors.push('Step 9: Done this date is required.')
+  if (isBlank(step9.done_place)) errors.push('Step 9: Done place is required.')
 
   return errors
 }
@@ -558,8 +559,8 @@ const validateCurrentGisStep = (): string | null => {
 
   if (gisStep.value === 9) {
     const step = form.fields.step_9 ?? {}
-    if (!step.done_date) {
-      return 'Please provide the done-this date before generating the GIS PDF.'
+    if (!step.done_date || !step.done_place) {
+      return 'Please provide the done-this date and done place before generating the GIS PDF.'
     }
   }
 
@@ -878,11 +879,11 @@ const submit = () => {
           </div>
           <div class="space-y-2">
             <Label>Official Email</Label>
-            <Input v-model="form.fields.step_1.email" type="email" />
+            <Input v-model="form.fields.step_1.email" type="email" readonly />
           </div>
           <div class="space-y-2">
             <Label>Alternate Email</Label>
-            <Input v-model="form.fields.step_1.alternate_email" type="email" />
+            <Input v-model="form.fields.step_1.alternate_email" type="email" readonly />
           </div>
           <div class="space-y-2">
             <Label>Corporate TIN</Label>
@@ -890,11 +891,11 @@ const submit = () => {
           </div>
           <div class="space-y-2">
             <Label>Official Mobile Number</Label>
-            <Input v-model="form.fields.step_1.official_mobile" type="tel" />
+            <Input v-model="form.fields.step_1.official_mobile" type="tel" readonly />
           </div>
           <div class="space-y-2">
             <Label>Alternate Mobile Number</Label>
-            <Input v-model="form.fields.step_1.alternate_mobile" type="tel" />
+            <Input v-model="form.fields.step_1.alternate_mobile" type="tel" readonly />
           </div>
           <div class="space-y-2">
             <Label>Telephone</Label>
@@ -1245,6 +1246,7 @@ const submit = () => {
         </div>
 
         <div v-else-if="gisStep === 6" class="space-y-3">
+          <fieldset disabled class="space-y-3">
           <div class="space-y-2">
             <Label>Corporate Name (from Page 1)</Label>
             <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
@@ -1275,7 +1277,7 @@ const submit = () => {
             <div>TIN</div>
           </div>
           <div v-for="(row, index) in form.fields.step_6.rows" :key="`stk6-${index}`" class="grid gap-2 md:grid-cols-8">
-            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+            <Input v-model="row.name_address" />
             <Input v-model="row.nationality" />
             <Input v-model="row.share_type" />
             <Input v-model="row.number_of_shares" />
@@ -1284,9 +1286,11 @@ const submit = () => {
             <Input v-model="row.amount_paid" />
             <Input v-model="row.tin" />
           </div>
+          </fieldset>
         </div>
 
         <div v-else-if="gisStep === 7" class="space-y-3">
+          <fieldset disabled class="space-y-3">
           <div class="space-y-2">
             <Label>Corporate Name (from Page 1)</Label>
             <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
@@ -1317,7 +1321,7 @@ const submit = () => {
             <div>TIN</div>
           </div>
           <div v-for="(row, index) in form.fields.step_7.rows" :key="`stk7-${index}`" class="grid gap-2 md:grid-cols-8">
-            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+            <Input v-model="row.name_address" />
             <Input v-model="row.nationality" />
             <Input v-model="row.share_type" />
             <Input v-model="row.number_of_shares" />
@@ -1330,9 +1334,11 @@ const submit = () => {
             <Label>Others (remaining stockholders count)</Label>
             <Input v-model="form.fields.step_7.others_count" />
           </div>
+          </fieldset>
         </div>
 
         <div v-else-if="gisStep === 8" class="space-y-3">
+          <fieldset disabled class="space-y-3">
           <div class="space-y-2">
             <Label>Corporate Name (from Page 1)</Label>
             <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
@@ -1483,12 +1489,17 @@ const submit = () => {
             <Input v-model="form.fields.step_8.total_rank_file_employees" placeholder="Total No. of Rank & File Employees" />
             <Input v-model="form.fields.step_8.total_manpower_complement" placeholder="Total Manpower Complement" />
           </div>
+          </fieldset>
         </div>
 
         <div v-else class="grid gap-4 md:grid-cols-2">
           <div class="space-y-2">
             <Label>Done This Date</Label>
             <Input v-model="form.fields.step_9.done_date" type="date" />
+          </div>
+          <div class="space-y-2">
+            <Label>Done Place</Label>
+            <Input v-model="form.fields.step_9.done_place" placeholder="City / Municipality" />
           </div>
         </div>
 

@@ -6,7 +6,7 @@
         @page { margin: 14px; }
         body { font-family: Cambria, serif; font-size: 10px; color: #111; }
         .page { page-break-after: always; }
-        .page:last-child { page-break-after: auto; }
+        .page:last-of-type { page-break-after: auto; }
         .title { margin: 0; text-align: center; font-weight: 700; font-size: 16px; }
         .subtitle { margin: 0 0 6px; text-align: center; font-weight: 700; font-size: 12px; }
         .rule { text-align: center; font-size: 9px; margin: 6px 0; }
@@ -34,6 +34,22 @@
         .cap-label { font-weight: 700; text-transform: uppercase; background: #f3f3f3; }
         .cap-sub { font-weight: 700; text-align: left; }
         .num { text-align: right; }
+        .page9-wrap { font-size: 12px; line-height: 1.42; margin-top: 12px; }
+        .page9-wrap p { margin: 0 0 13px; text-align: justify; }
+        .page9-done { margin: 20px 0 24px; text-align: left; }
+        .page9-done .line { min-width: 92px; min-height: 14px; vertical-align: baseline; }
+        .page9-signature { width: 340px; margin: 22px 8px 24px auto; text-align: center; }
+        .page9-signature-image { width: 100%; height: auto; max-height: 126px; display: block; }
+        .page9-notary { margin-top: 8px; text-align: left; }
+        .page9-notary .line { min-width: 86px; min-height: 14px; vertical-align: baseline; }
+        .page9-notary-title { margin-top: 54px; text-align: center; font-weight: 700; letter-spacing: 0.4px; }
+        .page9-meta { width: 280px; margin-top: 22px; font-size: 11px; line-height: 1.5; }
+        .page9-meta-row { margin: 0 0 4px; white-space: nowrap; }
+        .page9-meta .line { min-width: 120px; min-height: 12px; }
+        .page9-footer { margin-top: 200px; font-size: 9px; color: #222; }
+        .page9-footer-left { float: left; }
+        .page9-footer-right { float: right; }
+        .page9-footer::after { content: ""; display: block; clear: both; }
     </style>
 </head>
 <body>
@@ -59,6 +75,26 @@
     $subscribedForeignRows = array_values(is_array($step3['subscribed_foreign_rows'] ?? null) ? $step3['subscribed_foreign_rows'] : []);
     $paidupFilipinoRows = array_values(is_array($step3['paidup_filipino_rows'] ?? null) ? $step3['paidup_filipino_rows'] : []);
     $paidupForeignRows = array_values(is_array($step3['paidup_foreign_rows'] ?? null) ? $step3['paidup_foreign_rows'] : []);
+    $monthFromDate = static function ($value): string {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return '';
+        }
+
+        $fromIso = \DateTimeImmutable::createFromFormat('Y-m-d', $raw);
+        if ($fromIso instanceof \DateTimeImmutable) {
+            return $fromIso->format('F');
+        }
+
+        $timestamp = strtotime($raw);
+        if ($timestamp !== false) {
+            return date('F', $timestamp);
+        }
+
+        return $raw;
+    };
+    $annualMeetingMonth = $monthFromDate($step1['meeting_date_annual'] ?? '');
+    $actualMeetingMonth = $monthFromDate($step1['meeting_date_actual'] ?? '');
 
     $isChecked = static function ($value): bool {
         if (is_bool($value)) {
@@ -113,8 +149,8 @@
             <th>CORPORATE TAX IDENTIFICATION NUMBER (TIN)</th><td>{{ $step1['corporate_tin'] ?? '' }}</td>
         </tr>
         <tr>
-            <th>DATE OF ANNUAL MEETING PER BY-LAWS</th><td>3rd Saturday of {{ $step1['meeting_month'] ?? '' }}</td>
-            <th>ACTUAL DATE OF ANNUAL MEETING</th><td>{{ $step1['meeting_date_actual'] ?? '' }}</td>
+            <th>DATE OF ANNUAL MEETING PER BY-LAWS</th><td>3rd Saturday of {{ $annualMeetingMonth }}</td>
+            <th>ACTUAL DATE OF ANNUAL MEETING</th><td>Last Sunday of {{ $actualMeetingMonth }}</td>
         </tr>
         <tr><th>COMPLETE PRINCIPAL OFFICE ADDRESS</th><td colspan="3">482 Purok 4 San Juan Nepomuceno, Betis, Guagua, Pampanga
 </td></tr>
@@ -475,6 +511,12 @@
     <p class="title">GENERAL INFORMATION SHEET</p>
     <p class="subtitle">STOCK CORPORATION</p>
     <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+    <table>
+        <tr>
+            <th style="width:22%">Corporate Name:</th>
+            <td>{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+    </table>
 
     <div class="section-title">Stockholder's Information (1 to 7)</div>
     <table>
@@ -513,6 +555,12 @@
     <p class="title">GENERAL INFORMATION SHEET</p>
     <p class="subtitle">STOCK CORPORATION</p>
     <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+    <table>
+        <tr>
+            <th style="width:22%">Corporate Name:</th>
+            <td>{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+    </table>
 
     <div class="section-title">Stockholder's Information (8 to 14)</div>
     <table>
@@ -551,6 +599,12 @@
     <p class="title">GENERAL INFORMATION SHEET</p>
     <p class="subtitle">STOCK CORPORATION</p>
     <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
+    <table>
+        <tr>
+            <th style="width:22%">Corporate Name:</th>
+            <td>{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+    </table>
 
     <div class="section-title">Stockholder's Information (15 to 21 / Others)</div>
     <table>
@@ -592,6 +646,12 @@
     <p class="title">GENERAL INFORMATION SHEET</p>
     <p class="subtitle">STOCK CORPORATION</p>
     <p class="rule">PLEASE PRINT LEGIBLY</p>
+    <table>
+        <tr>
+            <th style="width:22%">Corporate Name:</th>
+            <td>{{ $step1['corporate_name'] ?? '' }}</td>
+        </tr>
+    </table>
 
     <div class="section-title">Investments / Dividends / Licenses / Manpower</div>
     <table>
@@ -626,45 +686,122 @@
     <div class="page-no">Page 8 of 9</div>
 </div>
 
-<div>
-    <p class="title">GENERAL INFORMATION SHEET</p>
-    <p class="subtitle">STOCK CORPORATION</p>
+<div class="page" style="font-family:'Times New Roman', Times, serif; color:#000; position:relative; box-sizing:border-box; padding:48pt 54pt 22pt 54pt;">
 
-    <p class="small">
-        I, <span class="line">Vince Anthony Feir</span>, Corporate Secretary of
-        <span class="line">{{ $step1['corporate_name'] ?? '' }}</span>, declare under penalty of perjury that all matters
-        set forth in this GIS have been made in good faith, duly verified by me and to the best of my knowledge and belief are true and correct.
-    </p>
-    <p class="small">I hereby attest that all the information in this GIS are being submitted in compliance with the rules and regulations of the Securities and Exchange Commission (SEC).</p>
-    <p class="small">I further attest that I have been authorized by the Board of Directors/Trustees to file this GIS with the SEC.</p>
-    <p class="small">I understand that the Commission may place the corporation under delinquent status for failure to submit reportorial requirements as provided under Section 177, RA No. 11232.</p>
-
-    <p class="small">
-        Done this <span class="line">{{ $step9['done_day'] ?? '' }}</span> day of
-        <span class="line">{{ $step9['done_month'] ?? '' }}</span>,
-        <span class="line" style="min-width:40px;">{{ $step9['done_year'] ?? '' }}</span>
-        in <span class="line">{{ $step9['done_place'] ?? '' }}</span>.
+    <p class="title" style="margin:0; text-align:center; font-size:14pt; font-weight:bold; letter-spacing:0.5pt;">
+        GENERAL INFORMATION SHEET
     </p>
 
-    <div style="margin-top: 30px; text-align: center;" class="small">
-        <div class="line" style="min-width: 260px;">iMAGE PLACEHOLDER</div>
-        <p>SIGNATURE OVER PRINTED NAME</p>
-        
+    <p class="subtitle" style="margin:4pt 0 18pt 0; text-align:center; font-size:12pt; font-weight:bold;">
+        STOCK CORPORATION
+    </p>
+
+    <?php
+        $certifierName = $step9['certifier_name'] ?? 'Vince Anthony P. Feir';
+        $signaturePath = public_path('images/Signature.png');
+        $signatureDataUri = null;
+        $doneDateRaw = trim((string) ($step9['done_date'] ?? ''));
+        $doneDay = trim((string) ($step9['done_day'] ?? ''));
+        $doneMonth = trim((string) ($step9['done_month'] ?? ''));
+        $doneYear = trim((string) ($step9['done_year'] ?? ''));
+        $doneDate = null;
+
+        if (is_file($signaturePath)) {
+            $signatureBinary = @file_get_contents($signaturePath);
+            if ($signatureBinary !== false) {
+                $signatureDataUri = 'data:image/png;base64,'.base64_encode($signatureBinary);
+            }
+        }
+
+        if ($doneDateRaw !== '') {
+            $doneDate = \DateTimeImmutable::createFromFormat('Y-m-d', $doneDateRaw) ?: null;
+            if ($doneDate === null) {
+                $timestamp = strtotime($doneDateRaw);
+                if ($timestamp !== false) {
+                    $doneDate = (new \DateTimeImmutable())->setTimestamp($timestamp);
+                }
+            }
+        }
+
+        if ($doneDay === '' && $doneDate instanceof \DateTimeImmutable) {
+            $doneDay = $doneDate->format('j');
+        }
+        if ($doneMonth === '' && $doneDate instanceof \DateTimeImmutable) {
+            $doneMonth = $doneDate->format('F');
+        }
+        if ($doneYear === '' && $doneDate instanceof \DateTimeImmutable) {
+            $doneYear = $doneDate->format('Y');
+        }
+    ?>
+
+    <div style="font-size:10.8pt; line-height:1.22;">
+
+        <p style="margin:0 0 10pt 0; text-align:justify;">
+            I, <b style="font-weight:normal; text-decoration:underline;">{{ $certifierName }}</b>, Corporate Secretary of
+            <b style="font-weight:normal; text-decoration:underline;">{{ $step1['corporate_name'] ?? '[Corporate Name]' }}</b>, declare under penalty of perjury that all matters set forth in this GIS have been made in good faith, duly verified by me and to the best of my knowledge and belief are true and correct.
+        </p>
+
+        <p style="margin:0 0 10pt 0; text-align:justify;">
+            I hereby attest that all the information in this GIS are being submitted in compliance with the rules and regulations of the Securities and Exchange Commission (SEC), and that the collection, processing, storage, and sharing of said information are necessary to carry out the functions of public authority for the performance of the constitutionally and statutorily mandated functions of the SEC as a regulatory agency.
+        </p>
+
+        <p style="margin:0 0 10pt 0; text-align:justify;">
+            I further attest that I have been authorized by the Board of Directors/Trustees to file this GIS with the SEC.
+        </p>
+
+        <p style="margin:0 0 10pt 0; text-align:justify;">
+            I understand that the Commission may place the corporation under delinquent status for failure to submit reportorial requirements three (3) times, consecutively or intermittently, within a period of five (5) years (Section 177, RA No. 11232).
+        </p>
+
+        <p style="margin-top:10pt; margin-bottom:16pt;">
+            Done this
+            <span style="display:inline-block; min-width:78px; border-bottom:1px solid #000; text-align:center;">{{ $doneDay }}</span>
+            day of
+            <span style="display:inline-block; min-width:78px; border-bottom:1px solid #000; text-align:center;">{{ $doneMonth }}</span>,
+            <span style="display:inline-block; min-width:56px; border-bottom:1px solid #000; text-align:center;">{{ $doneYear }}</span>
+           in
+            <span style="display:inline-block; min-width:120px; border-bottom:1px solid #000; text-align:center; margin:0 6px;">
+            {{ $step9['done_place'] ?? '' }}
+            </span>.
+        </p>
+
+        <div style="margin:0 0 18pt 0; min-height:48pt; text-align:right;">
+            @if($signatureDataUri !== null)
+                <img src="{{ $signatureDataUri }}" alt="Signature" style="height:60pt; width:auto; object-fit:contain;">
+            @endif
+        </div>
+
+        <p style="margin:0; text-align:left;">
+            <strong>SUBSCRIBED AND SWORN TO</strong> before me in
+            <span style="display:inline-block; min-width:105px; border-bottom:1px solid #000; text-align:center;">{{ $step9['notary_place'] ?? '' }}</span>
+            on <span style="display:inline-block; min-width:105px; border-bottom:1px solid #000; text-align:center;">{{ $step9['notary_date'] ?? '' }}</span>
+            by affiant who personally appeared before me and
+            exhibited to me his/her competent evidence of identity consisting of
+            <span style="display:inline-block; min-width:105px; border-bottom:1px solid #000; text-align:center;">{{ $step9['competent_evidence'] ?? '' }}</span>
+            issued at
+            <span style="display:inline-block; min-width:88px; border-bottom:1px solid #000; text-align:center;">{{ $step9['issued_at'] ?? '' }}</span>
+            on
+            <span style="display:inline-block; min-width:88px; border-bottom:1px solid #000; text-align:center;">{{ $step9['issued_on'] ?? '' }}</span>.
+        </p>
+
+        <div style="margin-top:22pt; text-align:left;">
+            NOTARY PUBLIC
+        </div>
+
+        <div style="margin-top:8pt; width:235pt; margin-left:0; font-size:10.2pt; line-height:1.2;">
+            <div style="margin-bottom:4pt;">DOC. NO. <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;"></span>;</div>
+            <div style="margin-bottom:4pt;">PAGE NO. <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;"></span>;</div>
+            <div style="margin-bottom:4pt;">BOOK NO. <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;"></span>;</div>
+            <div>SERIES OF <span style="display:inline-block; min-width:110px; border-bottom:1px solid #000;"></span>.</div>
+        </div>
+
     </div>
 
-    <p class="small" style="margin-top:20px;">
-        SUBSCRIBED AND SWORN TO before me in <span class="line"></span>
-        on <span class="line"></span> by affiant who exhibited competent evidence of identity:
-        <span class="line"></span>, issued at
-        <span class="line"></span> on <span class="line"></span>.
-    </p>
 
-    <div style="margin-top: 26px; text-align: center;" class="small">
-        <div class="line" style="min-width: 220px;"></div>
-        <div>NOTARY PUBLIC</div>
-    </div>
 
-    <div class="page-no">Page 9 of 9</div>
+        <div class="page-no">Page 9 of 9</div>
+
+
 </div>
 </body>
 </html>
