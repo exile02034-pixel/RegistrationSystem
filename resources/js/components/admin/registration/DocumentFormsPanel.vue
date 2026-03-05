@@ -360,6 +360,7 @@ const formatDateTime = (value: string | null) => {
   if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
     year: 'numeric',
     month: 'short',
     day: '2-digit',

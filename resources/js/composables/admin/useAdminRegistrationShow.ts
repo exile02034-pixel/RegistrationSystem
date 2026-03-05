@@ -4,6 +4,13 @@ import { toast } from '@/components/ui/sonner'
 import type { AdminRegistrationShowRecord, RegistrationStatus } from '@/types'
 
 export const useAdminRegistrationShow = (registration: AdminRegistrationShowRecord) => {
+  const parseTimestamp = (value: string) => {
+    const trimmed = value.trim()
+    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed)
+
+    return new Date(hasTimezone ? trimmed : `${trimmed}Z`)
+  }
+
   const statusForm = useForm({
     status: registration.status as RegistrationStatus,
   })
@@ -60,7 +67,7 @@ export const useAdminRegistrationShow = (registration: AdminRegistrationShowReco
   const formatDateTime = (value: string | null) => {
     if (!value) return 'N/A'
 
-    const utcDate = new Date(`${value}Z`)
+    const utcDate = parseTimestamp(value)
     if (Number.isNaN(utcDate.getTime())) return 'N/A'
 
     return utcDate.toLocaleString('en-PH', {

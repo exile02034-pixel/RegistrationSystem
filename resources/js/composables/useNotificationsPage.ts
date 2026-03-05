@@ -11,7 +11,8 @@ export const useNotificationsPage = (props: NotificationsPageProps) => {
             return 'n/a';
         }
 
-        return new Date(value).toLocaleDateString('en-US', {
+        return new Date(value).toLocaleDateString('en-PH', {
+            timeZone: 'Asia/Manila',
             year: 'numeric',
             month: 'short',
             day: 'numeric',

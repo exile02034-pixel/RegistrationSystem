@@ -26,7 +26,8 @@ export const useAdminUserShow = (activities: UserActivityItem[]) => {
     const parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return value
 
-    return parsed.toLocaleDateString('en-US', {
+    return parsed.toLocaleDateString('en-PH', {
+      timeZone: 'Asia/Manila',
       year: 'numeric',
       month: 'short',
       day: '2-digit',
@@ -38,7 +39,8 @@ export const useAdminUserShow = (activities: UserActivityItem[]) => {
     const parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return value
 
-    return parsed.toLocaleString('en-US', {
+    return parsed.toLocaleString('en-PH', {
+      timeZone: 'Asia/Manila',
       year: 'numeric',
       month: 'short',
       day: '2-digit',

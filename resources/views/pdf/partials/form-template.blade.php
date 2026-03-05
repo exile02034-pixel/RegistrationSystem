@@ -55,6 +55,6 @@
         </table>
     @endif
 
-    <p class="footer">Generated on {{ now()->format('M d, Y h:i A') }}</p>
+    <p class="footer">Generated on {{ now()->timezone('Asia/Manila')->format('M d, Y h:i A') }}</p>
 </body>
 </html>

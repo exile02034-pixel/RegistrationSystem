@@ -20,7 +20,7 @@
 
     <p>
         Registration email: {{ $registrationLink->email }}<br>
-        Sent at: {{ now()->format('M d, Y h:i A') }}
+        Sent at: {{ now()->timezone('Asia/Manila')->format('M d, Y h:i A') }}
     </p>
 </body>
 </html>
