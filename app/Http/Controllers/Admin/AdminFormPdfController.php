@@ -3,59 +3,40 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\PrintSubmissionBatchRequest;
 use App\Models\FormSubmission;
-use App\Services\FormPdfService;
+use App\Services\Admin\AdminSubmissionPdfService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminFormPdfController extends Controller
 {
     public function __construct(
-        private readonly FormPdfService $formPdfService,
+        private readonly AdminSubmissionPdfService $submissionPdfService,
     ) {}
 
     public function view(FormSubmission $submission, string $section): Response
     {
-        try {
-            return $this->formPdfService->streamPdf($submission, $section);
-        } catch (InvalidArgumentException) {
-            abort(404);
-        }
+        return $this->submissionPdfService->view($submission, $section);
     }
 
     public function download(FormSubmission $submission, string $section): Response
     {
-        try {
-            return $this->formPdfService->downloadPdf($submission, $section);
-        } catch (InvalidArgumentException) {
-            abort(404);
-        }
+        return $this->submissionPdfService->download($submission, $section);
     }
 
     public function destroy(FormSubmission $submission, string $section): RedirectResponse
     {
-        try {
-            $this->formPdfService->deleteSection($submission, $section);
-        } catch (InvalidArgumentException) {
-            abort(404);
-        }
+        $this->submissionPdfService->deleteSection($submission, $section);
 
         return back()->with('success', 'Form deleted successfully.');
     }
 
-    public function printBatch(Request $request, FormSubmission $submission): Response
+    public function printBatch(PrintSubmissionBatchRequest $request, FormSubmission $submission): Response
     {
-        $validated = $request->validate([
-            'sections' => ['required', 'array', 'min:1'],
-            'sections.*' => ['required', 'string', 'in:client_information,treasurer_details,opc_details,proprietorship,regular_corporation'],
-        ]);
-
-        try {
-            return $this->formPdfService->mergeToPdf($submission, $validated['sections']);
-        } catch (InvalidArgumentException) {
-            abort(404);
-        }
+        return $this->submissionPdfService->printBatch(
+            $submission,
+            (array) $request->validated('sections', []),
+        );
     }
 }

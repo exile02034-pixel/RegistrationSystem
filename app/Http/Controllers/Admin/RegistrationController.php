@@ -6,11 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
 use App\Models\RegistrationLink;
-use App\Models\User;
-use App\Services\ActivityLogService;
-use App\Services\DocumentGenerationService;
 use App\Services\NotificationService;
-use App\Services\RegistrationFormService;
+use App\Services\Admin\AdminRegistrationService;
 use App\Services\RegistrationTemplateService;
 use App\Services\RegistrationWorkflowService;
 use Illuminate\Http\RedirectResponse;
@@ -23,60 +20,23 @@ class RegistrationController extends Controller
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationWorkflowService $workflowService,
-        private readonly RegistrationFormService $registrationFormService,
-        private readonly DocumentGenerationService $documentGenerationService,
+        private readonly AdminRegistrationService $adminRegistrationService,
         private readonly NotificationService $notificationService,
-        private readonly ActivityLogService $activityLogService,
     ) {}
 
     public function index(): Response
     {
         $search = trim((string) request('search', ''));
-        $sort = request('sort') === 'created_at' ? 'created_at' : 'created_at';
-        $direction = request('direction') === 'asc' ? 'asc' : 'desc';
+        $sort = (string) request('sort', 'created_at');
+        $direction = (string) request('direction', 'desc');
         $companyType = request('company_type');
 
-        $links = RegistrationLink::query()
-            ->with('formSubmission')
-            ->when(in_array($companyType, ['corp', 'sole_prop', 'opc'], true), function ($query) use ($companyType) {
-                $query->where('company_type', $companyType);
-            })
-            ->when($search !== '', function ($query) use ($search) {
-                $innerSearch = strtolower($search);
-                $searchType = match (true) {
-                    str_contains($innerSearch, 'opc') => 'opc',
-                    str_contains($innerSearch, 'sole') || str_contains($innerSearch, 'prop') || str_contains($innerSearch, 'proprietorship') => 'sole_prop',
-                    str_contains($innerSearch, 'corp') || str_contains($innerSearch, 'corporation') || str_contains($innerSearch, 'regular') => 'corp',
-                    default => null,
-                };
-
-                $query->where(function ($inner) use ($search, $searchType) {
-                    $inner
-                        ->where('email', 'like', "%{$search}%")
-                        ->orWhere('token', 'like', "%{$search}%")
-                        ->orWhere('company_type', 'like', "%{$search}%");
-
-                    if ($searchType !== null) {
-                        $inner->orWhere('company_type', $searchType);
-                    }
-                });
-            })
-            ->orderBy($sort, $direction)
-            ->paginate(10)
-            ->withQueryString();
-
-        $links->setCollection($links->getCollection()->map(fn (RegistrationLink $link) => [
-            'id' => $link->id,
-            'email' => $link->email,
-            'company_type' => $link->company_type,
-            'company_type_label' => $this->templateService->labelFor($link->company_type),
-            'status' => $link->status,
-            'token' => $link->token,
-            'form_submitted' => $link->formSubmission !== null,
-            'created_at' => $link->created_at?->toDateTimeString(),
-            'client_url' => route('registration.form.show', $link->token),
-            'show_url' => route('admin.register.show', $link->id),
-        ]));
+        $links = $this->adminRegistrationService->paginatedForIndex(
+            search: $search,
+            companyType: is_string($companyType) ? $companyType : null,
+            sort: $sort,
+            direction: $direction,
+        );
 
         return Inertia::render('admin/registration/index', [
             'links' => $links,
@@ -123,53 +83,7 @@ class RegistrationController extends Controller
 
     public function destroy(Request $request, RegistrationLink $registrationLink): RedirectResponse
     {
-        $email = $registrationLink->email;
-        $companyType = $registrationLink->company_type;
-        $companyTypeLabel = $this->templateService->labelFor($companyType);
-        $registrationId = $registrationLink->id;
-        $clientName = $this->guessClientNameFromEmail($email);
-        $linkedUser = User::query()
-            ->where('role', 'user')
-            ->where('email', $email)
-            ->first();
-
-        $registrationLink->delete();
-
-        $this->notificationService->notifyAdmins(
-            category: 'registration_deleted',
-            title: 'Registration deleted',
-            message: "Registration record for {$email} was deleted.",
-            actionUrl: route('admin.register.index'),
-            meta: ['email' => $email],
-        );
-
-        $this->activityLogService->log(
-            type: 'admin.registration.deleted',
-            description: "Admin deleted registration of {$clientName} ({$email}) - {$companyTypeLabel}",
-            performedBy: $request->user(),
-            metadata: [
-                'registration_id' => $registrationId,
-                'email' => $email,
-                'company_type' => $companyType,
-                'company_type_label' => $companyTypeLabel,
-            ],
-        );
-
-        if ($linkedUser && in_array($companyType, ['corp', 'sole_prop', 'opc'], true)) {
-            $this->activityLogService->log(
-                type: 'admin.user.company_type.removed',
-                description: "Admin removed {$companyTypeLabel} from {$linkedUser->name} ({$linkedUser->email})",
-                performedBy: $request->user(),
-                metadata: [
-                    'user_id' => $linkedUser->id,
-                    'user_email' => $linkedUser->email,
-                    'user_name' => $linkedUser->name,
-                    'company_type' => $companyType,
-                    'company_type_label' => $companyTypeLabel,
-                    'registration_id' => $registrationId,
-                ],
-            );
-        }
+        $this->adminRegistrationService->deleteRegistration($registrationLink, $request->user());
 
         return redirect()
             ->route('admin.register.index')
@@ -178,38 +92,8 @@ class RegistrationController extends Controller
 
     public function show(RegistrationLink $registrationLink): Response
     {
-        $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy');
-        $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
-        $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
-
         return Inertia::render('admin/registration/show', [
-            'registration' => [
-                'id' => $registrationLink->id,
-                'email' => $registrationLink->email,
-                'token' => $registrationLink->token,
-                'company_type' => $registrationLink->company_type,
-                'company_type_label' => $this->templateService->labelFor($registrationLink->company_type),
-                'status' => $registrationLink->status,
-                'created_at' => $registrationLink->created_at?->toDateTimeString(),
-                'form_submission' => $this->registrationFormService->getStructuredSubmission($registrationLink),
-                'generated_documents' => $registrationLink->generatedDocuments
-                    ->sortByDesc('created_at')
-                    ->values()
-                    ->map(fn ($document) => [
-                        'id' => $document->id,
-                        'document_type' => $document->document_type,
-                        'document_name' => $document->document_name,
-                        'created_at' => $document->created_at?->toDateTimeString(),
-                        'generated_by' => $document->generatedBy?->name,
-                        'view_url' => route('admin.register.documents.view', [$registrationLink->id, $document->id]),
-                        'download_url' => route('admin.register.documents.download', [$registrationLink->id, $document->id]),
-                        'delete_url' => route('admin.register.documents.destroy', [$registrationLink->id, $document->id]),
-                    ])
-                    ->all(),
-                'document_forms' => $this->documentGenerationService->availableDocuments(),
-                'revision_count' => $revisionCount,
-                'last_revision_at' => $lastRevisionAt?->toDateTimeString(),
-            ],
+            'registration' => $this->adminRegistrationService->detailsForShow($registrationLink),
         ]);
     }
 
@@ -217,18 +101,8 @@ class RegistrationController extends Controller
     {
         $status = $request->string('status')->toString();
 
-        $registrationLink->update([
-            'status' => $status,
-        ]);
+        $this->adminRegistrationService->setStatus($registrationLink, $status);
 
         return back()->with('success', "Successfully set status to {$status}.");
-    }
-
-    private function guessClientNameFromEmail(string $email): string
-    {
-        $localPart = explode('@', $email)[0] ?? $email;
-        $normalized = trim(str_replace(['.', '_', '-'], ' ', $localPart));
-
-        return $normalized !== '' ? ucwords($normalized) : $email;
     }
 }
