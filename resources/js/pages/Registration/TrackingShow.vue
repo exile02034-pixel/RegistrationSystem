@@ -1,65 +1,11 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { Head } from '@inertiajs/vue3'
 import TrackedSectionCard from '@/components/registration/TrackedSectionCard.vue'
-import { useSubmissionTracking } from '@/composables/useSubmissionTracking'
+import { useTrackingShow } from '@/composables/useTrackingShow'
+import type { TrackingShowPageProps } from '@/types/registration'
 
-const props = defineProps<{
-  email: string
-  companyTypeLabel: string
-  status: string
-  statusLabel: string
-  submittedAt: string | null
-  canEdit: boolean
-  editableSections: string[]
-  statusMessage: string
-  errorMessage: string
-  editUrl: string
-  requestEditPermissionUrl: string
-  logoutUrl: string
-  revisionCount: number
-  lastRevisionAt: string | null
-  summary: {
-    sections?: Array<{ name: string; label: string; fields: Array<{ name: string; label: string; value: string | null }> }>
-  } | null
-}>()
-
-const form = useForm({})
-const requestEditForm = useForm({})
-const { formatDate, sectionEditUrl } = useSubmissionTracking(props.editUrl)
-const canEditSection = (sectionName: string) =>
-  props.canEdit && props.editableSections.includes(sectionName)
-
-const summarySections = computed(() => {
-  return (props.summary?.sections ?? [])
-    .map((section) => {
-      if (section.name === 'treasurer_details') {
-        return {
-          ...section,
-          fields: section.fields.map((field) => ({
-            ...field,
-            value: String(field.value ?? '').trim() === '' ? 'NA' : field.value,
-          })),
-        }
-      }
-
-      return {
-        ...section,
-        fields: section.fields.filter((field) => String(field.value ?? '').trim() !== ''),
-      }
-    })
-    .filter((section) => section.name === 'treasurer_details' || section.fields.length > 0)
-})
-
-const logout = () => {
-  form.post(props.logoutUrl)
-}
-
-const requestEditPermission = () => {
-  requestEditForm.post(props.requestEditPermissionUrl, {
-    preserveScroll: true,
-  })
-}
+const props = defineProps<TrackingShowPageProps>()
+const { requestEditForm, formatDate, sectionEditUrl, canEditSection, summarySections, logout, requestEditPermission } = useTrackingShow(props)
 
 </script>
 

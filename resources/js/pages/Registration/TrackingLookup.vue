@@ -1,21 +1,10 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
+import { useTrackingLookup } from '@/composables/useTrackingLookup'
+import type { TrackingLookupPageProps } from '@/types/registration'
 
-const props = defineProps<{
-  statusMessage: string
-  errorMessage: string
-  requestLinkUrl: string
-}>()
-
-const form = useForm({
-  email: '',
-})
-
-const submit = () => {
-  form.post(props.requestLinkUrl, {
-    preserveScroll: true,
-  })
-}
+const props = defineProps<TrackingLookupPageProps>()
+const { form, submit } = useTrackingLookup(props)
 </script>
 
 <template>

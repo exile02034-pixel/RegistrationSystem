@@ -46,6 +46,14 @@ class AdminDocumentService
         ];
     }
 
+    public function generatedJsonResponsePayload(array $documentPayload): array
+    {
+        return [
+            'message' => 'Document generated successfully.',
+            'document' => $documentPayload,
+        ];
+    }
+
     public function resolvePdfPath(RegistrationLink $registrationLink, RegistrationGeneratedDocument $document): string
     {
         $this->assertOwnership($registrationLink, $document);

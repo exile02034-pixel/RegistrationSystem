@@ -21,11 +21,7 @@ class NotificationController extends Controller
 
         abort_unless($user !== null, 403);
 
-        $notifications = $this->notificationCenterService->paginatedForUser($user);
-
-        return Inertia::render('notifications/Index', [
-            'notifications' => $notifications,
-        ]);
+        return Inertia::render('notifications/Index', $this->notificationCenterService->indexPageProps($user));
     }
 
     public function markRead(Request $request, UserNotification $notification): RedirectResponse

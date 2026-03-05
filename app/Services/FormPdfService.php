@@ -13,6 +13,11 @@ use RuntimeException;
 
 class FormPdfService
 {
+    public function pdfPayload(FormSubmission $submission, string $section): array
+    {
+        return $this->generatePdf($submission, $section);
+    }
+
     public function streamPdf(FormSubmission $submission, string $section): Response
     {
         $pdf = $this->generatePdf($submission, $section);

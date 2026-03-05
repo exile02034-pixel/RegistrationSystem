@@ -29,6 +29,13 @@ class AdminActivityLogService
         return $logs;
     }
 
+    public function indexPageProps(int $perPage = 10): array
+    {
+        return [
+            'logs' => $this->paginated($perPage),
+        ];
+    }
+
     private function mapLog(ActivityLog $log): array
     {
         $metadata = is_array($log->metadata) ? $log->metadata : [];

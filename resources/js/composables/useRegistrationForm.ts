@@ -1,25 +1,12 @@
 import { useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { toast } from '@/components/ui/sonner'
-
-type FormField = {
-  name: string
-  label: string
-  type?: string
-  required?: boolean
-  options?: Array<{ label: string; value: string }>
-}
-
-type FormSection = {
-  name: string
-  label: string
-  fields: FormField[]
-}
+import type { FormFieldSchema, FormSectionSchema } from '@/types'
 
 type SectionErrorMap = Record<string, Record<string, string>>
 
 export const useRegistrationForm = (
-  formSchema: FormSection[],
+  formSchema: FormSectionSchema[],
   submitUrl: string,
   initialValues: Record<string, Record<string, string>> = {},
   initialSectionName: string | null = null,
@@ -76,7 +63,7 @@ export const useRegistrationForm = (
     return String(form.sections?.[sectionName]?.[fieldName] ?? '').trim()
   }
 
-  const isNumericField = (field: FormField): boolean => {
+  const isNumericField = (field: FormFieldSchema): boolean => {
     if (field.type === 'number') {
       return true
     }
@@ -84,11 +71,11 @@ export const useRegistrationForm = (
     return /(mobile|phone|contact_number|_number$)/i.test(field.name)
   }
 
-  const isTinField = (field: FormField): boolean => {
+  const isTinField = (field: FormFieldSchema): boolean => {
     return /tin/i.test(field.name)
   }
 
-  const validateField = (sectionName: string, field: FormField): string | null => {
+  const validateField = (sectionName: string, field: FormFieldSchema): string | null => {
     const value = valueFor(sectionName, field.name)
 
     if (field.required && value === '') {
@@ -138,7 +125,7 @@ export const useRegistrationForm = (
     return null
   }
 
-  const validateSection = (section: FormSection): Record<string, string> => {
+  const validateSection = (section: FormSectionSchema): Record<string, string> => {
     return section.fields.reduce<Record<string, string>>((errors, field) => {
       const error = validateField(section.name, field)
 

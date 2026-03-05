@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
+import type { RegistrationSuccessPageProps } from '@/types/registration'
 
-const props = defineProps<{
-  trackingLookupUrl: string
-}>()
+const props = defineProps<RegistrationSuccessPageProps>()
 </script>
 
 <template>

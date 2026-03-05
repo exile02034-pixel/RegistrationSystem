@@ -140,7 +140,7 @@
     hereby depose and state that:
 </p>
 
-<ul class="bullet-list">
+<ol>
     <li>
         I am the duly elected and qualified Corporate Secretary of
         <span class="line" style="min-width: 300px;">{{ $corpName }}</span>
@@ -162,7 +162,7 @@
         That the aforementioned persons are likewise authorized to process documents with Local Government Units (LGUs),
         including but not limited to: updating of business registration, business closure, and submission of compliance documents.
     </li>
-</ul>
+</ol>
 
 <p class="witness">
     IN WITNESS WHEREOF, I have hereunto signed this Certificate this

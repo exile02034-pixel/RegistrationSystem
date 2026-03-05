@@ -9,6 +9,13 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class NotificationCenterService
 {
+    public function indexPageProps(User $user, int $perPage = 12): array
+    {
+        return [
+            'notifications' => $this->paginatedForUser($user, $perPage),
+        ];
+    }
+
     public function paginatedForUser(User $user, int $perPage = 12): LengthAwarePaginator
     {
         return UserNotification::query()

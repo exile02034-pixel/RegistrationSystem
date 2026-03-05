@@ -5,67 +5,13 @@ import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { useUserFiles } from '@/composables/useUserFiles'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
+import type { UserFilesPageProps } from '@/types/user-pages'
 
-type SubmittedField = {
-  name: string
-  label: string
-  value: string | null
-}
-
-type SubmittedSection = {
-  name: string
-  label: string
-  fields: SubmittedField[]
-}
-
-type FormSubmission = {
-  id: string
-  email?: string
-  status: 'pending' | 'incomplete' | 'completed'
-  submitted_at: string | null
-  sections: SubmittedSection[]
-}
-
-type UserSubmission = {
-  registration_id: string
-  company_type: 'opc' | 'sole_prop' | 'corp'
-  company_type_label: string
-  registration_status: 'pending' | 'incomplete' | 'completed'
-  created_at: string | null
-  form_submission: FormSubmission | null
-}
-
-defineProps<{
-  submissions: UserSubmission[]
-  clientInfo: {
-    name: string
-    email: string
-    company_types: Array<{ value: 'opc' | 'sole_prop' | 'corp'; label: string }>
-  }
-}>()
-
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'My Submission',
-    href: '/user/about-me',
-  },
-]
-
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
-const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
-  if (value === 'opc') return 'OPC'
-  if (value === 'corp') return 'CORP'
-  return 'SOLE PROP'
-}
+const props = defineProps<UserFilesPageProps>()
+const { submissions, clientInfo } = props
+const { breadcrumbs, avatarInitials, shortCompanyType } = useUserFiles(props.clientInfo)
 
 </script>
 
@@ -84,7 +30,7 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
       <div class="relative space-y-6">
         <div>
           <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
-            About Me
+            My Files
           </h1>
           <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
             View your submitted registration form data.
@@ -94,7 +40,7 @@ const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
           <div class="flex items-center gap-3">
             <div class="h-10 w-10 flex items-center justify-center rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold dark:bg-[#0F2747] dark:text-[#E6F1FF]">
-              {{ initials(clientInfo.name) }}
+              {{ avatarInitials }}
             </div>
             <div>
               <p class="text-sm font-semibold">{{ clientInfo.name }}</p>

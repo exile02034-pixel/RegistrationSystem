@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,165 +20,30 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
-import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAdminRegistrationActions } from '@/composables/admin/useAdminRegistrationActions'
+import { useAdminRegistrations } from '@/composables/admin/useAdminRegistrations'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminRegistrationIndexPageProps } from '@/types'
 
-type RegistrationLink = {
-  id: string
-  email: string
-  company_type_label: string
-  status: string
-  form_submitted: boolean
-  created_at: string | null
-  client_url: string
-  show_url: string
-}
+const props = defineProps<AdminRegistrationIndexPageProps>()
 
-type CompanyType = {
-  value: string
-  label: string
-}
-
-type PaginatedLinks = {
-  data: RegistrationLink[]
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-}
-
-type Filters = {
-  search: string
-  sort: 'created_at'
-  direction: 'asc' | 'desc'
-  company_type: '' | 'opc' | 'sole_prop' | 'corp'
-}
-
-const props = defineProps<{
-  links: PaginatedLinks
-  companyTypes: CompanyType[]
-  filters: Filters
-}>()
-
-const isModalOpen = ref(false)
-const isDeleteModalOpen = ref(false)
-const deleting = ref(false)
-const selectedForDelete = ref<RegistrationLink | null>(null)
-
-const search = ref(props.filters.search ?? '')
-const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
-const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc')
-const companyTypeFilter = ref<Filters['company_type']>(props.filters.company_type ?? '')
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
-const form = useForm({
-  email: '',
-  company_type: props.companyTypes[0]?.value ?? 'corp',
+const { search, sortIcon, companyTypeFilter, toggleSort, reload } = useAdminRegistrations({
+  filters: props.filters,
+  getCurrentPage: () => props.links.current_page,
 })
-
-const buildQuery = (overrides: Partial<{ page: number }> = {}) => {
-  const query: Record<string, string | number> = {
-    page: overrides.page ?? props.links.current_page,
-    search: search.value.trim(),
-    sort: sort.value,
-    direction: direction.value,
-  }
-
-  if (companyTypeFilter.value) {
-    query.company_type = companyTypeFilter.value
-  }
-
-  if (!query.search) {
-    delete query.search
-  }
-
-  return query
-}
-
-const reload = (page = 1) => {
-  router.get('/admin/registration', buildQuery({ page }), {
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-  })
-}
-
-watch(search, () => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => reload(1), 300)
-})
-
-watch(companyTypeFilter, () => reload(1))
-
-const toggleSort = () => {
-  direction.value = direction.value === 'asc' ? 'desc' : 'asc'
-  reload(1)
-}
-
-const sortIcon = computed(() => {
-  if (sort.value !== 'created_at') return ChevronsUpDown
-  return direction.value === 'asc' ? ChevronUp : ChevronDown
-})
-
-const formatDate = (value: string | null) => {
-  if (!value) return 'n/a'
-
-  return new Date(value).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-const submit = () => {
-  form.post('/admin/registration/send', {
-    preserveScroll: true,
-    onSuccess: () => {
-      form.reset('email')
-      isModalOpen.value = false
-      toast.success('Registration email sent successfully.')
-    },
-    onError: () => {
-      toast.error('Unable to send registration email.')
-    },
-  })
-}
-
-const openDeleteModal = (link: RegistrationLink) => {
-  selectedForDelete.value = link
-  isDeleteModalOpen.value = true
-}
-
-const confirmDelete = () => {
-  if (!selectedForDelete.value) return
-
-  router.delete(`/admin/registrations/${selectedForDelete.value.id}`, {
-    preserveScroll: true,
-    onStart: () => {
-      deleting.value = true
-    },
-    onSuccess: () => {
-      toast.success('Deleted successfully.')
-      isDeleteModalOpen.value = false
-      selectedForDelete.value = null
-    },
-    onError: () => {
-      toast.error('Unable to delete registration.')
-    },
-    onFinish: () => {
-      deleting.value = false
-    },
-  })
-}
-
-const statusClass = (status: string) => {
-  if (status === 'completed') return 'text-emerald-600 dark:text-emerald-400'
-  if (status === 'incomplete') return 'text-rose-600 dark:text-rose-400'
-  if (status === 'pending') return 'text-amber-600 dark:text-amber-400'
-
-  return 'text-[#0B1F3A] dark:text-[#E6F1FF]'
-}
+const {
+  deleting,
+  form,
+  isDeleteModalOpen,
+  isModalOpen,
+  selectedForDelete,
+  confirmDelete,
+  formatDate,
+  openDeleteModal,
+  statusClass,
+  submit,
+} = useAdminRegistrationActions(props.companyTypes)
 </script>
 
 <template>

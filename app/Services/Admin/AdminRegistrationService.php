@@ -71,6 +71,38 @@ class AdminRegistrationService
         return $links;
     }
 
+    public function indexPageProps(
+        string $search,
+        string $sort,
+        string $direction,
+        ?string $companyType,
+    ): array {
+        return [
+            'links' => $this->paginatedForIndex($search, $companyType, $sort, $direction),
+            'companyTypes' => $this->templateService->availableCompanyTypes(),
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'direction' => $direction,
+                'company_type' => in_array($companyType, ['corp', 'sole_prop', 'opc'], true) ? $companyType : '',
+            ],
+        ];
+    }
+
+    public function createPageProps(): array
+    {
+        return [
+            'companyTypes' => $this->templateService->availableCompanyTypes(),
+        ];
+    }
+
+    public function showPageProps(RegistrationLink $registrationLink): array
+    {
+        return [
+            'registration' => $this->detailsForShow($registrationLink),
+        ];
+    }
+
     public function detailsForShow(RegistrationLink $registrationLink): array
     {
         $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy');

@@ -2,23 +2,12 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useUserDashboard } from '@/composables/useUserDashboard';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type BreadcrumbItem } from '@/types';
+import type { UserDashboardPageProps } from '@/types/user-pages';
 
-const props = defineProps<{
-    stats: {
-        totalSubmissions: number;
-        completedSubmissions: number;
-        latestSubmissionAt: string | null;
-    };
-}>();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/user/dashboard',
-    },
-];
+const props = defineProps<UserDashboardPageProps>();
+const { breadcrumbs, latestSubmissionLabel } = useUserDashboard(props.stats);
 
 </script>
 
@@ -63,7 +52,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <div class="mt-3 space-y-2 text-sm text-[#475569] dark:text-[#9FB3C8]">
                             <p><strong>Total Submitted Forms:</strong> {{ props.stats.totalSubmissions }}</p>
                             <p><strong>Completed Forms:</strong> {{ props.stats.completedSubmissions }}</p>
-                            <p><strong>Latest Submission:</strong>   {{ props.stats.latestSubmissionAt ? new Date(props.stats.latestSubmissionAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'n/a' }}</p>
+                            <p><strong>Latest Submission:</strong>   {{ latestSubmissionLabel }}</p>
 
                         </div>
                     </Card>

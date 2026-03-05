@@ -1,115 +1,23 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronUp } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Pagination } from '@/components/ui/pagination'
+import { useAdminUserShow } from '@/composables/admin/useAdminUserShow'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminUserShowPageProps } from '@/types'
 
-type CompanyType = {
-  value: 'corp' | 'sole_prop' | 'opc'
-  label: string
-}
-
-type SubmittedField = {
-  name: string
-  label: string
-  value: string | null
-}
-
-type SubmittedSection = {
-  name: string
-  label: string
-  fields: SubmittedField[]
-}
-
-type FormSubmission = {
-  id: string
-  email?: string
-  status: 'pending' | 'incomplete' | 'completed'
-  submitted_at: string | null
-  sections: SubmittedSection[]
-}
-
-type UserSubmission = {
-  registration_id: string
-  company_type: 'opc' | 'sole_prop' | 'corp'
-  company_type_label: string
-  registration_status: 'pending' | 'incomplete' | 'completed'
-  created_at: string | null
-  form_submission: FormSubmission | null
-}
-
-type ActivityItem = {
-  id: string
-  type: string
-  description: string
-  created_at: string | null
-  files_count: number | null
-  filenames: string[]
-  section_label?: string | null
-  updated_fields?: string[]
-}
-
-const props = defineProps<{
-  user: {
-    id: string
-    name: string
-    email: string
-    status: string
-    created_at: string | null
-    company_types: CompanyType[]
-  }
-  submissions: UserSubmission[]
-  activities: ActivityItem[]
-}>()
-
-const activitiesPerPage = 5
-const activityPage = ref(1)
-
-const activityLastPage = computed(() => {
-  return Math.max(1, Math.ceil(props.activities.length / activitiesPerPage))
-})
-
-const paginatedActivities = computed(() => {
-  const currentPage = Math.min(activityPage.value, activityLastPage.value)
-  const start = (currentPage - 1) * activitiesPerPage
-  const end = start + activitiesPerPage
-
-  return props.activities.slice(start, end)
-})
-
-const changeActivityPage = (page: number) => {
-  activityPage.value = Math.max(1, Math.min(page, activityLastPage.value))
-}
-
-const formatDate = (value: string | null) => {
-  if (!value) return 'n/a'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-  })
-}
-
-const formatDateTime = (value: string | null) => {
-  if (!value) return 'n/a'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-
-  return parsed.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+const props = defineProps<AdminUserShowPageProps>()
+const {
+  activityLastPage,
+  activityPage,
+  paginatedActivities,
+  changeActivityPage,
+  formatDate,
+  formatDateTime,
+} = useAdminUserShow(props.activities)
 </script>
 
 <template>
