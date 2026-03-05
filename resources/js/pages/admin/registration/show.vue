@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3'
 import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
 import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
@@ -10,130 +8,22 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAdminRegistrationShow } from '@/composables/admin/useAdminRegistrationShow'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminRegistrationShowPageProps } from '@/types'
 
-type SubmittedField = {
-  name: string
-  label: string
-  value: string | null
-}
-
-type SubmittedSection = {
-  name: string
-  label: string
-  fields: SubmittedField[]
-}
-
-type FormSubmission = {
-  id: string
-  email?: string
-  status: 'pending' | 'incomplete' | 'completed'
-  submitted_at: string | null
-  sections: SubmittedSection[]
-}
-
-type GeneratedDocument = {
-  id: string
-  document_type: string
-  document_name: string
-  created_at: string | null
-  generated_by: string | null
-  view_url: string
-  download_url: string
-  delete_url: string
-}
-
-type DocumentForm = {
-  type: 'secretary_certificate' | 'appointment_form_opc' | 'gis_stock_corporation'
-  name: string
-  description: string
-}
-
-const props = defineProps<{
-  registration: {
-    id: string
-    email: string
-    token: string
-    company_type: 'opc' | 'sole_prop' | 'corp'
-    company_type_label: string
-    status: string
-    created_at: string | null
-    form_submission: FormSubmission | null
-    generated_documents: GeneratedDocument[]
-    document_forms: DocumentForm[]
-    revision_count: number
-    last_revision_at: string | null
-  }
-}>()
-
-const statusForm = useForm({
-  status: props.registration.status as 'pending' | 'incomplete' | 'completed',
-})
-const currentStatus = ref(props.registration.status as 'pending' | 'incomplete' | 'completed')
-const createUserForm = useForm({
-  name: '',
-  email: props.registration.email,
-  password: '',
-  password_confirmation: '',
-})
-const isCreateUserModalOpen = ref(false)
-
-const updateStatus = () => {
-  statusForm.patch(`/admin/registration/${props.registration.id}/status`, {
-    preserveScroll: true,
-    onSuccess: () => {
-      currentStatus.value = statusForm.status
-      toast.success(`Successfully set the status to ${statusForm.status}.`)
-    },
-    onError: () => {
-      statusForm.status = currentStatus.value
-      toast.error('Unable to update status.')
-    },
-  })
-}
-
-const canCreateUser = computed(() => currentStatus.value === 'completed')
-
-const openCreateUserModal = () => {
-  createUserForm.clearErrors()
-  createUserForm.email = props.registration.email
-  isCreateUserModalOpen.value = true
-}
-
-const submitCreateUser = () => {
-  createUserForm.post('/admin/user', {
-    preserveScroll: true,
-    onSuccess: () => {
-      createUserForm.reset()
-      createUserForm.email = props.registration.email
-      isCreateUserModalOpen.value = false
-      toast.success('User created successfully', {
-        description: 'The new client account is ready to use.',
-      })
-    },
-    onError: () => {
-      toast.error('Unable to create user', {
-        description: 'Please check the form fields and try again.',
-      })
-    },
-  })
-}
-
-const formatDateTime = (date:any) => {
-  if (!date) return 'N/A'
-  const utcDate = new Date(date + 'Z') // force UTC interpretation
-  return utcDate.toLocaleString('en-PH', {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  })
-}
+const props = defineProps<AdminRegistrationShowPageProps>()
+const {
+  canCreateUser,
+  createUserForm,
+  isCreateUserModalOpen,
+  statusForm,
+  formatDateTime,
+  openCreateUserModal,
+  submitCreateUser,
+  updateStatus,
+} = useAdminRegistrationShow(props.registration)
 </script>
 
 <template>
@@ -248,6 +138,8 @@ const formatDateTime = (date:any) => {
             :submission="registration.form_submission"
             :company-type="registration.company_type"
             context="admin"
+            :registration-id="registration.id"
+            :registration-email="registration.email"
           />
 
           <DocumentFormsPanel

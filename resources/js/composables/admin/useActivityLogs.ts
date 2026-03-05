@@ -1,23 +1,5 @@
 import { computed } from 'vue'
-
-type ActivityLogItem = {
-  id: string
-  type: string
-  description: string
-  performed_by_name: string | null
-  performed_by_email: string | null
-  performed_by_role: string | null
-  company_type: string | null
-  files_count?: number | null
-  filenames?: string[]
-  file_types?: string[]
-  metadata?: {
-    section?: string
-    section_label?: string
-    updated_fields?: string[]
-  }
-  created_at: string | null
-}
+import type { ActivityLogItem } from '@/types'
 
 export const useActivityLogs = (logs: ActivityLogItem[]) => {
   const formatDateTime = (value: string | null) => {

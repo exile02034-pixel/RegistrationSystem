@@ -1,37 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { computed } from 'vue'
 import FormSection from '@/components/registration/FormSection.vue'
 import FormStepper from '@/components/registration/FormStepper.vue'
 import { Button } from '@/components/ui/button'
 import { useRegistrationForm } from '@/composables/useRegistrationForm'
+import { useRegistrationReview } from '@/composables/useRegistrationReview'
+import type { RegistrationFormPageProps } from '@/types'
 
-type FieldSchema = {
-  name: string
-  label: string
-  type?: string
-  required?: boolean
-  options?: Array<{ label: string; value: string }>
-}
-
-type SectionSchema = {
-  name: string
-  label: string
-  fields: FieldSchema[]
-}
-
-const props = defineProps<{
-  token: string
-  email: string
-  companyType: string
-  companyTypeLabel: string
-  formSchema: SectionSchema[]
-  submitUrl: string
-  qrCodeDataUri: string
-  initialSections?: Record<string, Record<string, string>>
-  isEditing?: boolean
-  focusSection?: string | null
-}>()
+const props = defineProps<RegistrationFormPageProps>()
 
 const {
   canMoveNext,
@@ -51,52 +27,7 @@ const {
   props.focusSection ?? null,
 )
 
-const isLastStep = () => currentStep.value === stepItems.value.length - 1
-
-const filledRegularCorporationIncorporatorIndexes = computed(() => {
-  const values = form.sections.regular_corporation ?? {}
-  const indexes = new Set<number>()
-
-  Object.entries(values).forEach(([fieldName, rawValue]) => {
-    const match = fieldName.match(/^incorporator_(\d+)_/)
-    if (!match) {
-      return
-    }
-
-    const value = String(rawValue ?? '').trim()
-    if (value === '') {
-      return
-    }
-
-    indexes.add(Number.parseInt(match[1], 10))
-  })
-
-  return indexes
-})
-
-const reviewFieldsForSection = (section: SectionSchema) => {
-  if (section.name === 'opc_details') {
-    return section.fields.filter((field) => {
-      return field.name !== 'nominee_person_choice'
-        && field.name !== 'alternate_nominee_person_choice'
-    })
-  }
-
-  if (section.name !== 'regular_corporation') {
-    return section.fields
-  }
-
-  return section.fields.filter((field) => {
-    const match = field.name.match(/^incorporator_(\d+)_/)
-    if (!match) {
-      return true
-    }
-
-    const index = Number.parseInt(match[1], 10)
-
-    return filledRegularCorporationIncorporatorIndexes.value.has(index)
-  })
-}
+const { isLastStep, reviewFieldsForSection } = useRegistrationReview(props.formSchema, { form })
 </script>
 
 <template>
@@ -179,7 +110,7 @@ const reviewFieldsForSection = (section: SectionSchema) => {
         <div class="flex items-center gap-2">
           <p v-if="!canMoveNext && !isReviewStep" class="text-xs text-red-600">Please complete required fields first.</p>
           <Button
-            v-if="!isLastStep()"
+            v-if="!isLastStep(currentStep, stepItems.length)"
             type="button"
             :disabled="form.processing"
             @click="next"

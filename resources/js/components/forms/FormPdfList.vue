@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Download, Eye, MoreHorizontal, Printer, Trash2 } from 'lucide-vue-next'
+import { useForm } from '@inertiajs/vue3'
+import { Download, Eye, Mail, MoreHorizontal, Printer, Trash2 } from 'lucide-vue-next'
 import { computed } from 'vue'
 import {
   AlertDialog,
@@ -19,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { toast } from '@/components/ui/sonner'
 import { useDelete } from '@/composables/useDelete'
 import { type CompanyType, type PdfContext, useFormPdf } from '@/composables/useFormPdf'
 
@@ -41,6 +43,8 @@ const props = defineProps<{
   submission: FormSubmission | null
   companyType: CompanyType
   context: PdfContext
+  registrationId?: string
+  registrationEmail?: string
   title?: string
   subtitle?: string
 }>()
@@ -59,8 +63,13 @@ const {
 } = useFormPdf(props.submission, props.companyType, props.context)
 
 const { isOpen, deleting, promptDelete, confirmDelete, reset } = useDelete()
+const sendEmailForm = useForm<{ sections: string[]; document_ids: string[] }>({
+  sections: [],
+  document_ids: [],
+})
 
 const canPrint = computed(() => selectedGeneratedRows.value.length > 0)
+const canSendEmail = computed(() => props.context === 'admin' && selectedGeneratedRows.value.length > 0 && Boolean(props.registrationId))
 const canDelete = computed(() => props.context === 'admin')
 
 const formatCreatedAt = (value: string | null | undefined) => {
@@ -74,6 +83,25 @@ const formatCreatedAt = (value: string | null | undefined) => {
     day: '2-digit',
   })
 }
+
+const sendSelectedByEmail = () => {
+  if (!props.registrationId || selectedGeneratedRows.value.length === 0) return
+
+  sendEmailForm.sections = selectedGeneratedRows.value.map((row) => row.section)
+  sendEmailForm.document_ids = []
+
+  sendEmailForm.post(`/admin/registration/${props.registrationId}/pdfs/send-email`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      sendEmailForm.reset()
+      toast.success(`Selected PDF forms were sent to ${props.registrationEmail ?? 'the registration email'}.`)
+    },
+    onError: (errors) => {
+      const firstMessage = Object.values(errors).find((value) => typeof value === 'string')
+      toast.error((firstMessage as string | undefined) ?? 'Failed to send selected PDF forms.')
+    },
+  })
+}
 </script>
 
 <template>
@@ -83,16 +111,29 @@ const formatCreatedAt = (value: string | null | undefined) => {
         <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">{{ title ?? 'Generated PDF Forms' }}</h3>
         <p v-if="subtitle" class="text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ subtitle }}</p>
       </div>
-      <Button
-        v-if="canPrint"
-        type="button"
-        variant="outline"
-        class="cursor-pointer"
-        @click="printSelected"
-      >
-        <Printer class="mr-2 h-4 w-4" />
-        Print Selected ({{ selectedGeneratedRows.length }})
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button
+          v-if="canSendEmail"
+          type="button"
+          variant="outline"
+          class="cursor-pointer"
+          :disabled="sendEmailForm.processing"
+          @click="sendSelectedByEmail"
+        >
+          <Mail class="mr-2 h-4 w-4" />
+          Send Email ({{ selectedGeneratedRows.length }})
+        </Button>
+        <Button
+          v-if="canPrint"
+          type="button"
+          variant="outline"
+          class="cursor-pointer"
+          @click="printSelected"
+        >
+          <Printer class="mr-2 h-4 w-4" />
+          Print Selected ({{ selectedGeneratedRows.length }})
+        </Button>
+      </div>
     </div>
 
     <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">

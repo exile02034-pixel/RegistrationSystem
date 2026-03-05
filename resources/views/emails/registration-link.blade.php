@@ -5,11 +5,13 @@
     <title>Complete Your Registration</title>
 </head>
 <body>
-    <p>Greetings,</p>
+    <p>Greetings Sir,</p>
 
     <p>
-        Please complete your online registration form for {{ $companyTypeLabel }} using the secure link below.
+        Attached is the registratiion form for the corporation please fill it out and provide the necessary details and documents for us to be able to register the requested corporations.
     </p>
+
+    <p>Thank you and may this merit your favorable response.</p>
 
     <p>
         <a href="{{ $registrationUrl }}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;">

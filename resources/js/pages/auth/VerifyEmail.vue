@@ -6,10 +6,9 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
+import type { VerifyEmailPageProps } from '@/types';
 
-defineProps<{
-    status?: string;
-}>();
+defineProps<VerifyEmailPageProps>();
 </script>
 
 <template>

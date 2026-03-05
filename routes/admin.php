@@ -41,5 +41,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/submissions/{submission}/pdf/{section}/download', [AdminFormPdfController::class, 'download'])->name('submissions.pdf.download');
         Route::get('/submissions/{submission}/pdf/print-batch', [AdminFormPdfController::class, 'printBatch'])->name('submissions.pdf.print-batch');
         Route::delete('/submissions/{submission}/pdf/{section}', [AdminFormPdfController::class, 'destroy'])->name('submissions.pdf.destroy');
+        Route::post('/registration/{registrationLink}/pdfs/send-email', [RegistrationController::class, 'sendSelectedPdfsEmail'])
+            ->name('register.pdfs.send-email');
         Route::patch('/submissions/{submission}/section/{section}', [AdminFormSubmissionController::class, 'updateSection'])->name('submissions.section.update');
     });

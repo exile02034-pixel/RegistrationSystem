@@ -1,43 +1,13 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
-import { toast } from '@/components/ui/sonner';
+import { useNotificationSettings } from '@/composables/useNotificationSettings';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import type { BreadcrumbItem } from '@/types';
+import type { NotificationSettingsPageProps } from '@/types/notifications';
 
-const props = defineProps<{
-    preferences: Record<string, boolean>;
-    labels: Record<string, string>;
-}>();
-
-const breadcrumbItems: BreadcrumbItem[] = [
-    {
-        title: 'Notification settings',
-        href: '/settings/notifications',
-    },
-];
-
-const updatePreference = (key: string, value: boolean) => {
-    const updated = {
-        ...props.preferences,
-        [key]: value,
-    };
-
-    router.put(
-        '/settings/notifications',
-        { preferences: updated },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success('Notification preference updated.');
-            },
-            onError: () => {
-                toast.error('Unable to update notification preference.');
-            },
-        },
-    );
-};
+const props = defineProps<NotificationSettingsPageProps>();
+const { breadcrumbItems, updatePreference } = useNotificationSettings(props);
 </script>
 
 <template>
@@ -83,4 +53,3 @@ const updatePreference = (key: string, value: boolean) => {
         </SettingsLayout>
     </AppLayout>
 </template>
-

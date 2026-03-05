@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Services\UserDashboardService;
-use App\Services\UserFormSubmissionService;
+use App\Services\User\UserPageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -12,28 +11,18 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     public function __construct(
-        private readonly UserDashboardService $dashboardService,
-        private readonly UserFormSubmissionService $formSubmissionService,
+        private readonly UserPageService $userPageService,
     ) {}
 
     public function index(Request $request): Response
     {
-        return Inertia::render('user/Dashboard', [
-            'stats' => $this->dashboardService->getStatsForUser($request->user()),
-        ]);
+        return Inertia::render('user/Dashboard', $this->userPageService->dashboardPageProps($request->user()));
     }
 
     public function aboutMe(Request $request): Response
     {
         $user = $request->user();
 
-        return Inertia::render('user/Files', [
-            'submissions' => $this->formSubmissionService->getSubmissionsForUser($user),
-            'clientInfo' => [
-                'name' => $user->name,
-                'email' => $user->email,
-                'company_types' => $this->formSubmissionService->getCompanyTypesForUser($user)->all(),
-            ],
-        ]);
+        return Inertia::render('user/Files', $this->userPageService->filesPageProps($user));
     }
 }

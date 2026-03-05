@@ -4,16 +4,7 @@ import Button from '@/components/ui/button/Button.vue'
 import Input from '@/components/ui/input/Input.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { dashboard } from '@/routes'
-import { type BreadcrumbItem } from '@/types'
-
-type UserItem = {
-  id: number
-  name: string
-  email: string
-  role: string
-  status: 'Active' | 'Inactive'
-  createdAt: string
-}
+import { type BreadcrumbItem, type UserListItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: dashboard().url },
@@ -21,7 +12,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 // Static sample users (replace later with props from backend)
-const users: UserItem[] = [
+const users: UserListItem[] = [
   { id: 1, name: 'Jancee Capati', email: 'jancee@example.com', role: 'Admin', status: 'Active', createdAt: 'Feb 20, 2026' },
   { id: 2, name: 'Marie Santos', email: 'marie@example.com', role: 'User', status: 'Active', createdAt: 'Feb 18, 2026' },
   { id: 3, name: 'John Dela Cruz', email: 'john@example.com', role: 'User', status: 'Inactive', createdAt: 'Feb 10, 2026' },

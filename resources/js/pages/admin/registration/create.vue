@@ -1,36 +1,13 @@
 <script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from '@/components/ui/sonner'
+import { useRegistrationEmailForm } from '@/composables/admin/useRegistrationEmailForm'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminRegistrationCreatePageProps } from '@/types'
 
-type CompanyType = {
-  value: string
-  label: string
-}
-
-const props = defineProps<{
-  companyTypes: CompanyType[]
-}>()
-
-const form = useForm({
-  email: '',
-  company_type: props.companyTypes[0]?.value ?? 'corp',
-})
-
-const submit = () => {
-  form.post('/admin/registration/send', {
-    preserveScroll: true,
-    onSuccess: () => {
-      form.reset('email')
-      toast.success('Registration email sent successfully.')
-    },
-    onError: () => {
-      toast.error('Unable to send registration email.')
-    },
-  })
-}
+const props = defineProps<AdminRegistrationCreatePageProps>()
+const { form, submit } = useRegistrationEmailForm(props.companyTypes)
 </script>
 
 <template>

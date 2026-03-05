@@ -1,22 +1,16 @@
 import { router } from '@inertiajs/vue3'
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-
-type Filters = {
-  search: string
-  sort: 'created_at'
-  direction: 'asc' | 'desc'
-  company_type: '' | 'opc' | 'sole_prop' | 'corp'
-}
+import type { AdminTableFilters } from '@/types'
 
 type UseAdminUsersOptions = {
-  filters: Filters
+  filters: AdminTableFilters
   getCurrentPage: () => number
 }
 
 export const useAdminUsers = (options: UseAdminUsersOptions) => {
   const search = ref(options.filters.search ?? '')
-  const companyTypeFilter = ref<Filters['company_type']>(options.filters.company_type ?? '')
+  const companyTypeFilter = ref<AdminTableFilters['company_type']>(options.filters.company_type ?? '')
   const sort = ref<'created_at'>(options.filters.sort ?? 'created_at')
   const direction = ref<'asc' | 'desc'>(options.filters.direction ?? 'desc')
   let debounceTimer: ReturnType<typeof setTimeout> | null = null

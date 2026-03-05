@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
-import { Download, Eye, FileText, Trash2 } from 'lucide-vue-next'
+import { Download, Eye, FileText, Mail, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   AlertDialog,
@@ -13,7 +13,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
@@ -45,11 +52,16 @@ const props = defineProps<{
 const isModalOpen = ref(false)
 const activeType = ref<DocumentForm['type'] | null>(null)
 const gisStep = ref(1)
+const selectedDocumentIds = ref<string[]>([])
 
 const { isOpen, deleting, promptDelete, confirmDelete, reset } = useDelete()
 
 const form = useForm<{ fields: Record<string, any> }>({
   fields: {},
+})
+const sendEmailForm = useForm<{ sections: string[]; document_ids: string[] }>({
+  sections: [],
+  document_ids: [],
 })
 
 const defaultAppointmentOfficers = () => ([
@@ -357,6 +369,51 @@ const formatDateTime = (value: string | null) => {
   })
 }
 
+const selectedGeneratedDocuments = computed(() => {
+  return props.generatedDocuments.filter((document) => selectedDocumentIds.value.includes(document.id))
+})
+
+const allGeneratedSelected = computed(() => {
+  return props.generatedDocuments.length > 0
+    && selectedGeneratedDocuments.value.length === props.generatedDocuments.length
+})
+
+const toggleAllGenerated = (checked: boolean) => {
+  selectedDocumentIds.value = checked ? props.generatedDocuments.map((document) => document.id) : []
+}
+
+const toggleGeneratedDocument = (id: string, checked: boolean) => {
+  if (checked) {
+    if (!selectedDocumentIds.value.includes(id)) {
+      selectedDocumentIds.value = [...selectedDocumentIds.value, id]
+    }
+
+    return
+  }
+
+  selectedDocumentIds.value = selectedDocumentIds.value.filter((value) => value !== id)
+}
+
+const sendGeneratedDocumentsByEmail = () => {
+  if (selectedGeneratedDocuments.value.length === 0) return
+
+  sendEmailForm.sections = []
+  sendEmailForm.document_ids = selectedGeneratedDocuments.value.map((document) => document.id)
+
+  sendEmailForm.post(`/admin/registration/${props.registrationId}/pdfs/send-email`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      selectedDocumentIds.value = []
+      sendEmailForm.reset()
+      toast.success('Selected generated PDF documents were sent to the registration email.')
+    },
+    onError: (errors) => {
+      const firstMessage = Object.values(errors).find((value) => typeof value === 'string')
+      toast.error((firstMessage as string | undefined) ?? 'Failed to send selected generated PDF documents.')
+    },
+  })
+}
+
 const generateUrl = computed(() => {
   if (!activeType.value) return '#'
 
@@ -609,15 +666,35 @@ const submit = () => {
 <template>
   <div class="space-y-4">
     <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-      <div class="mb-3 flex items-center gap-2">
-        <FileText class="h-4 w-4 text-[#2563EB] dark:text-[#60A5FA]" />
-        <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Generated Document PDFs</h3>
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <FileText class="h-4 w-4 text-[#2563EB] dark:text-[#60A5FA]" />
+          <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Generated Document PDFs</h3>
+        </div>
+        <Button
+          v-if="selectedGeneratedDocuments.length > 0"
+          type="button"
+          variant="outline"
+          class="cursor-pointer"
+          :disabled="sendEmailForm.processing"
+          @click="sendGeneratedDocumentsByEmail"
+        >
+          <Mail class="mr-2 h-4 w-4" />
+          Send Email ({{ selectedGeneratedDocuments.length }})
+        </Button>
       </div>
 
       <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
         <table class="min-w-full text-sm">
           <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
             <tr>
+              <th class="w-10 px-4 py-3">
+                <Checkbox
+                  :model-value="allGeneratedSelected"
+                  :disabled="generatedDocuments.length === 0"
+                  @update:model-value="(checked) => toggleAllGenerated(Boolean(checked))"
+                />
+              </th>
               <th class="px-4 py-3">Document</th>
               <th class="px-4 py-3">Generated By</th>
               <th class="px-4 py-3">Created At</th>
@@ -626,13 +703,19 @@ const submit = () => {
           </thead>
           <tbody>
             <tr v-if="generatedDocuments.length === 0">
-              <td colspan="4" class="px-4 py-4 text-[#64748B] dark:text-[#9FB3C8]">No generated documents yet.</td>
+              <td colspan="5" class="px-4 py-4 text-[#64748B] dark:text-[#9FB3C8]">No generated documents yet.</td>
             </tr>
             <tr
               v-for="row in generatedDocuments"
               :key="row.id"
               class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]"
             >
+              <td class="px-4 py-3">
+                <Checkbox
+                  :model-value="selectedDocumentIds.includes(row.id)"
+                  @update:model-value="(checked) => toggleGeneratedDocument(row.id, Boolean(checked))"
+                />
+              </td>
               <td class="px-4 py-3 font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">{{ row.document_name }}</td>
               <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">{{ row.generated_by || 'Admin' }}</td>
               <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">{{ formatDateTime(row.created_at) }}</td>
@@ -644,9 +727,19 @@ const submit = () => {
                   <Button as="a" :href="row.download_url" variant="ghost" size="icon" class="h-8 w-8">
                     <Download class="h-4 w-4" />
                   </Button>
-                  <Button type="button" variant="ghost" size="icon" class="h-8 w-8 text-red-600" @click="promptDelete(row.delete_url)">
-                    <Trash2 class="h-4 w-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="ghost" size="icon" class="h-8 w-8">
+                        <MoreHorizontal class="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-40">
+                      <DropdownMenuItem class="text-destructive" @click="promptDelete(row.delete_url)">
+                        <Trash2 class="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </td>
             </tr>

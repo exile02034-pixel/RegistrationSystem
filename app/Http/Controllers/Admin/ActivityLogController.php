@@ -15,8 +15,6 @@ class ActivityLogController extends Controller
 
     public function index(): Response
     {
-        return Inertia::render('admin/activity-logs/index', [
-            'logs' => $this->activityLogService->paginated(10),
-        ]);
+        return Inertia::render('admin/activity-logs/index', $this->activityLogService->indexPageProps(10));
     }
 }

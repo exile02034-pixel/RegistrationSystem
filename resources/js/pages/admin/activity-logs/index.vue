@@ -1,52 +1,18 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import ActivityTypeIcon from '@/components/admin/ActivityTypeIcon.vue'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
 import { useActivityLogs } from '@/composables/admin/useActivityLogs'
+import { useActivityLogsPage } from '@/composables/admin/useActivityLogsPage'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { ActivityLogsPageProps } from '@/types'
 
-type ActivityLogItem = {
-  id: string
-  type: string
-  description: string
-  performed_by_name: string | null
-  performed_by_email: string | null
-  performed_by_role: string | null
-  company_type: string | null
-  files_count: number | null
-  filenames: string[]
-  file_types: string[]
-  metadata?: {
-    section?: string
-    section_label?: string
-    updated_fields?: string[]
-  }
-  created_at: string | null
-}
-
-type PaginatedLogs = {
-  data: ActivityLogItem[]
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-}
-
-const props = defineProps<{
-  logs: PaginatedLogs
-}>()
+const props = defineProps<ActivityLogsPageProps>()
 
 const { groupedByDay, formatDateTime, roleLabel, companyTypeLabel } = useActivityLogs(props.logs.data)
-
-const reload = (page: number) => {
-  router.get('/admin/activity-logs', { page }, {
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-  })
-}
+const { reload } = useActivityLogsPage()
 </script>
 
 <template>

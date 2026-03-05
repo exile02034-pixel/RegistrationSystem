@@ -19,11 +19,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { home } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+import type { LoginPageProps } from '@/types';
 
-defineProps<{
-    status?: string;
-    canResetPassword: boolean;
-}>();
+defineProps<LoginPageProps>();
 </script>
 
 <template>

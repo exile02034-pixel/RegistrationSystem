@@ -39,10 +39,7 @@ class DocumentGeneratorController extends Controller
         $payload = $this->adminDocumentService->documentPayload($registrationLink, $document);
 
         if ($request->expectsJson()) {
-            return response()->json([
-                'message' => 'Document generated successfully.',
-                'document' => $payload,
-            ]);
+            return response()->json($this->adminDocumentService->generatedJsonResponsePayload($payload));
         }
 
         return back()->with('success', 'Document generated successfully.');

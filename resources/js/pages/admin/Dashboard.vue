@@ -6,25 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useActivityLogs } from '@/composables/admin/useActivityLogs'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminDashboardPageProps } from '@/types'
 
-const props = defineProps<{
-  stats?: {
-    totalUsers: number
-    pendingUsers: number
-    acceptedUsers: number
-    totalSubmissions: number
-  }
-  recentActivities?: Array<{
-    id: string
-    type: string
-    description: string
-    performed_by_name: string | null
-    performed_by_email: string | null
-    performed_by_role: string | null
-    company_type: string | null
-    created_at: string | null
-  }>
-}>()
+const props = defineProps<AdminDashboardPageProps>()
 
 const { relativeTime, roleLabel } = useActivityLogs(props.recentActivities ?? [])
 </script>

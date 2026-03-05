@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { router, useForm } from '@inertiajs/vue3'
-import { ChevronDown, ChevronUp, ChevronsUpDown, Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { Eye, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,180 +22,31 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Pagination } from '@/components/ui/pagination'
-import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAdminUserActions } from '@/composables/admin/useAdminUserActions'
+import { useAdminUsers } from '@/composables/admin/useAdminUsers'
 import AppLayout from '@/layouts/AppLayout.vue'
+import type { AdminUsersIndexPageProps } from '@/types'
 
-type UserRow = {
-  id: string
-  name: string
-  email: string
-  created_at: string | null
-  company_types: Array<{ value: 'opc' | 'sole_prop' | 'corp'; label: string }>
-  company_type_values: Array<'opc' | 'sole_prop' | 'corp'>
-  submissions_count: number
-  show_url: string
-}
+const props = defineProps<AdminUsersIndexPageProps>()
 
-type PaginatedUsers = {
-  data: UserRow[]
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
-}
-
-type Filters = {
-  search: string
-  sort: 'created_at'
-  direction: 'asc' | 'desc'
-  company_type: '' | 'opc' | 'sole_prop' | 'corp'
-}
-
-const props = defineProps<{
-  users: PaginatedUsers
-  filters: Filters
-}>()
-
-const isCreateModalOpen = ref(false)
-const isDeleteModalOpen = ref(false)
-const selectedUserForDelete = ref<UserRow | null>(null)
-const deleting = ref(false)
-
-const search = ref(props.filters.search ?? '')
-const companyTypeFilter = ref<Filters['company_type']>(props.filters.company_type ?? '')
-const sort = ref<'created_at'>(props.filters.sort ?? 'created_at')
-const direction = ref<'asc' | 'desc'>(props.filters.direction ?? 'desc')
-
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
-const form = useForm({
-  name: '',
-  email: '',
-  password: '',
-  password_confirmation: '',
+const { search, companyTypeFilter, sortIcon, toggleSort, reload } = useAdminUsers({
+  filters: props.filters,
+  getCurrentPage: () => props.users.current_page,
 })
-
-const initials = (name: string) =>
-  name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
-const formatDate = (value: string | null) => {
-  if (!value) return 'n/a'
-
-  return new Date(value).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-const shortCompanyType = (value: 'opc' | 'corp' | 'sole_prop') => {
-  if (value === 'opc') return 'OPC'
-  if (value === 'corp') return 'CORP'
-  return 'SOLE PROP'
-}
-
-const buildQuery = (overrides: Partial<{ page: number }> = {}) => {
-  const query: Record<string, string | number> = {
-    page: overrides.page ?? props.users.current_page,
-    search: search.value.trim(),
-    sort: sort.value,
-    direction: direction.value,
-  }
-
-  if (companyTypeFilter.value) {
-    query.company_type = companyTypeFilter.value
-  }
-
-  if (!query.search) {
-    delete query.search
-  }
-
-  return query
-}
-
-const reload = (page = 1) => {
-  router.get('/admin/user', buildQuery({ page }), {
-    preserveState: true,
-    preserveScroll: true,
-    replace: true,
-  })
-}
-
-watch(search, () => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => reload(1), 300)
-})
-
-watch(companyTypeFilter, () => reload(1))
-
-const toggleSort = () => {
-  if (sort.value === 'created_at') {
-    direction.value = direction.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sort.value = 'created_at'
-    direction.value = 'desc'
-  }
-
-  reload(1)
-}
-
-const sortIcon = computed(() => {
-  if (sort.value !== 'created_at') return ChevronsUpDown
-  return direction.value === 'asc' ? ChevronUp : ChevronDown
-})
-
-const submit = () => {
-  form.post('/admin/user', {
-    preserveScroll: true,
-    onSuccess: () => {
-      form.reset()
-      isCreateModalOpen.value = false
-      toast.success('User created successfully', {
-        description: 'The new client account is ready to use.',
-      })
-    },
-    onError: () => {
-      toast.error('Unable to create user', {
-        description: 'Please check the form fields and try again.',
-      })
-    },
-  })
-}
-
-const openDeleteModal = (user: UserRow) => {
-  selectedUserForDelete.value = user
-  isDeleteModalOpen.value = true
-}
-
-const confirmDelete = () => {
-  if (!selectedUserForDelete.value) return
-
-  router.delete(`/admin/user/${selectedUserForDelete.value.id}`, {
-    preserveScroll: true,
-    onStart: () => {
-      deleting.value = true
-    },
-    onSuccess: () => {
-      toast.success('Deleted successfully.')
-      isDeleteModalOpen.value = false
-      selectedUserForDelete.value = null
-    },
-    onError: () => {
-      toast.error('Unable to delete user', {
-        description: 'Please try again.',
-      })
-    },
-    onFinish: () => {
-      deleting.value = false
-    },
-  })
-}
+const {
+  deleting,
+  form,
+  isCreateModalOpen,
+  isDeleteModalOpen,
+  selectedUserForDelete,
+  confirmDelete,
+  formatDate,
+  initials,
+  openDeleteModal,
+  shortCompanyType,
+  submit,
+} = useAdminUserActions()
 </script>
 
 <template>
