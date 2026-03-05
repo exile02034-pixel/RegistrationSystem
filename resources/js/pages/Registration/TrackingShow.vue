@@ -12,7 +12,10 @@ const props = defineProps<{
   submittedAt: string | null
   canEdit: boolean
   editableSections: string[]
+  statusMessage: string
+  errorMessage: string
   editUrl: string
+  requestEditPermissionUrl: string
   logoutUrl: string
   revisionCount: number
   lastRevisionAt: string | null
@@ -22,6 +25,7 @@ const props = defineProps<{
 }>()
 
 const form = useForm({})
+const requestEditForm = useForm({})
 const { formatDate, sectionEditUrl } = useSubmissionTracking(props.editUrl)
 const canEditSection = (sectionName: string) =>
   props.canEdit && props.editableSections.includes(sectionName)
@@ -37,6 +41,12 @@ const summarySections = computed(() => {
 
 const logout = () => {
   form.post(props.logoutUrl)
+}
+
+const requestEditPermission = () => {
+  requestEditForm.post(props.requestEditPermissionUrl, {
+    preserveScroll: true,
+  })
 }
 
 </script>
@@ -70,6 +80,12 @@ const logout = () => {
 
       <div class="rounded-3xl border border-[#E2E8F0] bg-white p-6 shadow-sm dark:border-[#2A4A72] dark:bg-[#12325B]">
         <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#F8FAFC]">Submission Details</h2>
+        <p v-if="props.statusMessage" class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">
+          {{ props.statusMessage }}
+        </p>
+        <p v-if="props.errorMessage" class="mt-4 rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
+          {{ props.errorMessage }}
+        </p>
         <div class="mt-3 flex items-center gap-2">
           
         </div>
@@ -81,6 +97,15 @@ const logout = () => {
         <p v-if="!props.canEdit" class="mt-4 text-sm text-[#64748B] dark:text-[#9FB3C8]">
           Editing is currently locked for this submission status.
         </p>
+        <button
+          v-if="!props.canEdit"
+          type="button"
+          class="mt-4 inline-flex rounded-xl bg-[#2563EB] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="requestEditForm.processing"
+          @click="requestEditPermission"
+        >
+          {{ requestEditForm.processing ? 'Sending request...' : 'Request Edit Permission' }}
+        </button>
       </div>
 
       <div

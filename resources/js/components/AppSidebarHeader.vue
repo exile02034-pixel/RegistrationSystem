@@ -25,6 +25,8 @@ withDefaults(
 const isFullscreen = ref(false);
 const canToggleFullscreen = ref(false);
 const page = usePage();
+const NOTIFICATION_POLL_INTERVAL_MS = 10000;
+let notificationPollTimer: ReturnType<typeof setInterval> | null = null;
 
 const notifications = computed(() => {
     const value = page.props.notifications;
@@ -81,6 +83,24 @@ const openNotification = (id: string, actionUrl: string | null) => {
     );
 };
 
+const reloadNotifications = () => {
+    if (document.visibilityState !== 'visible') {
+        return;
+    }
+
+    router.reload({
+        only: ['notifications'],
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+        reloadNotifications();
+    }
+};
+
 const syncFullscreenState = () => {
     isFullscreen.value = Boolean(document.fullscreenElement);
 };
@@ -103,11 +123,24 @@ onMounted(() => {
         Boolean(document.fullscreenEnabled) &&
         typeof document.documentElement.requestFullscreen === 'function';
     syncFullscreenState();
+    reloadNotifications();
+    notificationPollTimer = setInterval(
+        reloadNotifications,
+        NOTIFICATION_POLL_INTERVAL_MS,
+    );
+
     document.addEventListener('fullscreenchange', syncFullscreenState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('fullscreenchange', syncFullscreenState);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    if (notificationPollTimer) {
+        clearInterval(notificationPollTimer);
+        notificationPollTimer = null;
+    }
 });
 </script>
 
