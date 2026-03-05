@@ -21,6 +21,10 @@ Route::get('/register/track/access/{token}', [SubmissionTrackingController::clas
 Route::get('/register/track/submission', [SubmissionTrackingController::class, 'show'])
     ->name('registration.tracking.show');
 
+Route::post('/register/track/request-edit-permission', [SubmissionTrackingController::class, 'requestEditPermission'])
+    ->middleware('throttle:3,10')
+    ->name('registration.tracking.request-edit-permission');
+
 Route::post('/register/track/logout', [SubmissionTrackingController::class, 'logout'])
     ->name('registration.tracking.logout');
 
