@@ -7,7 +7,8 @@ export const useActivityLogs = (logs: ActivityLogItem[]) => {
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return value
 
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-PH', {
+      timeZone: 'Asia/Manila',
       year: 'numeric',
       month: 'short',
       day: '2-digit',
@@ -64,7 +65,8 @@ export const useActivityLogs = (logs: ActivityLogItem[]) => {
     if (isSameDay(date, today)) return 'Today'
     if (isSameDay(date, yesterday)) return 'Yesterday'
 
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-PH', {
+      timeZone: 'Asia/Manila',
       year: 'numeric',
       month: 'short',
       day: '2-digit',

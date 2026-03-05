@@ -1,7 +1,16 @@
 export const useSubmissionTracking = (editUrl: string) => {
-const formatDate = (date: any) => {
+const parseTimestamp = (value: string) => {
+  const trimmed = value.trim()
+  const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed)
+
+  return new Date(hasTimezone ? trimmed : `${trimmed}Z`)
+}
+
+const formatDate = (date: string | null) => {
   if (!date) return 'N/A'
-  const utcDate = new Date(date + 'Z') // force UTC interpretation
+  const utcDate = parseTimestamp(date)
+  if (Number.isNaN(utcDate.getTime())) return 'N/A'
+
   return utcDate.toLocaleString('en-PH', {
     timeZone: 'Asia/Manila',
     year: 'numeric',

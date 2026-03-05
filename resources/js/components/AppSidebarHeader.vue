@@ -61,7 +61,8 @@ const formatDate = (value: string | null) => {
         return '';
     }
 
-    return new Date(value).toLocaleDateString('en-US', {
+    return new Date(value).toLocaleDateString('en-PH', {
+        timeZone: 'Asia/Manila',
         month: 'short',
         day: 'numeric',
     });

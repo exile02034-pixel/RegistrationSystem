@@ -15,7 +15,8 @@ export const useUserDashboard = (stats: UserDashboardStats) => {
             return 'n/a';
         }
 
-        return new Date(stats.latestSubmissionAt).toLocaleDateString('en-US', {
+        return new Date(stats.latestSubmissionAt).toLocaleDateString('en-PH', {
+            timeZone: 'Asia/Manila',
             year: 'numeric',
             month: 'short',
             day: '2-digit',
