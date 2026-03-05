@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserNotification;
+use App\Services\NotificationCenterService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,26 +11,17 @@ use Inertia\Response;
 
 class NotificationController extends Controller
 {
+    public function __construct(
+        private readonly NotificationCenterService $notificationCenterService,
+    ) {}
+
     public function index(Request $request): Response
     {
         $user = $request->user();
 
         abort_unless($user !== null, 403);
 
-        $notifications = UserNotification::query()
-            ->forUser($user->id)
-            ->latest('created_at')
-            ->paginate(12)
-            ->through(fn (UserNotification $notification) => [
-                'id' => $notification->id,
-                'category' => $notification->category,
-                'title' => $notification->title,
-                'message' => $notification->message,
-                'action_url' => $notification->action_url,
-                'read_at' => $notification->read_at?->toDateTimeString(),
-                'created_at' => $notification->created_at?->toDateTimeString(),
-            ])
-            ->withQueryString();
+        $notifications = $this->notificationCenterService->paginatedForUser($user);
 
         return Inertia::render('notifications/Index', [
             'notifications' => $notifications,
@@ -38,11 +30,10 @@ class NotificationController extends Controller
 
     public function markRead(Request $request, UserNotification $notification): RedirectResponse
     {
-        abort_unless($request->user()?->id === $notification->user_id, 403);
+        $user = $request->user();
+        abort_unless($user !== null, 403);
 
-        if ($notification->read_at === null) {
-            $notification->forceFill(['read_at' => now()])->save();
-        }
+        $this->notificationCenterService->markRead($user, $notification);
 
         return back();
     }
@@ -52,19 +43,17 @@ class NotificationController extends Controller
         $user = $request->user();
         abort_unless($user !== null, 403);
 
-        UserNotification::query()
-            ->forUser($user->id)
-            ->unread()
-            ->update(['read_at' => now()]);
+        $this->notificationCenterService->markAllRead($user);
 
         return back();
     }
 
     public function destroy(Request $request, UserNotification $notification): RedirectResponse
     {
-        abort_unless($request->user()?->id === $notification->user_id, 403);
+        $user = $request->user();
+        abort_unless($user !== null, 403);
 
-        $notification->delete();
+        $this->notificationCenterService->delete($user, $notification);
 
         return back();
     }
@@ -79,10 +68,7 @@ class NotificationController extends Controller
             'ids.*' => ['uuid'],
         ]);
 
-        UserNotification::query()
-            ->forUser($user->id)
-            ->whereIn('id', $validated['ids'])
-            ->delete();
+        $this->notificationCenterService->deleteSelected($user, $validated['ids']);
 
         return back();
     }
@@ -92,9 +78,7 @@ class NotificationController extends Controller
         $user = $request->user();
         abort_unless($user !== null, 403);
 
-        UserNotification::query()
-            ->forUser($user->id)
-            ->delete();
+        $this->notificationCenterService->deleteAll($user);
 
         return back();
     }

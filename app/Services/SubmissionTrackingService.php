@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Mail\SubmissionTrackingLinkMail;
+use App\Jobs\SendSubmissionTrackingLinkMailJob;
 use App\Models\RegistrationLink;
 use App\Models\SubmissionAccessToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class SubmissionTrackingService
@@ -54,9 +53,10 @@ class SubmissionTrackingService
             'expires_at' => now()->addMinutes(30),
         ]);
 
-        Mail::to($email)->send(new SubmissionTrackingLinkMail(
+        SendSubmissionTrackingLinkMailJob::dispatch(
+            email: $email,
             trackingUrl: route('registration.tracking.access', ['token' => $rawToken]),
-        ));
+        )->onQueue('mail');
     }
 
     public function consumeAccessToken(Request $request, string $rawToken): ?RegistrationLink
@@ -125,13 +125,19 @@ class SubmissionTrackingService
             return [];
         }
 
-        return $submission->fields()
+        $sections = $submission->fields()
             ->whereNotNull('field_value')
             ->where('field_value', '!=', '')
             ->pluck('section')
             ->unique()
             ->values()
             ->all();
+
+        if (! in_array('treasurer_details', $sections, true)) {
+            $sections[] = 'treasurer_details';
+        }
+
+        return $sections;
     }
 
     public function isTrackingSessionForLink(Request $request, RegistrationLink $link): bool

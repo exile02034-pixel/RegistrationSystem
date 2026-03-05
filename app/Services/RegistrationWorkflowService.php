@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Mail\RegistrationLinkMail;
+use App\Jobs\SendRegistrationLinkMailJob;
 use App\Models\RegistrationLink;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class RegistrationWorkflowService
@@ -26,11 +25,12 @@ class RegistrationWorkflowService
         $registrationUrl = route('registration.form.show', $link->token);
         $qrCodeDataUri = $this->qrCodeService->makeDataUri($registrationUrl);
 
-        Mail::to($email)->send(new RegistrationLinkMail(
+        SendRegistrationLinkMailJob::dispatch(
+            email: $email,
             registrationUrl: $registrationUrl,
             companyTypeLabel: $this->templateService->labelFor($companyType),
             qrCodeDataUri: $qrCodeDataUri,
-        ));
+        )->onQueue('mail');
 
         return $link;
     }
