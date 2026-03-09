@@ -53,6 +53,8 @@ const isModalOpen = ref(false)
 const activeType = ref<DocumentForm['type'] | null>(null)
 const gisStep = ref(1)
 const selectedDocumentIds = ref<string[]>([])
+const MIN_GIS_STOCKHOLDER_ROWS = 6
+const GIS_TOTAL_PAGES = 7
 const secretaryUseDefaultValues = ref(true)
 
 const SECRETARY_DEFAULT_NAME = 'Vince Anthony Feir'
@@ -61,8 +63,9 @@ const SECRETARY_DEFAULT_TIN = '765-241-127-000'
 
 const { isOpen, deleting, promptDelete, confirmDelete, reset } = useDelete()
 
-const form = useForm<{ fields: Record<string, any> }>({
+const form = useForm<{ fields: Record<string, any>; fields_json: string }>({
   fields: {},
+  fields_json: '',
 })
 const sendEmailForm = useForm<{ sections: string[]; document_ids: string[] }>({
   sections: [],
@@ -87,15 +90,20 @@ const defaultGisRows = () => Array.from({ length: 15 }, () => ({
   tin: '',
 }))
 
-const defaultGisStockholderRows = (startNumber: number) => ([
-  { no: startNumber, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 1, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 2, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 3, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 4, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 5, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-  { no: startNumber + 6, name_address: '', nationality: '', share_type: '', number_of_shares: '', amount_subscribed: '', percent_ownership: '', amount_paid: '', tin: '' },
-])
+const defaultGisStockholderRows = (startNumber: number, count = MIN_GIS_STOCKHOLDER_ROWS) => Array.from(
+  { length: count },
+  (_, index) => ({
+    no: startNumber + index,
+    name_address: '',
+    nationality: '',
+    share_type: '',
+    number_of_shares: '',
+    amount_subscribed: '',
+    percent_ownership: '',
+    amount_paid: '',
+    tin: '',
+  }),
+)
 
 const defaultCapitalRows = (count: number) => Array.from({ length: count }, () => ({
   type_of_shares: '',
@@ -273,13 +281,6 @@ const defaultFields = (type: DocumentForm['type']) => {
       total_assets: '',
       rows: defaultGisStockholderRows(1),
     },
-    step_6: {
-      rows: defaultGisStockholderRows(8),
-    },
-    step_7: {
-      rows: defaultGisStockholderRows(15),
-      others_count: '',
-    },
     step_8: {
       investment_stocks: '',
       investment_bonds: '',
@@ -403,6 +404,56 @@ const closeForm = () => {
   activeType.value = null
   gisStep.value = 1
   form.clearErrors()
+}
+
+const createGisStockholderRow = (no: number) => ({
+  no,
+  name_address: '',
+  nationality: '',
+  share_type: '',
+  number_of_shares: '',
+  amount_subscribed: '',
+  percent_ownership: '',
+  amount_paid: '',
+  tin: '',
+})
+
+const sanitizeGisStockholderRowsForSubmit = (): Record<string, string>[] => {
+  const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
+
+  return rows
+    .map((row, index) => ({
+      no: String(index + 1),
+      name_address: String(row?.name_address ?? '').trim(),
+      nationality: String(row?.nationality ?? '').trim(),
+      share_type: String(row?.share_type ?? '').trim(),
+      number_of_shares: String(row?.number_of_shares ?? '').trim(),
+      amount_subscribed: String(row?.amount_subscribed ?? '').trim(),
+      percent_ownership: String(row?.percent_ownership ?? '').trim(),
+      amount_paid: String(row?.amount_paid ?? '').trim(),
+      tin: String(row?.tin ?? '').trim(),
+    }))
+}
+
+const reorderGisStockholderRows = () => {
+  const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
+  rows.forEach((row, index) => {
+    row.no = index + 1
+  })
+}
+
+const addGisStockholderRow = () => {
+  const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
+  const nextNo = rows.length + 1
+  form.fields.step_5.rows = [...rows, createGisStockholderRow(nextNo)]
+}
+
+const removeGisStockholderRow = (index: number) => {
+  const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
+  if (rows.length <= MIN_GIS_STOCKHOLDER_ROWS) return
+
+  form.fields.step_5.rows = rows.filter((_, rowIndex) => rowIndex !== index)
+  reorderGisStockholderRows()
 }
 
 const formatDateTime = (value: string | null) => {
@@ -565,10 +616,6 @@ const validateAllGisSteps = (): string[] => {
   const step4 = Array.isArray(fields.step_4) ? fields.step_4 : []
   const step5 = fields.step_5 ?? {}
   const step5Rows = Array.isArray(step5.rows) ? step5.rows : []
-  const step6 = fields.step_6 ?? {}
-  const step6Rows = Array.isArray(step6.rows) ? step6.rows : []
-  const step7 = fields.step_7 ?? {}
-  const step7Rows = Array.isArray(step7.rows) ? step7.rows : []
   const step9 = fields.step_9 ?? {}
 
   if (isBlank(step1.corporate_name)) errors.push('Step 1: Corporate Name is required.')
@@ -613,8 +660,8 @@ const validateAllGisSteps = (): string[] => {
     })
   }
 
-  if (step5Rows.length === 0) {
-    errors.push('Step 5: At least one stockholder row is required.')
+  if (step5Rows.length < MIN_GIS_STOCKHOLDER_ROWS) {
+    errors.push(`Step 5: At least ${MIN_GIS_STOCKHOLDER_ROWS} stockholder rows are required.`)
   } else {
     step5Rows.forEach((row, index) => {
       const i = index + 1
@@ -624,16 +671,8 @@ const validateAllGisSteps = (): string[] => {
     })
   }
 
-  if (step6Rows.length === 0) {
-    errors.push('Step 6: At least one stockholder row is required.')
-  }
-
-  if (step7Rows.length === 0) {
-    errors.push('Step 7: At least one stockholder row is required.')
-  }
-
-  if (isBlank(step9.done_date)) errors.push('Step 9: Done this date is required.')
-  if (isBlank(step9.done_place)) errors.push('Step 9: Done place is required.')
+  if (isBlank(step9.done_date)) errors.push('Step 7: Done this date is required.')
+  if (isBlank(step9.done_place)) errors.push('Step 7: Done place is required.')
 
   return errors
 }
@@ -662,7 +701,7 @@ const validateCurrentGisStep = (): string | null => {
     }
   }
 
-  if (gisStep.value === 9) {
+  if (gisStep.value === GIS_TOTAL_PAGES) {
     const step = form.fields.step_9 ?? {}
     if (!step.done_date || !step.done_place) {
       return 'Please provide the done-this date and done place before generating the GIS PDF.'
@@ -675,7 +714,7 @@ const validateCurrentGisStep = (): string | null => {
 const nextGisStep = () => {
   // GIS validation is temporarily disabled per request.
   void validateCurrentGisStep
-  gisStep.value = Math.min(9, gisStep.value + 1)
+  gisStep.value = Math.min(GIS_TOTAL_PAGES, gisStep.value + 1)
 }
 
 const previousGisStep = () => {
@@ -699,6 +738,18 @@ const submit = () => {
     toast.error(errors[0])
     return
   }
+
+  if (activeType.value === 'gis_stock_corporation') {
+    form.fields = {
+      ...form.fields,
+      step_5: {
+        ...(form.fields.step_5 ?? {}),
+        rows: sanitizeGisStockholderRowsForSubmit(),
+      },
+    }
+  }
+
+  form.fields_json = JSON.stringify(form.fields)
 
   form.post(generateUrl.value, {
     preserveScroll: true,
@@ -1013,7 +1064,7 @@ const submit = () => {
 
       <div v-else-if="activeType === 'gis_stock_corporation'" class="space-y-4">
         <div class="rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-sm dark:border-[#1E3A5F] dark:bg-[#0F2747]">
-          GIS Page {{ gisStep }} of 9
+          GIS Page {{ gisStep }} of {{ GIS_TOTAL_PAGES }}
         </div>
 
         <div v-if="gisStep === 1" class="grid gap-4 md:grid-cols-2">
@@ -1390,8 +1441,14 @@ const submit = () => {
               <Input v-model="form.fields.step_5.total_assets" />
             </div>
           </div>
-          <Label>Stockholder Information (1-7)</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
+          <div class="flex items-start justify-between gap-3">
+            <Label>Stockholder Information</Label>
+            <Button type="button" variant="outline" size="sm" @click="addGisStockholderRow">
+              Add Stockholder
+            </Button>
+          </div>
+          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-10">
+            <div>No.</div>
             <div>Name / Address</div>
             <div>Nationality</div>
             <div>Type of Shares</div>
@@ -1400,9 +1457,11 @@ const submit = () => {
             <div>% Ownership</div>
             <div>Amount Paid (PhP)</div>
             <div>TIN</div>
+            <div></div>
           </div>
-          <div v-for="(row, index) in form.fields.step_5.rows" :key="`stk5-${index}`" class="grid gap-2 md:grid-cols-8">
-            <Input v-model="row.name_address" :placeholder="`#${row.no}`" />
+          <div v-for="(row, index) in form.fields.step_5.rows" :key="`stk5-${index}`" class="grid gap-2 md:grid-cols-10">
+            <Input :model-value="row.no" readonly />
+            <Input v-model="row.name_address" placeholder="Name / Address" />
             <Input v-model="row.nationality" />
             <Input v-model="row.share_type" />
             <Input v-model="row.number_of_shares" />
@@ -1410,103 +1469,20 @@ const submit = () => {
             <Input v-model="row.percent_ownership" />
             <Input v-model="row.amount_paid" />
             <Input v-model="row.tin" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              class="border-[#F87171] text-[#B91C1C] hover:bg-[#FEF2F2]"
+              :disabled="form.fields.step_5.rows.length <= MIN_GIS_STOCKHOLDER_ROWS"
+              @click="removeGisStockholderRow(index)"
+            >
+              Delete
+            </Button>
           </div>
         </div>
 
         <div v-else-if="gisStep === 6" class="space-y-3">
-          <fieldset disabled class="space-y-3">
-          <div class="space-y-2">
-            <Label>Corporate Name (from Page 1)</Label>
-            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
-          </div>
-          <div class="grid gap-2 md:grid-cols-3">
-            <div class="space-y-2">
-              <Label>Total Number of Stockholders</Label>
-              <Input v-model="form.fields.step_5.total_stockholders" />
-            </div>
-            <div class="space-y-2">
-              <Label>No. of Stockholders with 100+ Shares</Label>
-              <Input v-model="form.fields.step_5.stockholders_with_100_plus" />
-            </div>
-            <div class="space-y-2">
-              <Label>Total Assets (Latest Audited FS)</Label>
-              <Input v-model="form.fields.step_5.total_assets" />
-            </div>
-          </div>
-          <Label>Stockholder Information (8-14)</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
-            <div>Name / Address</div>
-            <div>Nationality</div>
-            <div>Type of Shares</div>
-            <div>No. of Shares</div>
-            <div>Amount Subscribed (PhP)</div>
-            <div>% Ownership</div>
-            <div>Amount Paid (PhP)</div>
-            <div>TIN</div>
-          </div>
-          <div v-for="(row, index) in form.fields.step_6.rows" :key="`stk6-${index}`" class="grid gap-2 md:grid-cols-8">
-            <Input v-model="row.name_address" />
-            <Input v-model="row.nationality" />
-            <Input v-model="row.share_type" />
-            <Input v-model="row.number_of_shares" />
-            <Input v-model="row.amount_subscribed" />
-            <Input v-model="row.percent_ownership" />
-            <Input v-model="row.amount_paid" />
-            <Input v-model="row.tin" />
-          </div>
-          </fieldset>
-        </div>
-
-        <div v-else-if="gisStep === 7" class="space-y-3">
-          <fieldset disabled class="space-y-3">
-          <div class="space-y-2">
-            <Label>Corporate Name (from Page 1)</Label>
-            <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
-          </div>
-          <div class="grid gap-2 md:grid-cols-3">
-            <div class="space-y-2">
-              <Label>Total Number of Stockholders</Label>
-              <Input v-model="form.fields.step_5.total_stockholders" />
-            </div>
-            <div class="space-y-2">
-              <Label>No. of Stockholders with 100+ Shares</Label>
-              <Input v-model="form.fields.step_5.stockholders_with_100_plus" />
-            </div>
-            <div class="space-y-2">
-              <Label>Total Assets (Latest Audited FS)</Label>
-              <Input v-model="form.fields.step_5.total_assets" />
-            </div>
-          </div>
-          <Label>Stockholder Information (15-21 / Others)</Label>
-          <div class="grid gap-2 text-xs font-medium text-[#64748B] dark:text-[#9FB3C8] md:grid-cols-8">
-            <div>Name / Address</div>
-            <div>Nationality</div>
-            <div>Type of Shares</div>
-            <div>No. of Shares</div>
-            <div>Amount Subscribed (PhP)</div>
-            <div>% Ownership</div>
-            <div>Amount Paid (PhP)</div>
-            <div>TIN</div>
-          </div>
-          <div v-for="(row, index) in form.fields.step_7.rows" :key="`stk7-${index}`" class="grid gap-2 md:grid-cols-8">
-            <Input v-model="row.name_address" />
-            <Input v-model="row.nationality" />
-            <Input v-model="row.share_type" />
-            <Input v-model="row.number_of_shares" />
-            <Input v-model="row.amount_subscribed" />
-            <Input v-model="row.percent_ownership" />
-            <Input v-model="row.amount_paid" />
-            <Input v-model="row.tin" />
-          </div>
-          <div class="space-y-2">
-            <Label>Others (remaining stockholders count)</Label>
-            <Input v-model="form.fields.step_7.others_count" />
-          </div>
-          </fieldset>
-        </div>
-
-        <div v-else-if="gisStep === 8" class="space-y-3">
-          <fieldset disabled class="space-y-3">
           <div class="space-y-2">
             <Label>Corporate Name (from Page 1)</Label>
             <Input :model-value="form.fields.step_1.corporate_name || ''" readonly />
@@ -1657,10 +1633,9 @@ const submit = () => {
             <Input v-model="form.fields.step_8.total_rank_file_employees" placeholder="Total No. of Rank & File Employees" />
             <Input v-model="form.fields.step_8.total_manpower_complement" placeholder="Total Manpower Complement" />
           </div>
-          </fieldset>
         </div>
 
-        <div v-else class="grid gap-4 md:grid-cols-2">
+        <div v-else-if="gisStep === 7" class="grid gap-4 md:grid-cols-2">
           <div class="space-y-2">
             <Label>Done This Date</Label>
             <Input v-model="form.fields.step_9.done_date" type="date" />
@@ -1677,7 +1652,7 @@ const submit = () => {
           </Button>
           <div class="flex items-center gap-2">
             <Button
-              v-if="gisStep < 9"
+              v-if="gisStep < GIS_TOTAL_PAGES"
               type="button"
               :disabled="form.processing"
               @click="nextGisStep"

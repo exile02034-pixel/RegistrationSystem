@@ -17,6 +17,7 @@ class GenerateRegistrationDocumentRequest extends FormRequest
 
         $rules = [
             'fields' => ['required', 'array'],
+            'fields_json' => ['nullable', 'string'],
         ];
 
         if ($documentType === 'secretary_certificate') {

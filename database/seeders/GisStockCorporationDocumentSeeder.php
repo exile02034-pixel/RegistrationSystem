@@ -139,14 +139,11 @@ class GisStockCorporationDocumentSeeder extends Seeder
                 'total_stockholders' => '20',
                 'stockholders_with_100_plus' => '12',
                 'total_assets' => '12,000,000.00',
-                'rows' => $this->stockholderRows(1),
-            ],
-            'step_6' => [
-                'rows' => $this->stockholderRows(8),
-            ],
-            'step_7' => [
-                'rows' => $this->stockholderRows(15),
-                'others_count' => '6',
+                'rows' => array_merge(
+                    $this->stockholderRows(1),
+                    $this->stockholderRows(8),
+                    $this->stockholderRows(15),
+                ),
             ],
             'step_8' => [
                 'investment_stocks' => '1,500,000.00',
@@ -263,11 +260,11 @@ class GisStockCorporationDocumentSeeder extends Seeder
         return $rows;
     }
 
-    private function stockholderRows(int $startNumber): array
+    private function stockholderRows(int $startNumber, int $count = 7): array
     {
         $rows = [];
 
-        for ($offset = 0; $offset < 7; $offset++) {
+        for ($offset = 0; $offset < $count; $offset++) {
             $number = $startNumber + $offset;
 
             $rows[] = [

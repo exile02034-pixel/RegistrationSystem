@@ -9,6 +9,7 @@ use App\Models\RegistrationLink;
 use App\Services\Admin\AdminDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -27,7 +28,7 @@ class DocumentGeneratorController extends Controller
             $document = $this->adminDocumentService->generate(
                 registrationLink: $registrationLink,
                 documentType: $documentType,
-                fields: (array) $request->input('fields', []),
+                fields: $this->resolvedFields($request),
                 generatedBy: $request->user(),
             );
         } catch (\Throwable $e) {
@@ -43,6 +44,20 @@ class DocumentGeneratorController extends Controller
         }
 
         return back()->with('success', 'Document generated successfully.');
+    }
+
+    private function resolvedFields(Request $request): array
+    {
+        $json = $request->input('fields_json');
+        if (is_string($json) && trim($json) !== '') {
+            $decoded = json_decode($json, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return (array) $request->input('fields', []);
     }
 
     public function view(RegistrationLink $registrationLink, RegistrationGeneratedDocument $document): BinaryFileResponse

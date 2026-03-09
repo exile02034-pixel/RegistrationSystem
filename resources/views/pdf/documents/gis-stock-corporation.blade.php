@@ -59,16 +59,36 @@
     $step3 = $fields['step_3'] ?? [];
     $step4 = $fields['step_4'] ?? [];
     $step5 = $fields['step_5'] ?? [];
-    $step6 = $fields['step_6'] ?? [];
-    $step7 = $fields['step_7'] ?? [];
     $step8 = $fields['step_8'] ?? [];
     $step9 = $fields['step_9'] ?? [];
 
     $amlaTypes = is_array($step2['amla_types'] ?? null) ? $step2['amla_types'] : [];
     $amlaDetailed = is_array($step2['amla_detailed'] ?? null) ? $step2['amla_detailed'] : [];
-    $stockRows5 = is_array($step5['rows'] ?? null) ? $step5['rows'] : [];
-    $stockRows6 = is_array($step6['rows'] ?? null) ? $step6['rows'] : [];
-    $stockRows7 = is_array($step7['rows'] ?? null) ? $step7['rows'] : [];
+    $stockRows = array_values(array_map(
+        static function (mixed $stockRow): array {
+            return is_array($stockRow) ? $stockRow : [];
+        },
+        is_array($step5['rows'] ?? null) ? $step5['rows'] : [],
+    ));
+    foreach ($stockRows as $index => $stockRow) {
+        if (!is_array($stockRow)) {
+            $stockRows[$index] = [];
+            $stockRow = [];
+        }
+
+        $stockRows[$index]['no'] = $index + 1;
+    }
+    // Keep this below the maximum rows that fit on a PDF page for the stockholder table.
+    $stockholderRowsPerPage = 13;
+    $stockholderChunks = array_chunk($stockRows, $stockholderRowsPerPage);
+    if (count($stockholderChunks) === 0) {
+        $stockholderChunks = [[]];
+    }
+    $stockholderPageCount = count($stockholderChunks);
+    $fixedPagesBeforeStockholders = 4;
+    $investmentPage = $fixedPagesBeforeStockholders + $stockholderPageCount + 1;
+    $affidavitPage = $investmentPage + 1;
+    $totalPages = $fixedPagesBeforeStockholders + $stockholderPageCount + 2;
     $additionalShares = is_array($step8['additional_shares'] ?? null) ? $step8['additional_shares'] : [];
     $authorizedRows = array_values(is_array($step3['authorized_rows'] ?? null) ? $step3['authorized_rows'] : []);
     $subscribedFilipinoRows = array_values(is_array($step3['subscribed_filipino_rows'] ?? null) ? $step3['subscribed_filipino_rows'] : []);
@@ -184,7 +204,7 @@
         <tr><td>{{ $step1['intercompany_subsidiary'] ?? '' }}</td><td>{{ $step1['intercompany_subsidiary_sec_no'] ?? '' }}</td><td>{{ $step1['intercompany_subsidiary_address'] ?? '' }}</td></tr>
     </table>
 
-    <div class="page-no">Page 1 of 9</div>
+    <div class="page-no">Page 1 of {{ $totalPages }}</div>
 </div>
 
 <div class="page">
@@ -306,7 +326,7 @@
         <tr><th>Other AMLA details</th><td>{{ $step2['amla_other_details'] ?? '' }}</td></tr>
     </table>
 
-    <div class="page-no">Page 2 of 9</div>
+    <div class="page-no">Page 2 of {{ $totalPages }}</div>
 </div>
 
 <div class="page">
@@ -346,7 +366,9 @@
             <th colspan="4"></th>
         </tr>
         @for($i = 0; $i < 3; $i++)
-            @php($row = $authorizedRows[$i] ?? [])
+            @php
+                $row = $authorizedRows[$i] ?? [];
+            @endphp
             <tr>
                 <td>{{ $row['type_of_shares'] ?? '' }}</td>
                 <td class="num">{{ $row['number_of_shares'] ?? '' }}</td>
@@ -371,7 +393,9 @@
             <th style="width:14%">% OF OWNERSHIP</th>
         </tr>
         @for($i = 0; $i < 2; $i++)
-            @php($row = $subscribedFilipinoRows[$i] ?? [])
+            @php
+                $row = $subscribedFilipinoRows[$i] ?? [];
+            @endphp
             <tr>
                 <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
                 <td>{{ $row['type_of_shares'] ?? '' }}</td>
@@ -396,7 +420,9 @@
             <th>% OF OWNERSHIP</th>
         </tr>
         @for($i = 0; $i < 2; $i++)
-            @php($row = $subscribedForeignRows[$i] ?? [])
+            @php
+                $row = $subscribedForeignRows[$i] ?? [];
+            @endphp
             <tr>
                 <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
                 <td>{{ $row['type_of_shares'] ?? '' }}</td>
@@ -428,7 +454,9 @@
             <th style="width:16%">% OF OWNERSHIP</th>
         </tr>
         @for($i = 0; $i < 2; $i++)
-            @php($row = $paidupFilipinoRows[$i] ?? [])
+            @php
+                $row = $paidupFilipinoRows[$i] ?? [];
+            @endphp
             <tr>
                 <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
                 <td>{{ $row['type_of_shares'] ?? '' }}</td>
@@ -450,7 +478,9 @@
             <th>% OF OWNERSHIP</th>
         </tr>
         @for($i = 0; $i < 2; $i++)
-            @php($row = $paidupForeignRows[$i] ?? [])
+            @php
+                $row = $paidupForeignRows[$i] ?? [];
+            @endphp
             <tr>
                 <td class="num">{{ $row['no_of_stockholders'] ?? '' }}</td>
                 <td>{{ $row['type_of_shares'] ?? '' }}</td>
@@ -467,7 +497,7 @@
     </table>
 
     <div class="small">* Common, Preferred or other classification. ** Other than directors, officers, shareholders owning 10% of outstanding shares.</div>
-    <div class="page-no">Page 3 of 9</div>
+    <div class="page-no">Page 3 of {{ $totalPages }}</div>
 </div>
 
 <div class="page">
@@ -504,10 +534,11 @@
     </table>
 
     <div class="small">Instruction: For Sex: F/M. For Board: C/M/I. For INC'R and STOCKHOLDER: Y/N.</div>
-    <div class="page-no">Page 4 of 9</div>
+    <div class="page-no">Page 4 of {{ $totalPages }}</div>
 </div>
 
-<div class="page">
+@foreach($stockholderChunks as $chunkIndex => $stockholderChunk)
+    <div class="page">
     <p class="title">GENERAL INFORMATION SHEET</p>
     <p class="subtitle">STOCK CORPORATION</p>
     <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
@@ -518,7 +549,11 @@
         </tr>
     </table>
 
-    <div class="section-title">Stockholder's Information (1 to 7)</div>
+    @php
+        $chunkStart = ($chunkIndex * $stockholderRowsPerPage) + 1;
+        $chunkEnd = $chunkStart + count($stockholderChunk) - 1;
+    @endphp
+    <div class="section-title">Stockholder's Information ({{ $chunkStart }} to {{ $chunkEnd }})</div>
     <table>
         <tr>
             <th style="width:4%">#</th>
@@ -530,7 +565,7 @@
             <th style="width:12%">Amount Paid</th>
             <th style="width:10%">TIN</th>
         </tr>
-        @foreach($stockRows5 as $row)
+        @foreach($stockholderChunk as $row)
             <tr>
                 <td>{{ $row['no'] ?? '' }}</td>
                 <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
@@ -543,104 +578,16 @@
             </tr>
         @endforeach
     </table>
-    <table>
-        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
-        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
-    </table>
+    @if($chunkIndex === array_key_last($stockholderChunks))
+        <table>
+            <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
+            <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
+        </table>
+    @endif
 
-    <div class="page-no">Page 5 of 9</div>
-</div>
-
-<div class="page">
-    <p class="title">GENERAL INFORMATION SHEET</p>
-    <p class="subtitle">STOCK CORPORATION</p>
-    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
-    <table>
-        <tr>
-            <th style="width:22%">Corporate Name:</th>
-            <td>{{ $step1['corporate_name'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    <div class="section-title">Stockholder's Information (8 to 14)</div>
-    <table>
-        <tr>
-            <th style="width:4%">#</th>
-            <th style="width:30%">Name / Nationality / Address</th>
-            <th style="width:12%">Type</th>
-            <th style="width:10%">No. of Shares</th>
-            <th style="width:12%">Amount Subscribed</th>
-            <th style="width:10%">% Ownership</th>
-            <th style="width:12%">Amount Paid</th>
-            <th style="width:10%">TIN</th>
-        </tr>
-        @foreach($stockRows6 as $row)
-            <tr>
-                <td>{{ $row['no'] ?? '' }}</td>
-                <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
-                <td>{{ $row['share_type'] ?? '' }}</td>
-                <td>{{ $row['number_of_shares'] ?? '' }}</td>
-                <td>{{ $row['amount_subscribed'] ?? '' }}</td>
-                <td>{{ $row['percent_ownership'] ?? '' }}</td>
-                <td>{{ $row['amount_paid'] ?? '' }}</td>
-                <td>{{ $row['tin'] ?? '' }}</td>
-            </tr>
-        @endforeach
-    </table>
-    <table>
-        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
-        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
-    </table>
-
-    <div class="page-no">Page 6 of 9</div>
-</div>
-
-<div class="page">
-    <p class="title">GENERAL INFORMATION SHEET</p>
-    <p class="subtitle">STOCK CORPORATION</p>
-    <p class="rule">================================ PLEASE PRINT LEGIBLY ================================</p>
-    <table>
-        <tr>
-            <th style="width:22%">Corporate Name:</th>
-            <td>{{ $step1['corporate_name'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    <div class="section-title">Stockholder's Information (15 to 21 / Others)</div>
-    <table>
-        <tr>
-            <th style="width:4%">#</th>
-            <th style="width:30%">Name / Nationality / Address</th>
-            <th style="width:12%">Type</th>
-            <th style="width:10%">No. of Shares</th>
-            <th style="width:12%">Amount Subscribed</th>
-            <th style="width:10%">% Ownership</th>
-            <th style="width:12%">Amount Paid</th>
-            <th style="width:10%">TIN</th>
-        </tr>
-        @foreach($stockRows7 as $row)
-            <tr>
-                <td>{{ $row['no'] ?? '' }}</td>
-                <td>{{ $row['name_address'] ?? '' }} {{ $row['nationality'] ? ' / '.$row['nationality'] : '' }}</td>
-                <td>{{ $row['share_type'] ?? '' }}</td>
-                <td>{{ $row['number_of_shares'] ?? '' }}</td>
-                <td>{{ $row['amount_subscribed'] ?? '' }}</td>
-                <td>{{ $row['percent_ownership'] ?? '' }}</td>
-                <td>{{ $row['amount_paid'] ?? '' }}</td>
-                <td>{{ $row['tin'] ?? '' }}</td>
-            </tr>
-        @endforeach
-    </table>
-    <table>
-        <tr><th style="width:40%">TOTAL NUMBER OF STOCKHOLDERS</th><td>{{ $step5['total_stockholders'] ?? '' }}</td><th style="width:30%">NO. WITH 100+ SHARES</th><td>{{ $step5['stockholders_with_100_plus'] ?? '' }}</td></tr>
-        <tr><th>TOTAL ASSETS (LATEST AUDITED FS)</th><td colspan="3">{{ $step5['total_assets'] ?? '' }}</td></tr>
-    </table>
-    <table>
-        <tr><th style="width:40%">OTHERS (remaining stockholders count)</th><td>{{ $step7['others_count'] ?? '' }}</td></tr>
-    </table>
-
-    <div class="page-no">Page 7 of 9</div>
-</div>
+        <div class="page-no">Page {{ $fixedPagesBeforeStockholders + $chunkIndex + 1 }} of {{ $totalPages }}</div>
+    </div>
+@endforeach
 
 <div class="page">
     <p class="title">GENERAL INFORMATION SHEET</p>
@@ -683,7 +630,7 @@
         <tr><th>Total No. of Rank & File Employees</th><td>{{ $step8['total_rank_file_employees'] ?? '' }}</td><th>Total Manpower Complement</th><td>{{ $step8['total_manpower_complement'] ?? '' }}</td></tr>
     </table>
 
-    <div class="page-no">Page 8 of 9</div>
+    <div class="page-no">Page {{ $investmentPage }} of {{ $totalPages }}</div>
 </div>
 
 <div class="page" style="font-family:'Times New Roman', Times, serif; color:#000; position:relative; box-sizing:border-box; padding:48pt 54pt 22pt 54pt;">
@@ -799,7 +746,7 @@
 
 
 
-        <div class="page-no">Page 9 of 9</div>
+    <div class="page-no">Page {{ $affidavitPage }} of {{ $totalPages }}</div>
 
 
 </div>
