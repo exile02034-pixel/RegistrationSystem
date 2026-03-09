@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3'
 import { Download, Eye, FileText, Mail, MoreHorizontal, Trash2 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +53,11 @@ const isModalOpen = ref(false)
 const activeType = ref<DocumentForm['type'] | null>(null)
 const gisStep = ref(1)
 const selectedDocumentIds = ref<string[]>([])
+const secretaryUseDefaultValues = ref(true)
+
+const SECRETARY_DEFAULT_NAME = 'Vince Anthony Feir'
+const SECRETARY_DEFAULT_ADDRESS = '299 Purok 1 San Agustin Lubao Pampanga'
+const SECRETARY_DEFAULT_TIN = '765-241-127-000'
 
 const { isOpen, deleting, promptDelete, confirmDelete, reset } = useDelete()
 
@@ -161,13 +166,14 @@ const amlaOptionGroups = {
 const defaultFields = (type: DocumentForm['type']) => {
   if (type === 'secretary_certificate') {
     return {
-      secretary_name: '',
-      secretary_address: '',
+      secretary_name: SECRETARY_DEFAULT_NAME,
+      secretary_address: SECRETARY_DEFAULT_ADDRESS,
+      secretary_signature_data_uri: '',
       corporation_name: '',
       corporation_address: '',
       authorized_person_name: 'Ronnel Landa',
       signing_date: '',
-      tin: '765-241-127-000',
+      tin: SECRETARY_DEFAULT_TIN,
       doc_no: '',
       page_no: '',
       book_no: '',
@@ -342,10 +348,55 @@ const openForm = (type: DocumentForm['type']) => {
   activeType.value = type
   gisStep.value = 1
   form.clearErrors()
+  secretaryUseDefaultValues.value = true
   form.reset()
   form.fields = defaultFields(type)
   isModalOpen.value = true
 }
+
+const normalizeSecretaryDefaults = () => {
+  form.fields.secretary_name = SECRETARY_DEFAULT_NAME
+  form.fields.secretary_address = SECRETARY_DEFAULT_ADDRESS
+  form.fields.tin = SECRETARY_DEFAULT_TIN
+  form.fields.secretary_signature_data_uri = ''
+}
+
+const useSecretaryDefaults = (enabled: boolean) => {
+  secretaryUseDefaultValues.value = enabled
+  if (enabled) {
+    normalizeSecretaryDefaults()
+    return
+  }
+
+  syncSecretarySignatureToName(form.fields.secretary_name)
+}
+
+const syncSecretarySignatureToName = (name: unknown) => {
+  if (secretaryUseDefaultValues.value) {
+    return
+  }
+
+  form.fields.secretary_signature_data_uri = String(name ?? '').trim()
+}
+
+watch(
+  () => secretaryUseDefaultValues.value,
+  (useDefault) => {
+    if (useDefault) {
+      normalizeSecretaryDefaults()
+      return
+    }
+
+    syncSecretarySignatureToName(form.fields.secretary_name)
+  },
+)
+
+watch(
+  () => form.fields?.secretary_name,
+  (secretaryName) => {
+    syncSecretarySignatureToName(secretaryName)
+  },
+)
 
 const closeForm = () => {
   isModalOpen.value = false
@@ -787,9 +838,20 @@ const submit = () => {
       </DialogHeader>
 
       <div v-if="activeType === 'secretary_certificate'" class="grid gap-4 md:grid-cols-2">
+        <div class="flex items-center gap-2 md:col-span-2">
+          <Checkbox
+            id="choose-another-secretary"
+            :model-value="!secretaryUseDefaultValues"
+            @update:model-value="(checked) => useSecretaryDefaults(!Boolean(checked))"
+          />
+          <Label for="choose-another-secretary">Choose another</Label>
+        </div>
         <div class="space-y-2">
           <Label>Secretary Name</Label>
-          <Input v-model="form.fields.secretary_name" />
+          <Input
+            v-model="form.fields.secretary_name"
+            :readonly="secretaryUseDefaultValues"
+          />
         </div>
         <div class="space-y-2">
           <Label>Corporation Name</Label>
@@ -797,7 +859,20 @@ const submit = () => {
         </div>
         <div class="space-y-2 md:col-span-2">
           <Label>Secretary Address</Label>
-          <textarea v-model="form.fields.secretary_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          <textarea
+            v-model="form.fields.secretary_address"
+            :readonly="secretaryUseDefaultValues"
+            class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+        </div>
+        <div class="space-y-2 md:col-span-2">
+          <Label>Signature Data URI</Label>
+          <textarea
+            v-model="form.fields.secretary_signature_data_uri"
+            :readonly="secretaryUseDefaultValues"
+            class="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            placeholder="Signature data (auto-fills with secretary name when custom mode)."
+          />
         </div>
         <div class="space-y-2 md:col-span-2">
           <Label>Corporation Address</Label>
@@ -813,7 +888,10 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>TIN (000-000-000-000)</Label>
-          <Input v-model="form.fields.tin" readonly />
+          <Input
+            v-model="form.fields.tin"
+            :readonly="secretaryUseDefaultValues"
+          />
         </div>
         <div class="space-y-2">
           <Label>Doc No.</Label>
