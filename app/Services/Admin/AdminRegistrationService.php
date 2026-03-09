@@ -11,13 +11,22 @@ use App\Services\RegistrationFormService;
 use App\Services\RegistrationTemplateService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AdminRegistrationService
 {
+    public const REQUIRED_DOCUMENT_TYPES = [
+        'articles_of_corporation' => 'Articles of Corporation',
+        'certificate_of_corporation' => 'Certificate of Corporation',
+        'cover_sheet' => 'Cover Sheet',
+        'certificate_of_registration' => 'Certificate of Registration',
+    ];
+
     public function __construct(
         private readonly RegistrationTemplateService $templateService,
         private readonly RegistrationFormService $registrationFormService,
         private readonly DocumentGenerationService $documentGenerationService,
+        private readonly RequiredDocumentExtractionService $requiredDocumentExtractionService,
         private readonly NotificationService $notificationService,
         private readonly ActivityLogService $activityLogService,
     ) {}
@@ -105,9 +114,16 @@ class AdminRegistrationService
 
     public function detailsForShow(RegistrationLink $registrationLink): array
     {
-        $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy');
+        $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy', 'requiredDocuments.uploadedBy');
         $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
         $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
+        $this->ensureCertificateExtraction($registrationLink);
+        $registrationLink->loadMissing('requiredDocuments.uploadedBy');
+        $requiredDocumentsByType = $registrationLink->requiredDocuments->keyBy('document_type');
+        $certificateOfRegistration = $requiredDocumentsByType->get('certificate_of_registration');
+        $gisAutofill = is_array($certificateOfRegistration?->extraction_payload)
+            ? $certificateOfRegistration->extraction_payload
+            : [];
 
         return [
             'id' => $registrationLink->id,
@@ -133,9 +149,82 @@ class AdminRegistrationService
                 ])
                 ->all(),
             'document_forms' => $this->documentGenerationService->availableDocuments(),
+            'gis_autofill' => [
+                'business_trade_name' => (string) ($gisAutofill['business_trade_name'] ?? ''),
+                'sec_registration_number' => (string) ($gisAutofill['sec_registration_number'] ?? ''),
+                'date_registered' => (string) ($gisAutofill['date_registered'] ?? ''),
+                'registered_address' => (string) ($gisAutofill['registered_address'] ?? ''),
+                'corporate_tin' => (string) ($gisAutofill['corporate_tin'] ?? ''),
+                'branch_code' => (string) ($gisAutofill['branch_code'] ?? ''),
+            ],
+            'required_documents' => collect(self::REQUIRED_DOCUMENT_TYPES)
+                ->map(function (string $label, string $type) use ($registrationLink, $requiredDocumentsByType): array {
+                    $uploaded = $requiredDocumentsByType->get($type);
+
+                    return [
+                        'type' => $type,
+                        'name' => $label,
+                        'is_uploaded' => $uploaded !== null,
+                        'original_filename' => $uploaded?->original_filename,
+                        'uploaded_at' => $uploaded?->created_at?->toDateTimeString(),
+                        'uploaded_by' => $uploaded?->uploadedBy?->name,
+                        'upload_url' => route('admin.register.required-documents.upload', $registrationLink->id),
+                        'view_url' => $uploaded !== null ? route('admin.register.required-documents.view', [$registrationLink->id, $uploaded->id]) : null,
+                        'download_url' => $uploaded !== null ? route('admin.register.required-documents.download', [$registrationLink->id, $uploaded->id]) : null,
+                    ];
+                })
+                ->values()
+                ->all(),
             'revision_count' => $revisionCount,
             'last_revision_at' => $lastRevisionAt?->toDateTimeString(),
         ];
+    }
+
+    private function ensureCertificateExtraction(RegistrationLink $registrationLink): void
+    {
+        $certificateDocument = $registrationLink->requiredDocuments()
+            ->where('document_type', 'certificate_of_registration')
+            ->first();
+
+        if ($certificateDocument === null) {
+            return;
+        }
+
+        $existingPayload = is_array($certificateDocument->extraction_payload)
+            ? $certificateDocument->extraction_payload
+            : [];
+        $requiredKeys = [
+            'business_trade_name',
+            'sec_registration_number',
+            'date_registered',
+            'registered_address',
+            'corporate_tin',
+        ];
+        $missingRequiredValues = collect($requiredKeys)->some(
+            fn (string $key): bool => trim((string) ($existingPayload[$key] ?? '')) === ''
+        );
+
+        if ($existingPayload !== [] && $missingRequiredValues === false) {
+            return;
+        }
+
+        if (! Storage::disk('local')->exists($certificateDocument->file_path)) {
+            return;
+        }
+
+        $absolutePath = Storage::disk('local')->path($certificateDocument->file_path);
+        $payload = $this->requiredDocumentExtractionService->extractCertificateOfRegistrationFields(
+            absolutePath: $absolutePath,
+            originalFilename: $certificateDocument->original_filename,
+        );
+
+        if ($payload === []) {
+            return;
+        }
+
+        $certificateDocument->update([
+            'extraction_payload' => array_merge($existingPayload, $payload),
+        ]);
     }
 
     public function deleteRegistration(RegistrationLink $registrationLink, ?User $performedBy): void

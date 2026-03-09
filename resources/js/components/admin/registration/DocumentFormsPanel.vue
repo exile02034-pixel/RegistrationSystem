@@ -43,10 +43,19 @@ type GeneratedDocument = {
   delete_url: string
 }
 
+type GisAutofillData = {
+  business_trade_name?: string
+  date_registered?: string
+  registered_address?: string
+  corporate_tin?: string
+  branch_code?: string
+}
+
 const props = defineProps<{
   registrationId: string
   forms: DocumentForm[]
   generatedDocuments: GeneratedDocument[]
+  gisAutofill?: GisAutofillData
 }>()
 
 const isModalOpen = ref(false)
@@ -352,6 +361,11 @@ const openForm = (type: DocumentForm['type']) => {
   secretaryUseDefaultValues.value = true
   form.reset()
   form.fields = defaultFields(type)
+
+  if (type === 'gis_stock_corporation') {
+    applyGisAutofillDefaults()
+  }
+
   isModalOpen.value = true
 }
 
@@ -404,6 +418,74 @@ const closeForm = () => {
   activeType.value = null
   gisStep.value = 1
   form.clearErrors()
+}
+
+const gisAutofillValue = (fieldName: 'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address'): string => {
+  const source = props.gisAutofill ?? {}
+
+  if (fieldName === 'business_trade_name') return String(source.business_trade_name ?? '').trim()
+  if (fieldName === 'sec_registration_number') return String(source.sec_registration_number ?? '').trim()
+  if (fieldName === 'date_registered') return String(source.date_registered ?? '').trim()
+  if (fieldName === 'corporate_tin') {
+    const tin = String(source.corporate_tin ?? '').trim()
+    const branchCode = String(source.branch_code ?? '').trim()
+
+    return [tin, branchCode].filter((segment) => segment !== '').join('/')
+  }
+
+  return String(source.registered_address ?? '').trim()
+}
+
+const applyGisAutofillOnFocus = (fieldName: 'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address') => {
+  if (activeType.value !== 'gis_stock_corporation') return
+  if (gisStep.value !== 1) return
+
+  const step1 = form.fields?.step_1 ?? {}
+  const currentValue = String(step1[fieldName] ?? '').trim()
+  if (currentValue !== '') return
+
+  const value = gisAutofillValue(fieldName)
+  if (value === '') return
+
+  if (fieldName === 'business_trade_name') {
+    form.fields.step_1.business_trade_name = value
+    return
+  }
+
+  if (fieldName === 'sec_registration_number') {
+    form.fields.step_1.sec_registration_number = value
+    return
+  }
+
+  if (fieldName === 'date_registered') {
+    form.fields.step_1.date_registered = value
+    return
+  }
+
+  if (fieldName === 'corporate_tin') {
+    form.fields.step_1.corporate_tin = value
+    return
+  }
+
+  if (fieldName === 'principal_office_address') form.fields.step_1.principal_office_address = value
+  if (fieldName === 'business_address') form.fields.step_1.business_address = value
+}
+
+const applyGisAutofillDefaults = () => {
+  if (activeType.value !== 'gis_stock_corporation') return
+
+  const fieldsToAutofill: Array<'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address'> = [
+    'business_trade_name',
+    'sec_registration_number',
+    'date_registered',
+    'corporate_tin',
+    'principal_office_address',
+    'business_address',
+  ]
+
+  fieldsToAutofill.forEach((fieldName) => {
+    applyGisAutofillOnFocus(fieldName)
+  })
 }
 
 const createGisStockholderRow = (no: number) => ({
@@ -1074,15 +1156,15 @@ const submit = () => {
           </div>
           <div class="space-y-2">
             <Label>Business / Trade Name</Label>
-            <Input v-model="form.fields.step_1.business_trade_name" />
+            <Input v-model="form.fields.step_1.business_trade_name" @focus="applyGisAutofillOnFocus('business_trade_name')" />
           </div>
           <div class="space-y-2">
             <Label>SEC Registration Number</Label>
-            <Input v-model="form.fields.step_1.sec_registration_number" />
+            <Input v-model="form.fields.step_1.sec_registration_number" @focus="applyGisAutofillOnFocus('sec_registration_number')" />
           </div>
           <div class="space-y-2">
             <Label>Date Registered</Label>
-            <Input v-model="form.fields.step_1.date_registered" type="date" />
+            <Input v-model="form.fields.step_1.date_registered" type="date" @focus="applyGisAutofillOnFocus('date_registered')" />
           </div>
           <div class="space-y-2">
             <Label>Fiscal Year End</Label>
@@ -1090,11 +1172,11 @@ const submit = () => {
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Complete Principal Office Address</Label>
-            <textarea v-model="form.fields.step_1.principal_office_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <textarea v-model="form.fields.step_1.principal_office_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" @focus="applyGisAutofillOnFocus('principal_office_address')" />
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Complete Business Address</Label>
-            <textarea v-model="form.fields.step_1.business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <textarea v-model="form.fields.step_1.business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" @focus="applyGisAutofillOnFocus('business_address')" />
           </div>
           <div class="space-y-2">
             <Label>Official Email</Label>
@@ -1106,7 +1188,7 @@ const submit = () => {
           </div>
           <div class="space-y-2">
             <Label>Corporate TIN</Label>
-            <Input v-model="form.fields.step_1.corporate_tin" />
+            <Input v-model="form.fields.step_1.corporate_tin" @focus="applyGisAutofillOnFocus('corporate_tin')" />
           </div>
           <div class="space-y-2">
             <Label>Official Mobile Number</Label>
