@@ -23,6 +23,8 @@ class GenerateRegistrationDocumentRequest extends FormRequest
             return array_merge($rules, [
                 'fields.secretary_name' => ['required', 'string', 'max:255'],
                 'fields.secretary_address' => ['required', 'string', 'max:1000'],
+                'fields.secretary_signature_data_uri' => ['nullable', 'string', 'max:1048576'],
+                'fields.signatureDataUri' => ['nullable', 'string', 'max:1048576'],
                 'fields.corporation_name' => ['required', 'string', 'max:255'],
                 'fields.corporation_address' => ['required', 'string', 'max:1000'],
                 'fields.authorized_person_name' => ['required', 'string', 'max:255'],
