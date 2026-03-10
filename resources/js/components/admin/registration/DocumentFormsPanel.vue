@@ -58,6 +58,20 @@ type GisAutofillData = {
   alternate_email?: string
   alternate_mobile?: string
   primary_purpose?: string
+  step_3?: {
+    authorized_capital_stock?: string
+    subscribed_capital_stock?: string
+    paid_up_capital_stock?: string
+    authorized_rows?: Array<Record<string, unknown>>
+    subscribed_filipino_rows?: Array<Record<string, unknown>>
+    subscribed_foreign_rows?: Array<Record<string, unknown>>
+    paidup_filipino_rows?: Array<Record<string, unknown>>
+    paidup_foreign_rows?: Array<Record<string, unknown>>
+    percentage_foreign_equity?: string
+    total_subscribed_capital?: string
+    total_paid_up_capital?: string
+  }
+  aoi_capital_stock_available?: boolean
   has_uploaded_sources?: boolean
   missing_fields?: string[]
 }
@@ -118,6 +132,27 @@ const defaultAppointmentOfficers = () => ([
   { position: 'Treasurer', name_and_residential_address: '', nationality: 'Filipino', gender: '', tin: '' },
   { position: 'Corporate Secretary', name_and_residential_address: '', nationality: 'Filipino', gender: '', tin: '' },
 ])
+
+type BankSignatoryRow = {
+  name: string
+  position: string
+}
+
+const createBankSignatoryRow = (): BankSignatoryRow => ({
+  name: '',
+  position: '',
+})
+
+const sanitizeBankSignatoryRows = (rows: unknown): BankSignatoryRow[] => {
+  if (!Array.isArray(rows)) return [createBankSignatoryRow()]
+
+  const sanitized = rows.map((row) => ({
+    name: String((row as BankSignatoryRow | undefined)?.name ?? ''),
+    position: String((row as BankSignatoryRow | undefined)?.position ?? ''),
+  }))
+
+  return sanitized.length > 0 ? sanitized : [createBankSignatoryRow()]
+}
 
 const defaultGisRows = () => Array.from({ length: 15 }, () => ({
   name: '',
@@ -263,14 +298,8 @@ const defaultFields = (type: DocumentForm['type']) => {
       bank_name: '',
       branch: '',
       meeting_date: '',
-      authorized_signatory_1_name: '',
-      authorized_signatory_1_position: '',
-      authorized_signatory_2_name: '',
-      authorized_signatory_2_position: '',
-      withdrawal_signatory_1_name: '',
-      withdrawal_signatory_1_position: '',
-      withdrawal_signatory_2_name: '',
-      withdrawal_signatory_2_position: '',
+      authorized_signatories_for_opening: [createBankSignatoryRow()],
+      authorized_signatories_for_transacting: [createBankSignatoryRow()],
       corporate_secretary_name: '',
       certificate_date: '',
       certificate_location: '',
@@ -417,6 +446,10 @@ const openForm = (type: DocumentForm['type']) => {
   secretaryUseDefaultValues.value = true
   form.reset()
   form.fields = defaultFields(type)
+  if (type === 'secretary_certificate_bank') {
+    form.fields.authorized_signatories_for_opening = sanitizeBankSignatoryRows(form.fields.authorized_signatories_for_opening)
+    form.fields.authorized_signatories_for_transacting = sanitizeBankSignatoryRows(form.fields.authorized_signatories_for_transacting)
+  }
 
   if (type === 'gis_stock_corporation') {
     applyGisAutofillDefaults()
@@ -426,6 +459,21 @@ const openForm = (type: DocumentForm['type']) => {
   }
 
   isModalOpen.value = true
+}
+
+const addBankSignatoryRow = (fieldName: 'authorized_signatories_for_opening' | 'authorized_signatories_for_transacting') => {
+  const rows = sanitizeBankSignatoryRows(form.fields?.[fieldName])
+  form.fields[fieldName] = [...rows, createBankSignatoryRow()]
+}
+
+const removeBankSignatoryRow = (
+  fieldName: 'authorized_signatories_for_opening' | 'authorized_signatories_for_transacting',
+) => {
+  const rows = sanitizeBankSignatoryRows(form.fields?.[fieldName])
+  if (rows.length <= 1) return
+
+  const nextRows = rows.slice(0, -1)
+  form.fields[fieldName] = nextRows.length > 0 ? nextRows : [createBankSignatoryRow()]
 }
 
 const normalizeSecretaryDefaults = () => {
@@ -509,8 +557,20 @@ const GIS_STEP1_AUTOFILL_FIELDS: GisStep1AutofillField[] = [
   'primary_purpose',
   'industry_classification',
 ]
+const GIS_STEP3_ROW_LIMITS = {
+  authorized_rows: 3,
+  subscribed_filipino_rows: 2,
+  subscribed_foreign_rows: 2,
+  paidup_filipino_rows: 2,
+  paidup_foreign_rows: 2,
+} as const
 
 const gisAutofillMissingFields = computed(() => new Set(props.gisAutofill?.missing_fields ?? []))
+const gisStep3Autofill = computed(() => {
+  const step3 = props.gisAutofill?.step_3
+
+  return step3 && typeof step3 === 'object' ? step3 : null
+})
 
 const gisAutofillValue = (fieldName: GisStep1AutofillField): string => {
   const source = props.gisAutofill ?? {}
@@ -557,17 +617,108 @@ const applyGisAutofillDefaults = (force = false) => {
   GIS_STEP1_AUTOFILL_FIELDS.forEach((fieldName) => {
     applyGisAutofillOnFocus(fieldName, force)
   })
+  applyGisStep3Autofill(force)
+}
+
+const hasValue = (value: unknown): boolean => String(value ?? '').trim() !== ''
+
+const shouldOverwriteField = (current: unknown, incoming: unknown, force: boolean): boolean => {
+  if (!hasValue(incoming)) return false
+  if (force) return true
+
+  return !hasValue(current)
+}
+
+const normalizeStep3Rows = (rows: unknown, maxRows: number): Record<string, string>[] => {
+  if (!Array.isArray(rows)) return []
+
+  return rows
+    .slice(0, maxRows)
+    .map((row: Record<string, unknown>) => Object.entries(row ?? {}).reduce<Record<string, string>>((carry, [key, value]) => {
+      carry[key] = String(value ?? '').trim()
+
+      return carry
+    }, {}))
+}
+
+const rowHasAnyValue = (row: unknown): boolean => {
+  if (!row || typeof row !== 'object') return false
+
+  return Object.values(row as Record<string, unknown>).some((value) => hasValue(value))
+}
+
+const applyGisStep3Autofill = (force = false) => {
+  if (activeType.value !== 'gis_stock_corporation') return
+  const extracted = gisStep3Autofill.value
+  if (!extracted) return
+
+  form.fields.step_3 = form.fields.step_3 ?? {}
+  const step3 = form.fields.step_3
+
+  if (shouldOverwriteField(step3.authorized_capital_stock, extracted.authorized_capital_stock, force)) {
+    step3.authorized_capital_stock = String(extracted.authorized_capital_stock ?? '').trim()
+  }
+  if (shouldOverwriteField(step3.subscribed_capital_stock, extracted.subscribed_capital_stock, force)) {
+    step3.subscribed_capital_stock = String(extracted.subscribed_capital_stock ?? '').trim()
+  }
+  if (shouldOverwriteField(step3.paid_up_capital_stock, extracted.paid_up_capital_stock, force)) {
+    step3.paid_up_capital_stock = String(extracted.paid_up_capital_stock ?? '').trim()
+  }
+  if (shouldOverwriteField(step3.percentage_foreign_equity, extracted.percentage_foreign_equity, force)) {
+    step3.percentage_foreign_equity = String(extracted.percentage_foreign_equity ?? '').trim()
+  }
+  if (shouldOverwriteField(step3.total_subscribed_capital, extracted.total_subscribed_capital, force)) {
+    step3.total_subscribed_capital = String(extracted.total_subscribed_capital ?? '').trim()
+  }
+  if (shouldOverwriteField(step3.total_paid_up_capital, extracted.total_paid_up_capital, force)) {
+    step3.total_paid_up_capital = String(extracted.total_paid_up_capital ?? '').trim()
+  }
+
+  for (const fieldName of Object.keys(GIS_STEP3_ROW_LIMITS) as Array<keyof typeof GIS_STEP3_ROW_LIMITS>) {
+    const maxRows = GIS_STEP3_ROW_LIMITS[fieldName]
+    const extractedRows = normalizeStep3Rows(extracted[fieldName], maxRows)
+    if (extractedRows.length === 0) continue
+
+    const currentRows = Array.isArray(step3[fieldName]) ? step3[fieldName] : defaultCapitalRows(maxRows)
+    const nextRows = defaultCapitalRows(maxRows).map((blankRow, index) => {
+      const currentRow = (currentRows[index] ?? blankRow) as Record<string, unknown>
+      const incomingRow = extractedRows[index] ?? {}
+      if (!rowHasAnyValue(incomingRow)) return currentRow
+      if (!force && rowHasAnyValue(currentRow)) return currentRow
+
+      return { ...blankRow, ...incomingRow }
+    })
+
+    step3[fieldName] = nextRows
+  }
 }
 
 const applyGisAutofillWithConfirmation = () => {
   if (activeType.value !== 'gis_stock_corporation' || gisStep.value !== 1) return
+  if (!props.gisAutofill?.aoi_capital_stock_available) {
+    toast.error('Articles of Incorporation is missing in Required Documents. Upload it first to autofill GIS Page 3.')
+  }
 
-  const hasOverlaps = GIS_STEP1_AUTOFILL_FIELDS.some((fieldName) => {
+  const hasStep1Overlaps = GIS_STEP1_AUTOFILL_FIELDS.some((fieldName) => {
     const currentValue = String(form.fields?.step_1?.[fieldName] ?? '').trim()
     const extractedValue = gisAutofillValue(fieldName)
 
     return currentValue !== '' && extractedValue !== ''
   })
+  const extractedStep3 = gisStep3Autofill.value
+  const hasStep3Overlaps = extractedStep3
+    ? (
+        ['authorized_capital_stock', 'subscribed_capital_stock', 'paid_up_capital_stock', 'percentage_foreign_equity', 'total_subscribed_capital', 'total_paid_up_capital'] as const
+      ).some((fieldName) => hasValue(form.fields?.step_3?.[fieldName]) && hasValue(extractedStep3[fieldName]))
+      || (Object.keys(GIS_STEP3_ROW_LIMITS) as Array<keyof typeof GIS_STEP3_ROW_LIMITS>).some((fieldName) => {
+        const maxRows = GIS_STEP3_ROW_LIMITS[fieldName]
+        const currentRows = Array.isArray(form.fields?.step_3?.[fieldName]) ? form.fields.step_3[fieldName] : defaultCapitalRows(maxRows)
+        const incomingRows = normalizeStep3Rows(extractedStep3[fieldName], maxRows)
+
+        return incomingRows.some((incomingRow, index) => rowHasAnyValue(currentRows[index]) && rowHasAnyValue(incomingRow))
+      })
+    : false
+  const hasOverlaps = hasStep1Overlaps || hasStep3Overlaps
 
   requestActionConfirmation(
     'Apply Extracted Data',
@@ -924,6 +1075,8 @@ const validateAppointmentForm = (): string[] => {
 const validateSecCertBankForm = (): string[] => {
   const errors: string[] = []
   const fields = form.fields ?? {}
+  const openingSignatories = sanitizeBankSignatoryRows(fields.authorized_signatories_for_opening)
+  const transactingSignatories = sanitizeBankSignatoryRows(fields.authorized_signatories_for_transacting)
 
   if (isBlank(fields.secretary_name)) errors.push('Name of Secretary is required.')
   if (isBlank(fields.secretary_address)) errors.push('Address of Secretary is required.')
@@ -936,14 +1089,16 @@ const validateSecCertBankForm = (): string[] => {
   } else if (!isIsoDate(fields.meeting_date)) {
     errors.push('Meeting Date must be a valid date.')
   }
-  if (isBlank(fields.authorized_signatory_1_name)) errors.push('Authorized Signatory 1 Name is required.')
-  if (isBlank(fields.authorized_signatory_1_position)) errors.push('Authorized Signatory 1 Position is required.')
-  if (isBlank(fields.authorized_signatory_2_name)) errors.push('Authorized Signatory 2 Name is required.')
-  if (isBlank(fields.authorized_signatory_2_position)) errors.push('Authorized Signatory 2 Position is required.')
-  if (isBlank(fields.withdrawal_signatory_1_name)) errors.push('Withdrawal Signatory 1 Name is required.')
-  if (isBlank(fields.withdrawal_signatory_1_position)) errors.push('Withdrawal Signatory 1 Position is required.')
-  if (isBlank(fields.withdrawal_signatory_2_name)) errors.push('Withdrawal Signatory 2 Name is required.')
-  if (isBlank(fields.withdrawal_signatory_2_position)) errors.push('Withdrawal Signatory 2 Position is required.')
+  openingSignatories.forEach((row, index) => {
+    const rowNo = index + 1
+    if (isBlank(row.name)) errors.push(`Authorized Signatory for Opening ${rowNo} Name is required.`)
+    if (isBlank(row.position)) errors.push(`Authorized Signatory for Opening ${rowNo} Position is required.`)
+  })
+  transactingSignatories.forEach((row, index) => {
+    const rowNo = index + 1
+    if (isBlank(row.name)) errors.push(`Authorized Signatory for Transacting ${rowNo} Name is required.`)
+    if (isBlank(row.position)) errors.push(`Authorized Signatory for Transacting ${rowNo} Position is required.`)
+  })
   if (isBlank(fields.corporate_secretary_name)) errors.push('Corporate Secretary Name is required.')
   if (isBlank(fields.certificate_date)) {
     errors.push('Certificate Date is required.')
@@ -1078,6 +1233,14 @@ const activeValidationErrors = (): string[] => {
 }
 
 const submitFieldsPayload = (): Record<string, any> => {
+  if (activeType.value === 'secretary_certificate_bank') {
+    return {
+      ...form.fields,
+      authorized_signatories_for_opening: sanitizeBankSignatoryRows(form.fields.authorized_signatories_for_opening),
+      authorized_signatories_for_transacting: sanitizeBankSignatoryRows(form.fields.authorized_signatories_for_transacting),
+    }
+  }
+
   if (activeType.value !== 'gis_stock_corporation') {
     return { ...form.fields }
   }
@@ -1388,37 +1551,59 @@ const submit = () => {
           <Label>Certificate Date</Label>
           <Input v-model="form.fields.certificate_date" type="date" />
         </div>
-        <div class="space-y-2">
-          <Label>Authorized Signatory 1 Name</Label>
-          <Input v-model="form.fields.authorized_signatory_1_name" />
+        <div class="space-y-2 md:col-span-2">
+          <Label>Authorized Signatory for Opening</Label>
+          <div class="space-y-3">
+            <div
+              v-for="(row, index) in form.fields.authorized_signatories_for_opening"
+              :key="`authorized-opening-${index}`"
+              class="grid gap-2 md:grid-cols-2"
+            >
+              <Input v-model="row.name" :placeholder="`Name ${index + 1}`" />
+              <Input v-model="row.position" :placeholder="`Position ${index + 1}`" />
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" @click="addBankSignatoryRow('authorized_signatories_for_opening')">
+              + Add Another
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              :disabled="form.fields.authorized_signatories_for_opening.length <= 1"
+              @click="removeBankSignatoryRow('authorized_signatories_for_opening')"
+            >
+              Delete
+            </Button>
+          </div>
         </div>
-        <div class="space-y-2">
-          <Label>Authorized Signatory 1 Position</Label>
-          <Input v-model="form.fields.authorized_signatory_1_position" />
-        </div>
-        <div class="space-y-2">
-          <Label>Authorized Signatory 2 Name</Label>
-          <Input v-model="form.fields.authorized_signatory_2_name" />
-        </div>
-        <div class="space-y-2">
-          <Label>Authorized Signatory 2 Position</Label>
-          <Input v-model="form.fields.authorized_signatory_2_position" />
-        </div>
-        <div class="space-y-2">
-          <Label>Withdrawal Signatory 1 Name</Label>
-          <Input v-model="form.fields.withdrawal_signatory_1_name" />
-        </div>
-        <div class="space-y-2">
-          <Label>Withdrawal Signatory 1 Position</Label>
-          <Input v-model="form.fields.withdrawal_signatory_1_position" />
-        </div>
-        <div class="space-y-2">
-          <Label>Withdrawal Signatory 2 Name</Label>
-          <Input v-model="form.fields.withdrawal_signatory_2_name" />
-        </div>
-        <div class="space-y-2">
-          <Label>Withdrawal Signatory 2 Position</Label>
-          <Input v-model="form.fields.withdrawal_signatory_2_position" />
+        <div class="space-y-2 md:col-span-2">
+          <Label>Authorized Signatory for Transacting</Label>
+          <div class="space-y-3">
+            <div
+              v-for="(row, index) in form.fields.authorized_signatories_for_transacting"
+              :key="`authorized-transacting-${index}`"
+              class="grid gap-2 md:grid-cols-2"
+            >
+              <Input v-model="row.name" :placeholder="`Name ${index + 1}`" />
+              <Input v-model="row.position" :placeholder="`Position ${index + 1}`" />
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" @click="addBankSignatoryRow('authorized_signatories_for_transacting')">
+              + Add Another
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              :disabled="form.fields.authorized_signatories_for_transacting.length <= 1"
+              @click="removeBankSignatoryRow('authorized_signatories_for_transacting')"
+            >
+              Delete
+            </Button>
+          </div>
         </div>
         <div class="space-y-2">
           <Label>Corporate Secretary Name</Label>
@@ -1606,6 +1791,9 @@ const submit = () => {
             </div>
             <p v-if="(props.gisAutofill?.missing_fields?.length ?? 0) > 0" class="mt-1 text-[#C2410C]">
               Some fields were not found and need manual input.
+            </p>
+            <p v-if="!props.gisAutofill?.aoi_capital_stock_available" class="mt-1 text-[#B91C1C]">
+              Articles of Incorporation is not uploaded. Upload it in Required Documents to autofill GIS Page 3 (Capital Stock).
             </p>
           </div>
           <div class="space-y-2">

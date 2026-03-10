@@ -33,14 +33,6 @@ $corporationName = trim((string) ($fields['corporation_name'] ?? ''));
 $principalAddress = trim((string) ($fields['principal_address'] ?? ''));
 $bankName = trim((string) ($fields['bank_name'] ?? ''));
 $branch = trim((string) ($fields['branch'] ?? ''));
-$authorizedSignatory1Name = trim((string) ($fields['authorized_signatory_1_name'] ?? ''));
-$authorizedSignatory1Position = trim((string) ($fields['authorized_signatory_1_position'] ?? ''));
-$authorizedSignatory2Name = trim((string) ($fields['authorized_signatory_2_name'] ?? ''));
-$authorizedSignatory2Position = trim((string) ($fields['authorized_signatory_2_position'] ?? ''));
-$withdrawalSignatory1Name = trim((string) ($fields['withdrawal_signatory_1_name'] ?? ''));
-$withdrawalSignatory1Position = trim((string) ($fields['withdrawal_signatory_1_position'] ?? ''));
-$withdrawalSignatory2Name = trim((string) ($fields['withdrawal_signatory_2_name'] ?? ''));
-$withdrawalSignatory2Position = trim((string) ($fields['withdrawal_signatory_2_position'] ?? ''));
 $corporateSecretaryName = trim((string) ($fields['corporate_secretary_name'] ?? ''));
 $certificateLocation = trim((string) ($fields['certificate_location'] ?? ''));
 
@@ -51,6 +43,34 @@ $meetingDateDisplay = $meetingDateRaw;
 $certificateDay = '';
 $certificateMonth = '';
 $certificateYear = '';
+$normalizeSignatories = static function (mixed $inputRows, string $legacyPrefix) use ($fields): array {
+    if (is_array($inputRows) && count($inputRows) > 0) {
+        $rows = array_map(static fn ($row) => [
+            'name' => trim((string) ($row['name'] ?? '')),
+            'position' => trim((string) ($row['position'] ?? '')),
+        ], $inputRows);
+
+        return count($rows) > 0 ? $rows : [['name' => '', 'position' => '']];
+    }
+
+    $legacyRows = [];
+    for ($index = 1; $index <= 20; $index++) {
+        $name = trim((string) ($fields["{$legacyPrefix}_{$index}_name"] ?? ''));
+        $position = trim((string) ($fields["{$legacyPrefix}_{$index}_position"] ?? ''));
+        if ($name === '' && $position === '') {
+            continue;
+        }
+
+        $legacyRows[] = [
+            'name' => $name,
+            'position' => $position,
+        ];
+    }
+
+    return count($legacyRows) > 0 ? $legacyRows : [['name' => '', 'position' => '']];
+};
+$openingSignatories = $normalizeSignatories($fields['authorized_signatories_for_opening'] ?? null, 'authorized_signatory');
+$transactingSignatories = $normalizeSignatories($fields['authorized_signatories_for_transacting'] ?? null, 'withdrawal_signatory');
 
 if ($meetingDateRaw !== '') {
     try {
@@ -102,16 +122,13 @@ Resolved further that the following are authorized to process, open and represen
 </tr>
 </thead>
 <tbody>
+@foreach ($openingSignatories as $signatory)
 <tr>
-<td>{{ $authorizedSignatory1Name }}</td>
-<td>{{ $authorizedSignatory1Position }}</td>
+<td>{{ $signatory['name'] }}</td>
+<td>{{ $signatory['position'] }}</td>
 <td>&nbsp;</td>
 </tr>
-<tr>
-<td>{{ $authorizedSignatory2Name }}</td>
-<td>{{ $authorizedSignatory2Position }}</td>
-<td>&nbsp;</td>
-</tr>
+@endforeach
 </tbody>
 </table>
 </li>
@@ -127,16 +144,13 @@ Resolved further that the authorized signatories for withdrawal, loans and any o
 </tr>
 </thead>
 <tbody>
+@foreach ($transactingSignatories as $signatory)
 <tr>
-<td>{{ $withdrawalSignatory1Name }}</td>
-<td>{{ $withdrawalSignatory1Position }}</td>
+<td>{{ $signatory['name'] }}</td>
+<td>{{ $signatory['position'] }}</td>
 <td>&nbsp;</td>
 </tr>
-<tr>
-<td>{{ $withdrawalSignatory2Name }}</td>
-<td>{{ $withdrawalSignatory2Position }}</td>
-<td>&nbsp;</td>
-</tr>
+@endforeach
 </tbody>
 </table>
 </li>
