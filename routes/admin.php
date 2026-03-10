@@ -28,8 +28,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::get('/registration/{registrationLink}', [RegistrationController::class, 'show'])->name('register.show');
         Route::patch('/registration/{registrationLink}/status', [RegistrationController::class, 'updateStatus'])->name('register.status.update');
         Route::delete('/registrations/{registrationLink}', [RegistrationController::class, 'destroy'])->name('register.destroy');
+        Route::post('/registration/{registrationLink}/documents/{documentType}/preview', [DocumentGeneratorController::class, 'preview'])
+            ->whereIn('documentType', ['secretary_certificate', 'secretary_certificate_bank', 'appointment_form_opc', 'gis_stock_corporation'])
+            ->name('register.documents.preview');
         Route::post('/registration/{registrationLink}/documents/{documentType}/generate', [DocumentGeneratorController::class, 'generate'])
-            ->whereIn('documentType', ['secretary_certificate', 'appointment_form_opc', 'gis_stock_corporation'])
+            ->whereIn('documentType', ['secretary_certificate', 'secretary_certificate_bank', 'appointment_form_opc', 'gis_stock_corporation'])
             ->name('register.documents.generate');
         Route::get('/registration/{registrationLink}/documents/{document}/view', [DocumentGeneratorController::class, 'view'])
             ->name('register.documents.view');

@@ -15,6 +15,7 @@ use RuntimeException;
 class DocumentGenerationService
 {
     public const SECRETARY_CERTIFICATE = 'secretary_certificate';
+    public const SECRETARY_CERTIFICATE_BANK = 'secretary_certificate_bank';
 
     public const APPOINTMENT_FORM_OPC = 'appointment_form_opc';
 
@@ -27,6 +28,11 @@ class DocumentGenerationService
                 'type' => self::SECRETARY_CERTIFICATE,
                 'name' => "Secretary's Certificate",
                 'description' => 'Generate Secretary Certificate PDF from the admin input form.',
+            ],
+            [
+                'type' => self::SECRETARY_CERTIFICATE_BANK,
+                'name' => "Secretary's Certificate Bank",
+                'description' => "Generate Secretary's Certificate Bank PDF from the admin input form.",
             ],
             [
                 'type' => self::APPOINTMENT_FORM_OPC,
@@ -60,11 +66,7 @@ class DocumentGenerationService
         $slug = Str::slug((string) $documentConfig['name'], '-');
         $pdfRelativePath = "{$relativeOutputDir}/{$slug}.pdf";
         $templateView = $this->templateViewFor($documentType);
-        $html = view($templateView, [
-            'registrationLink' => $registrationLink,
-            'fields' => $fields,
-            'generatedAt' => now(),
-        ])->render();
+        $html = $this->renderHtml($registrationLink, $documentType, $fields);
 
         $htmlRelativePath = "{$relativeOutputDir}/{$slug}.html";
         $htmlSaved = Storage::disk('local')->put($htmlRelativePath, $html);
@@ -123,6 +125,20 @@ class DocumentGenerationService
         return false;
     }
 
+    public function renderHtml(
+        RegistrationLink $registrationLink,
+        string $documentType,
+        array $fields,
+    ): string {
+        $templateView = $this->templateViewFor($documentType);
+
+        return view($templateView, [
+            'registrationLink' => $registrationLink,
+            'fields' => $fields,
+            'generatedAt' => now(),
+        ])->render();
+    }
+
     private function renderPdfFromHtml(string $html): string
     {
         if (! class_exists(Dompdf::class)) {
@@ -155,6 +171,7 @@ class DocumentGenerationService
     {
         return match ($documentType) {
             self::SECRETARY_CERTIFICATE => 'pdf.documents.secretary-certificate',
+            self::SECRETARY_CERTIFICATE_BANK => 'pdf.documents.sec_cert_bank',
             self::APPOINTMENT_FORM_OPC => 'pdf.documents.appointment-form-opc',
             self::GIS_STOCK_CORPORATION => 'pdf.documents.gis-stock-corporation',
             default => throw new RuntimeException('Unknown document type.'),

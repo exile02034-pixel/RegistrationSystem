@@ -10,6 +10,7 @@ use App\Services\Admin\AdminDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -44,6 +45,28 @@ class DocumentGeneratorController extends Controller
         }
 
         return back()->with('success', 'Document generated successfully.');
+    }
+
+    public function preview(
+        GenerateRegistrationDocumentRequest $request,
+        RegistrationLink $registrationLink,
+        string $documentType,
+    ): HttpResponse {
+        try {
+            $html = $this->adminDocumentService->previewHtml(
+                registrationLink: $registrationLink,
+                documentType: $documentType,
+                fields: $this->resolvedFields($request),
+            );
+        } catch (\Throwable $e) {
+            throw ValidationException::withMessages([
+                'document' => $e->getMessage(),
+            ]);
+        }
+
+        return response($html, 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+        ]);
     }
 
     private function resolvedFields(Request $request): array

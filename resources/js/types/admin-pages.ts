@@ -119,6 +119,7 @@ export type GeneratedDocument = {
 
 export type DocumentFormType =
     | 'secretary_certificate'
+    | 'secretary_certificate_bank'
     | 'appointment_form_opc'
     | 'gis_stock_corporation';
 
