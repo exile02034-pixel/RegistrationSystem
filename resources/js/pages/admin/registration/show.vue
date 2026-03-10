@@ -6,6 +6,16 @@ import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPan
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -34,6 +44,9 @@ const uploadRequiredDocumentForm = useForm<{ document_type: string; file: File |
 })
 const deleteRequiredDocumentForm = useForm({})
 const requiredDocumentFileInputs = ref<Record<string, HTMLInputElement | null>>({})
+const requiredDeleteDialogOpen = ref(false)
+const pendingRequiredDeleteUrl = ref<string | null>(null)
+const pendingRequiredDeleteName = ref('')
 
 const setRequiredDocumentFileInput = (type: string, element: Element | null) => {
   requiredDocumentFileInputs.value[type] = (element as HTMLInputElement | null)
@@ -70,12 +83,25 @@ const uploadRequiredDocument = (type: string, uploadUrl: string, event: Event) =
 
 const deleteRequiredDocument = (deleteUrl: string | null, name: string) => {
   if (!deleteUrl) return
-  if (!window.confirm(`Delete uploaded file for ${name}?`)) return
+  pendingRequiredDeleteUrl.value = deleteUrl
+  pendingRequiredDeleteName.value = name
+  requiredDeleteDialogOpen.value = true
+}
 
-  deleteRequiredDocumentForm.delete(deleteUrl, {
+const cancelDeleteRequiredDocument = () => {
+  requiredDeleteDialogOpen.value = false
+  pendingRequiredDeleteUrl.value = null
+  pendingRequiredDeleteName.value = ''
+}
+
+const confirmDeleteRequiredDocument = () => {
+  if (!pendingRequiredDeleteUrl.value) return
+
+  deleteRequiredDocumentForm.delete(pendingRequiredDeleteUrl.value, {
     preserveScroll: true,
     onSuccess: () => {
       toast.success('Required document deleted successfully.')
+      cancelDeleteRequiredDocument()
     },
     onError: (errors) => {
       const firstMessage = Object.values(errors).find((value) => typeof value === 'string')
@@ -275,6 +301,7 @@ const deleteRequiredDocument = (deleteUrl: string | null, name: string) => {
             :forms="registration.document_forms"
             :generated-documents="registration.generated_documents"
             :gis-autofill="registration.gis_autofill"
+            :appointment-autofill="registration.appointment_autofill"
           />
 
           <Collapsible
@@ -314,5 +341,24 @@ const deleteRequiredDocument = (deleteUrl: string | null, name: string) => {
         </div>
       </div>
     </div>
+
+    <AlertDialog :open="requiredDeleteDialogOpen" @update:open="(value) => !value && cancelDeleteRequiredDocument()">
+      <AlertDialogContent class="dark:border-[#1E3A5F] dark:bg-[#12325B]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Required Document</AlertDialogTitle>
+          <AlertDialogDescription>
+            Delete uploaded file for {{ pendingRequiredDeleteName }}? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleteRequiredDocumentForm.processing" @click="cancelDeleteRequiredDocument">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleteRequiredDocumentForm.processing" @click="confirmDeleteRequiredDocument">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </AppLayout>
 </template>

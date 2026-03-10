@@ -62,11 +62,25 @@ type GisAutofillData = {
   missing_fields?: string[]
 }
 
+type AppointmentAutofillData = {
+  corporate_tin?: string
+  complete_business_address?: string
+  business_trade_name?: string
+  date_of_registration?: string
+  sec_registration_number?: string
+  corporate_name?: string
+  email_address?: string
+  primary_purpose_activity?: string
+  has_uploaded_sources?: boolean
+  missing_fields?: string[]
+}
+
 const props = defineProps<{
   registrationId: string
   forms: DocumentForm[]
   generatedDocuments: GeneratedDocument[]
   gisAutofill?: GisAutofillData
+  appointmentAutofill?: AppointmentAutofillData
 }>()
 
 const isModalOpen = ref(false)
@@ -76,6 +90,13 @@ const selectedDocumentIds = ref<string[]>([])
 const MIN_GIS_STOCKHOLDER_ROWS = 6
 const GIS_TOTAL_PAGES = 7
 const secretaryUseDefaultValues = ref(true)
+const appointmentFieldsLocked = ref(true)
+const actionConfirmOpen = ref(false)
+const actionConfirmTitle = ref('')
+const actionConfirmDescription = ref('')
+const actionConfirmLabel = ref('Confirm')
+const actionConfirmHandler = ref<(() => void) | null>(null)
+const appointmentAutofillReadonly = computed(() => appointmentFieldsLocked.value && Boolean(props.appointmentAutofill?.has_uploaded_sources))
 
 const SECRETARY_DEFAULT_NAME = 'Vince Anthony Feir'
 const SECRETARY_DEFAULT_ADDRESS = '299 Purok 1 San Agustin Lubao Pampanga'
@@ -368,6 +389,7 @@ const isGis = computed(() => activeType.value === 'gis_stock_corporation')
 const openForm = (type: DocumentForm['type']) => {
   activeType.value = type
   gisStep.value = 1
+  appointmentFieldsLocked.value = true
   form.clearErrors()
   secretaryUseDefaultValues.value = true
   form.reset()
@@ -375,6 +397,9 @@ const openForm = (type: DocumentForm['type']) => {
 
   if (type === 'gis_stock_corporation') {
     applyGisAutofillDefaults()
+  }
+  if (type === 'appointment_form_opc') {
+    applyAppointmentAutofillDefaults()
   }
 
   isModalOpen.value = true
@@ -521,11 +546,14 @@ const applyGisAutofillWithConfirmation = () => {
     return currentValue !== '' && extractedValue !== ''
   })
 
-  if (hasOverlaps && !window.confirm('Some fields already have values. Overwrite them with extracted document data?')) {
-    return
-  }
-
-  applyGisAutofillDefaults(true)
+  requestActionConfirmation(
+    'Apply Extracted Data',
+    hasOverlaps
+      ? 'Some fields already have values. Applying extracted data will overwrite those values.'
+      : 'Apply extracted data to GIS fields?',
+    'Apply',
+    () => applyGisAutofillDefaults(true),
+  )
 }
 
 const gisFieldNeedsManualInput = (fieldName: GisStep1AutofillField): boolean => {
@@ -540,6 +568,94 @@ const gisFieldNeedsManualInput = (fieldName: GisStep1AutofillField): boolean => 
 const gisFieldClass = (fieldName: GisStep1AutofillField): string => (
   gisFieldNeedsManualInput(fieldName)
     ? 'border-[#F97316] ring-1 ring-[#F97316]/30'
+    : ''
+)
+
+type AppointmentAutofillField =
+  | 'corporate_tin'
+  | 'complete_business_address'
+  | 'business_trade_name'
+  | 'date_of_registration'
+  | 'sec_registration_number'
+  | 'corporate_name'
+  | 'email_address'
+  | 'primary_purpose_activity'
+
+const APPOINTMENT_AUTOFILL_FIELDS: AppointmentAutofillField[] = [
+  'corporate_tin',
+  'complete_business_address',
+  'business_trade_name',
+  'date_of_registration',
+  'sec_registration_number',
+  'corporate_name',
+  'email_address',
+  'primary_purpose_activity',
+]
+
+const appointmentMissingFields = computed(() => new Set(props.appointmentAutofill?.missing_fields ?? []))
+
+const appointmentAutofillValue = (fieldName: AppointmentAutofillField): string => {
+  const source = props.appointmentAutofill ?? {}
+
+  return String(source[fieldName] ?? '').trim()
+}
+
+const applyAppointmentAutofillField = (fieldName: AppointmentAutofillField, force = false) => {
+  if (activeType.value !== 'appointment_form_opc') return
+
+  const currentValue = String(form.fields?.[fieldName] ?? '').trim()
+  if (!force && currentValue !== '') return
+
+  const value = appointmentAutofillValue(fieldName)
+  if (value === '') return
+
+  form.fields[fieldName] = value
+}
+
+const applyAppointmentAutofillDefaults = (force = false) => {
+  if (activeType.value !== 'appointment_form_opc') return
+
+  APPOINTMENT_AUTOFILL_FIELDS.forEach((fieldName) => {
+    applyAppointmentAutofillField(fieldName, force)
+  })
+}
+
+const applyAppointmentAutofillWithConfirmation = () => {
+  if (activeType.value !== 'appointment_form_opc') return
+
+  const hasOverlaps = APPOINTMENT_AUTOFILL_FIELDS.some((fieldName) => {
+    const currentValue = String(form.fields?.[fieldName] ?? '').trim()
+    const extractedValue = appointmentAutofillValue(fieldName)
+
+    return currentValue !== '' && extractedValue !== ''
+  })
+
+  requestActionConfirmation(
+    'Apply Extracted Data',
+    hasOverlaps
+      ? 'Some fields already have values. Applying extracted data will overwrite those values.'
+      : 'Apply extracted data to Appointment Form - OPC fields?',
+    'Apply',
+    () => applyAppointmentAutofillDefaults(true),
+  )
+}
+
+const setAppointmentFieldsEditable = (editable: boolean) => {
+  appointmentFieldsLocked.value = !editable
+}
+
+const appointmentFieldNeedsManualInput = (fieldName: AppointmentAutofillField): boolean => {
+  if (!props.appointmentAutofill?.has_uploaded_sources) return false
+
+  const currentValue = String(form.fields?.[fieldName] ?? '').trim()
+  if (currentValue !== '') return false
+
+  return appointmentMissingFields.value.has(fieldName)
+}
+
+const appointmentFieldClass = (fieldName: AppointmentAutofillField): string => (
+  appointmentFieldNeedsManualInput(fieldName)
+    ? 'border-[#DC2626] ring-1 ring-[#DC2626]/30'
     : ''
 )
 
@@ -589,8 +705,40 @@ const removeGisStockholderRow = (index: number) => {
   const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
   if (rows.length <= MIN_GIS_STOCKHOLDER_ROWS) return
 
-  form.fields.step_5.rows = rows.filter((_, rowIndex) => rowIndex !== index)
-  reorderGisStockholderRows()
+  requestActionConfirmation(
+    'Delete Stockholder',
+    `Delete Stockholder #${index + 1}?`,
+    'Delete',
+    () => {
+      form.fields.step_5.rows = rows.filter((_, rowIndex) => rowIndex !== index)
+      reorderGisStockholderRows()
+      toast.success('Stockholder row deleted.')
+    },
+  )
+}
+
+function requestActionConfirmation(
+  title: string,
+  description: string,
+  label: string,
+  onConfirm: () => void,
+) {
+  actionConfirmTitle.value = title
+  actionConfirmDescription.value = description
+  actionConfirmLabel.value = label
+  actionConfirmHandler.value = onConfirm
+  actionConfirmOpen.value = true
+}
+
+function closeActionConfirmation() {
+  actionConfirmOpen.value = false
+  actionConfirmHandler.value = null
+}
+
+function confirmAction() {
+  const handler = actionConfirmHandler.value
+  closeActionConfirmation()
+  handler?.()
 }
 
 const formatDateTime = (value: string | null) => {
@@ -1100,21 +1248,56 @@ const submit = () => {
       </div>
 
       <div v-else-if="activeType === 'appointment_form_opc'" class="grid gap-4 md:grid-cols-2">
+        <div v-if="props.appointmentAutofill?.has_uploaded_sources" class="md:col-span-2 rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
+          <div class="flex items-center justify-between gap-2">
+            <span>Extracted data detected from uploaded required documents.</span>
+            <Button type="button" size="sm" variant="outline" @click="applyAppointmentAutofillWithConfirmation">
+              Apply extracted data
+            </Button>
+          </div>
+          <div class="mt-2 flex items-center gap-2">
+            <Checkbox
+              id="appointment-unlock-edit"
+              :model-value="!appointmentFieldsLocked"
+              @update:model-value="(checked) => setAppointmentFieldsEditable(Boolean(checked))"
+            />
+            <Label for="appointment-unlock-edit">Unlock extracted fields for manual edit</Label>
+          </div>
+          <p v-if="(props.appointmentAutofill?.missing_fields?.length ?? 0) > 0" class="mt-1 text-[#B91C1C]">
+            Some fields were not found and need manual input.
+          </p>
+        </div>
         <div class="space-y-2">
           <Label>For The Year</Label>
           <Input v-model="form.fields.for_the_year" readonly />
         </div>
         <div class="space-y-2">
           <Label>Corporate Name</Label>
-          <Input v-model="form.fields.corporate_name" />
+            <Input
+              v-model="form.fields.corporate_name"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('corporate_name')"
+              @focus="applyAppointmentAutofillField('corporate_name')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Date of Registration</Label>
-          <Input v-model="form.fields.date_of_registration" type="date" />
+            <Input
+              v-model="form.fields.date_of_registration"
+              type="date"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('date_of_registration')"
+              @focus="applyAppointmentAutofillField('date_of_registration')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Business / Trade Name</Label>
-          <Input v-model="form.fields.business_trade_name" />
+            <Input
+              v-model="form.fields.business_trade_name"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('business_trade_name')"
+              @focus="applyAppointmentAutofillField('business_trade_name')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Fiscal Year End</Label>
@@ -1122,15 +1305,31 @@ const submit = () => {
         </div>
         <div class="space-y-2">
           <Label>SEC Registration Number</Label>
-          <Input v-model="form.fields.sec_registration_number" />
+            <Input
+              v-model="form.fields.sec_registration_number"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('sec_registration_number')"
+              @focus="applyAppointmentAutofillField('sec_registration_number')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Email Address</Label>
-          <Input v-model="form.fields.email_address" type="email" readonly />
+            <Input
+              v-model="form.fields.email_address"
+              type="email"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('email_address')"
+              @focus="applyAppointmentAutofillField('email_address')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Corporate TIN</Label>
-          <Input v-model="form.fields.corporate_tin" />
+            <Input
+              v-model="form.fields.corporate_tin"
+              :readonly="appointmentAutofillReadonly"
+              :class="appointmentFieldClass('corporate_tin')"
+              @focus="applyAppointmentAutofillField('corporate_tin')"
+            />
         </div>
         <div class="space-y-2">
           <Label>Telephone Number</Label>
@@ -1138,11 +1337,21 @@ const submit = () => {
         </div>
         <div class="space-y-2 md:col-span-2">
           <Label>Complete Business Address</Label>
-          <textarea v-model="form.fields.complete_business_address" readonly class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          <textarea
+            v-model="form.fields.complete_business_address"
+            :readonly="appointmentAutofillReadonly"
+            :class="`min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${appointmentFieldClass('complete_business_address')}`"
+            @focus="applyAppointmentAutofillField('complete_business_address')"
+          />
         </div>
         <div class="space-y-2">
           <Label>Primary Purpose / Activity / Industry Presently Engaged In</Label>
-          <textarea v-model="form.fields.primary_purpose_activity" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          <textarea
+            v-model="form.fields.primary_purpose_activity"
+            :readonly="appointmentAutofillReadonly"
+            :class="`min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${appointmentFieldClass('primary_purpose_activity')}`"
+            @focus="applyAppointmentAutofillField('primary_purpose_activity')"
+          />
         </div>
 
         <div class="space-y-2 md:col-span-2">
@@ -1838,6 +2047,21 @@ const submit = () => {
       <AlertDialogFooter>
         <AlertDialogCancel :disabled="deleting" @click="reset">Cancel</AlertDialogCancel>
         <AlertDialogAction :disabled="deleting" @click="confirmDelete">Delete</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="actionConfirmOpen" @update:open="(value) => !value && closeActionConfirmation()">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ actionConfirmTitle }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ actionConfirmDescription }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel @click="closeActionConfirmation">Cancel</AlertDialogCancel>
+        <AlertDialogAction @click="confirmAction">{{ actionConfirmLabel }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
