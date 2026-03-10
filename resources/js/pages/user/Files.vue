@@ -19,20 +19,20 @@ const { breadcrumbs, avatarInitials, shortCompanyType } = useUserFiles(props.cli
   <Head title="About Me" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
-      <div class="pointer-events-none absolute inset-0">
+    <div class="app-page">
+      <div class="app-page-bg">
         <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
         <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
         <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
-        <div class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30" />
+        <div class="app-page-pattern" />
       </div>
 
       <div class="relative space-y-6">
         <div>
-          <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+          <h1 class="app-title">
             My Files
           </h1>
-          <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+          <p class="app-subtitle">
             View your submitted registration form data.
           </p>
         </div>
@@ -69,7 +69,7 @@ const { breadcrumbs, avatarInitials, shortCompanyType } = useUserFiles(props.cli
         </div>
 
         <div v-if="submissions.length" class="space-y-3">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Generated PDF</h2>
+          <h2 class="app-section-title">Generated PDF</h2>
           <div class="grid gap-3">
             <FormPdfList
               v-for="entry in submissions"

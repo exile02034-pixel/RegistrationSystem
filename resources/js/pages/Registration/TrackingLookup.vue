@@ -11,7 +11,7 @@ const { form, submit } = useTrackingLookup(props)
   <Head title="Track Submission" />
 
   <div class="relative min-h-screen overflow-hidden bg-[#F8FAFC] text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
-    <div class="pointer-events-none absolute inset-0">
+    <div class="app-page-bg">
       <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
       <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
     </div>

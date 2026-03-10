@@ -33,11 +33,11 @@ const dashboardHref = computed(() => {
     </Head>
 
     <div class="relative min-h-screen overflow-hidden bg-[#F8FAFC] text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
-        <div class="pointer-events-none absolute inset-0">
+        <div class="app-page-bg">
             <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
             <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
             <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
-            <div class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30" />
+            <div class="app-page-pattern" />
         </div>
 
         <div class="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-8 lg:py-10">
@@ -86,11 +86,11 @@ const dashboardHref = computed(() => {
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div class="rounded-2xl border border-[#60A5FA] bg-[#EFF6FF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Registrar permissions</p>
-                            <p class="mt-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">View clients, edit, delete, and manage client documents.</p>
+                            <p class="mt-2 app-subtitle">View clients, edit, delete, and manage client documents.</p>
                         </div>
                         <div class="rounded-2xl border border-[#60A5FA] bg-[#EFF6FF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Client permissions</p>
-                            <p class="mt-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">View and download their own documents only.</p>
+                            <p class="mt-2 app-subtitle">View and download their own documents only.</p>
                         </div>
                     </div>
                 </Card>
@@ -103,15 +103,15 @@ const dashboardHref = computed(() => {
                     <div class="space-y-3">
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 1</p>
-                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar creates a client account and profile.</p>
+                            <p class="mt-1 app-subtitle">Registrar creates a client account and profile.</p>
                         </div>
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 2</p>
-                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Registrar sends forms and instructions through email.</p>
+                            <p class="mt-1 app-subtitle">Registrar sends forms and instructions through email.</p>
                         </div>
                         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                             <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">Step 3</p>
-                            <p class="mt-1 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Client logs in to view and download only assigned documents.</p>
+                            <p class="mt-1 app-subtitle">Client logs in to view and download only assigned documents.</p>
                         </div>
                     </div>
                 </Card>
@@ -120,7 +120,7 @@ const dashboardHref = computed(() => {
             <Card class="grid gap-4 rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 backdrop-blur md:grid-cols-2 lg:p-8 dark:border-[#1E3A5F] dark:bg-[#12325B]">
                 <CardContent class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                     <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Registrar Access</h3>
-                    <ul class="mt-3 space-y-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+                    <ul class="mt-3 space-y-2 app-subtitle">
                         <li>Create client users</li>
                         <li>Send forms by email</li>
                         <li>View all clients and their documents</li>
@@ -130,7 +130,7 @@ const dashboardHref = computed(() => {
 
                 <CardContent class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                     <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Client Access</h3>
-                    <ul class="mt-3 space-y-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+                    <ul class="mt-3 space-y-2 app-subtitle">
                         <li>Log in with client credentials</li>
                         <li>View own documents only</li>
                         <li>Download personal documents</li>

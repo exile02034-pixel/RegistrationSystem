@@ -15,23 +15,23 @@ const { breadcrumbs, latestSubmissionLabel } = useUserDashboard(props.stats);
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
-            <div class="pointer-events-none absolute inset-0">
+        <div class="app-page">
+            <div class="app-page-bg">
                 <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
                 <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
                 <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
-                <div class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30" />
+                <div class="app-page-pattern" />
             </div>
 
             <div class="relative space-y-6">
                 <Card class="rounded-3xl border border-[#E2E8F0] bg-[#FFFFFF] p-6 backdrop-blur dark:border-[#1E3A5F] dark:bg-[#12325B]">
                     <CardHeader class="px-0 pb-2">
-                        <CardTitle class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+                        <CardTitle class="app-title">
                             Client Dashboard
                         </CardTitle>
                     </CardHeader>
                     <CardContent class="px-0">
-                        <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+                        <p class="app-subtitle">
                             Access your submitted form records and registration updates.
                         </p>
                     </CardContent>
@@ -40,7 +40,7 @@ const { breadcrumbs, latestSubmissionLabel } = useUserDashboard(props.stats);
                 <div class="grid gap-4 md:grid-cols-2">
                     <Card class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 dark:border-[#1E3A5F] dark:bg-[#0F2747]">
                         <p class="font-['Public_Sans'] text-xs uppercase tracking-wider text-[#2563EB] dark:text-[#60A5FA]">My Access</p>
-                        <ul class="mt-3 space-y-2 font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">
+                        <ul class="mt-3 space-y-2 app-subtitle">
                             <li>View personal documents only</li>
                             <li>View and update submitted form sections</li>
                           

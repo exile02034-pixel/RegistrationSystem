@@ -45,20 +45,16 @@ const mainNavItems = computed<NavItem[]>(() => {
 </script>
 
 <template>
-    <Sidebar
-        collapsible="icon"
-        variant="inset"
-        class="bg-[#FFFFFF] dark:bg-[#0B1F3A]"
-    >
+    <Sidebar collapsible="icon" variant="inset" class="bg-sidebar">
         <SidebarHeader
-            class="border-b border-[#E2E8F0] bg-[#FFFFFF] dark:border-[#1E3A5F] dark:bg-[#0B1F3A]"
+            class="border-b bg-sidebar"
         >
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:hover:bg-[#0F2747]"
+                        class="rounded-xl border bg-background hover:bg-accent"
                     >
                         <Link :href="dashboardHref">
                             <AppLogo />
@@ -67,7 +63,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent class="bg-[#FFFFFF] dark:bg-[#0B1F3A]">
+        <SidebarContent class="bg-sidebar">
             <NavMain :items="mainNavItems" />
         </SidebarContent>
     </Sidebar>
