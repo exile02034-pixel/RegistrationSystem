@@ -139,8 +139,9 @@ class RegistrationController extends Controller
         $absolutePath = Storage::disk('local')->path($path);
 
         $extractionPayload = [];
-        if ($documentType === 'certificate_of_registration') {
-            $extractionPayload = $this->requiredDocumentExtractionService->extractCertificateOfRegistrationFields(
+        if (in_array($documentType, ['certificate_of_registration', 'cover_sheet', 'articles_of_corporation'], true)) {
+            $extractionPayload = $this->requiredDocumentExtractionService->extractFieldsForDocument(
+                documentType: $documentType,
                 absolutePath: $absolutePath,
                 originalFilename: $uploadedFile->getClientOriginalName(),
             );
@@ -192,6 +193,19 @@ class RegistrationController extends Controller
             $requiredDocument->original_filename,
             ['Content-Type' => $requiredDocument->mime_type ?? 'application/octet-stream'],
         );
+    }
+
+    public function destroyRequiredDocument(
+        RegistrationLink $registrationLink,
+        RegistrationRequiredDocument $requiredDocument,
+    ): RedirectResponse {
+        $this->assertRequiredDocumentOwnership($registrationLink, $requiredDocument);
+
+        Storage::disk('local')->delete($requiredDocument->file_path);
+        $documentName = $requiredDocument->document_name;
+        $requiredDocument->delete();
+
+        return back()->with('success', "{$documentName} deleted successfully.");
     }
 
     private function assertRequiredDocumentOwnership(

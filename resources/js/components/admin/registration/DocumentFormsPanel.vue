@@ -44,11 +44,22 @@ type GeneratedDocument = {
 }
 
 type GisAutofillData = {
+  corporate_name?: string
   business_trade_name?: string
+  sec_registration_number?: string
   date_registered?: string
-  registered_address?: string
+  principal_office_address?: string
+  business_address?: string
   corporate_tin?: string
   branch_code?: string
+  industry_classification?: string
+  email?: string
+  official_mobile?: string
+  alternate_email?: string
+  alternate_mobile?: string
+  primary_purpose?: string
+  has_uploaded_sources?: boolean
+  missing_fields?: string[]
 }
 
 const props = defineProps<{
@@ -232,10 +243,10 @@ const defaultFields = (type: DocumentForm['type']) => {
       corporate_tin: '',
       principal_office_address: '',
       business_address: '',
-      email: 'vafeir27@gmail.com',
-      alternate_email: 'tfcitaxteam@gmail.com',
-      official_mobile: '09271713690',
-      alternate_mobile: '09682312875',
+      email: '',
+      alternate_email: '',
+      official_mobile: '',
+      alternate_mobile: '',
       website_url: '',
       fax_number: '',
       primary_purpose: '',
@@ -420,12 +431,54 @@ const closeForm = () => {
   form.clearErrors()
 }
 
-const gisAutofillValue = (fieldName: 'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address'): string => {
+type GisStep1AutofillField =
+  | 'corporate_name'
+  | 'business_trade_name'
+  | 'sec_registration_number'
+  | 'date_registered'
+  | 'principal_office_address'
+  | 'business_address'
+  | 'email'
+  | 'alternate_email'
+  | 'corporate_tin'
+  | 'official_mobile'
+  | 'alternate_mobile'
+  | 'primary_purpose'
+  | 'industry_classification'
+
+const GIS_STEP1_AUTOFILL_FIELDS: GisStep1AutofillField[] = [
+  'corporate_name',
+  'business_trade_name',
+  'sec_registration_number',
+  'date_registered',
+  'principal_office_address',
+  'business_address',
+  'email',
+  'alternate_email',
+  'corporate_tin',
+  'official_mobile',
+  'alternate_mobile',
+  'primary_purpose',
+  'industry_classification',
+]
+
+const gisAutofillMissingFields = computed(() => new Set(props.gisAutofill?.missing_fields ?? []))
+
+const gisAutofillValue = (fieldName: GisStep1AutofillField): string => {
   const source = props.gisAutofill ?? {}
 
+  if (fieldName === 'corporate_name') return String(source.corporate_name ?? '').trim()
   if (fieldName === 'business_trade_name') return String(source.business_trade_name ?? '').trim()
   if (fieldName === 'sec_registration_number') return String(source.sec_registration_number ?? '').trim()
   if (fieldName === 'date_registered') return String(source.date_registered ?? '').trim()
+  if (fieldName === 'principal_office_address') return String(source.principal_office_address ?? '').trim()
+  if (fieldName === 'business_address') return String(source.business_address ?? '').trim()
+  if (fieldName === 'email') return String(source.email ?? '').trim()
+  if (fieldName === 'alternate_email') return String(source.alternate_email ?? '').trim()
+  if (fieldName === 'official_mobile') return String(source.official_mobile ?? '').trim()
+  if (fieldName === 'alternate_mobile') return String(source.alternate_mobile ?? '').trim()
+  if (fieldName === 'primary_purpose') return String(source.primary_purpose ?? '').trim()
+  if (fieldName === 'industry_classification') return String(source.industry_classification ?? '').trim()
   if (fieldName === 'corporate_tin') {
     const tin = String(source.corporate_tin ?? '').trim()
     const branchCode = String(source.branch_code ?? '').trim()
@@ -433,60 +486,62 @@ const gisAutofillValue = (fieldName: 'business_trade_name' | 'sec_registration_n
     return [tin, branchCode].filter((segment) => segment !== '').join('/')
   }
 
-  return String(source.registered_address ?? '').trim()
+  return ''
 }
 
-const applyGisAutofillOnFocus = (fieldName: 'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address') => {
+const applyGisAutofillOnFocus = (fieldName: GisStep1AutofillField, force = false) => {
   if (activeType.value !== 'gis_stock_corporation') return
   if (gisStep.value !== 1) return
 
   const step1 = form.fields?.step_1 ?? {}
   const currentValue = String(step1[fieldName] ?? '').trim()
-  if (currentValue !== '') return
+  if (!force && currentValue !== '') return
 
   const value = gisAutofillValue(fieldName)
   if (value === '') return
 
-  if (fieldName === 'business_trade_name') {
-    form.fields.step_1.business_trade_name = value
-    return
-  }
-
-  if (fieldName === 'sec_registration_number') {
-    form.fields.step_1.sec_registration_number = value
-    return
-  }
-
-  if (fieldName === 'date_registered') {
-    form.fields.step_1.date_registered = value
-    return
-  }
-
-  if (fieldName === 'corporate_tin') {
-    form.fields.step_1.corporate_tin = value
-    return
-  }
-
-  if (fieldName === 'principal_office_address') form.fields.step_1.principal_office_address = value
-  if (fieldName === 'business_address') form.fields.step_1.business_address = value
+  form.fields.step_1[fieldName] = value
 }
 
-const applyGisAutofillDefaults = () => {
+const applyGisAutofillDefaults = (force = false) => {
   if (activeType.value !== 'gis_stock_corporation') return
 
-  const fieldsToAutofill: Array<'business_trade_name' | 'sec_registration_number' | 'date_registered' | 'corporate_tin' | 'principal_office_address' | 'business_address'> = [
-    'business_trade_name',
-    'sec_registration_number',
-    'date_registered',
-    'corporate_tin',
-    'principal_office_address',
-    'business_address',
-  ]
-
-  fieldsToAutofill.forEach((fieldName) => {
-    applyGisAutofillOnFocus(fieldName)
+  GIS_STEP1_AUTOFILL_FIELDS.forEach((fieldName) => {
+    applyGisAutofillOnFocus(fieldName, force)
   })
 }
+
+const applyGisAutofillWithConfirmation = () => {
+  if (activeType.value !== 'gis_stock_corporation' || gisStep.value !== 1) return
+
+  const hasOverlaps = GIS_STEP1_AUTOFILL_FIELDS.some((fieldName) => {
+    const currentValue = String(form.fields?.step_1?.[fieldName] ?? '').trim()
+    const extractedValue = gisAutofillValue(fieldName)
+
+    return currentValue !== '' && extractedValue !== ''
+  })
+
+  if (hasOverlaps && !window.confirm('Some fields already have values. Overwrite them with extracted document data?')) {
+    return
+  }
+
+  applyGisAutofillDefaults(true)
+}
+
+const gisFieldNeedsManualInput = (fieldName: GisStep1AutofillField): boolean => {
+  if (!props.gisAutofill?.has_uploaded_sources) return false
+
+  const currentValue = String(form.fields?.step_1?.[fieldName] ?? '').trim()
+  if (currentValue !== '') return false
+
+  return gisAutofillMissingFields.value.has(fieldName)
+}
+
+const gisFieldClass = (fieldName: GisStep1AutofillField): string => (
+  gisFieldNeedsManualInput(fieldName)
+    ? 'border-[#F97316] ring-1 ring-[#F97316]/30'
+    : ''
+)
 
 const createGisStockholderRow = (no: number) => ({
   no,
@@ -1150,21 +1205,32 @@ const submit = () => {
         </div>
 
         <div v-if="gisStep === 1" class="grid gap-4 md:grid-cols-2">
+          <div v-if="props.gisAutofill?.has_uploaded_sources" class="md:col-span-2 rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2 text-xs text-[#475569] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
+            <div class="flex items-center justify-between gap-2">
+              <span>Extracted data detected from uploaded required documents.</span>
+              <Button type="button" size="sm" variant="outline" @click="applyGisAutofillWithConfirmation">
+                Apply extracted data
+              </Button>
+            </div>
+            <p v-if="(props.gisAutofill?.missing_fields?.length ?? 0) > 0" class="mt-1 text-[#C2410C]">
+              Some fields were not found and need manual input.
+            </p>
+          </div>
           <div class="space-y-2">
             <Label>Corporate Name</Label>
-            <Input v-model="form.fields.step_1.corporate_name" />
+            <Input v-model="form.fields.step_1.corporate_name" :class="gisFieldClass('corporate_name')" @focus="applyGisAutofillOnFocus('corporate_name')" />
           </div>
           <div class="space-y-2">
             <Label>Business / Trade Name</Label>
-            <Input v-model="form.fields.step_1.business_trade_name" @focus="applyGisAutofillOnFocus('business_trade_name')" />
+            <Input v-model="form.fields.step_1.business_trade_name" :class="gisFieldClass('business_trade_name')" @focus="applyGisAutofillOnFocus('business_trade_name')" />
           </div>
           <div class="space-y-2">
             <Label>SEC Registration Number</Label>
-            <Input v-model="form.fields.step_1.sec_registration_number" @focus="applyGisAutofillOnFocus('sec_registration_number')" />
+            <Input v-model="form.fields.step_1.sec_registration_number" :class="gisFieldClass('sec_registration_number')" @focus="applyGisAutofillOnFocus('sec_registration_number')" />
           </div>
           <div class="space-y-2">
             <Label>Date Registered</Label>
-            <Input v-model="form.fields.step_1.date_registered" type="date" @focus="applyGisAutofillOnFocus('date_registered')" />
+            <Input v-model="form.fields.step_1.date_registered" type="date" :class="gisFieldClass('date_registered')" @focus="applyGisAutofillOnFocus('date_registered')" />
           </div>
           <div class="space-y-2">
             <Label>Fiscal Year End</Label>
@@ -1172,31 +1238,31 @@ const submit = () => {
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Complete Principal Office Address</Label>
-            <textarea v-model="form.fields.step_1.principal_office_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" @focus="applyGisAutofillOnFocus('principal_office_address')" />
+            <textarea v-model="form.fields.step_1.principal_office_address" :class="`min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${gisFieldClass('principal_office_address')}`" @focus="applyGisAutofillOnFocus('principal_office_address')" />
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Complete Business Address</Label>
-            <textarea v-model="form.fields.step_1.business_address" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" @focus="applyGisAutofillOnFocus('business_address')" />
+            <textarea v-model="form.fields.step_1.business_address" :class="`min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${gisFieldClass('business_address')}`" @focus="applyGisAutofillOnFocus('business_address')" />
           </div>
           <div class="space-y-2">
             <Label>Official Email</Label>
-            <Input v-model="form.fields.step_1.email" type="email" readonly />
+            <Input v-model="form.fields.step_1.email" type="email" :class="gisFieldClass('email')" @focus="applyGisAutofillOnFocus('email')" />
           </div>
           <div class="space-y-2">
             <Label>Alternate Email</Label>
-            <Input v-model="form.fields.step_1.alternate_email" type="email" readonly />
+            <Input v-model="form.fields.step_1.alternate_email" type="email" :class="gisFieldClass('alternate_email')" @focus="applyGisAutofillOnFocus('alternate_email')" />
           </div>
           <div class="space-y-2">
             <Label>Corporate TIN</Label>
-            <Input v-model="form.fields.step_1.corporate_tin" @focus="applyGisAutofillOnFocus('corporate_tin')" />
+            <Input v-model="form.fields.step_1.corporate_tin" :class="gisFieldClass('corporate_tin')" @focus="applyGisAutofillOnFocus('corporate_tin')" />
           </div>
           <div class="space-y-2">
             <Label>Official Mobile Number</Label>
-            <Input v-model="form.fields.step_1.official_mobile" type="tel" readonly />
+            <Input v-model="form.fields.step_1.official_mobile" type="tel" :class="gisFieldClass('official_mobile')" @focus="applyGisAutofillOnFocus('official_mobile')" />
           </div>
           <div class="space-y-2">
             <Label>Alternate Mobile Number</Label>
-            <Input v-model="form.fields.step_1.alternate_mobile" type="tel" readonly />
+            <Input v-model="form.fields.step_1.alternate_mobile" type="tel" :class="gisFieldClass('alternate_mobile')" @focus="applyGisAutofillOnFocus('alternate_mobile')" />
           </div>
           <div class="space-y-2">
             <Label>Telephone</Label>
@@ -1220,11 +1286,11 @@ const submit = () => {
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Primary Purpose / Activity / Industry Engaged In</Label>
-            <textarea v-model="form.fields.step_1.primary_purpose" class="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            <textarea v-model="form.fields.step_1.primary_purpose" :class="`min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${gisFieldClass('primary_purpose')}`" @focus="applyGisAutofillOnFocus('primary_purpose')" />
           </div>
           <div class="space-y-2 md:col-span-2">
             <Label>Industry Classification</Label>
-            <Input v-model="form.fields.step_1.industry_classification" />
+            <Input v-model="form.fields.step_1.industry_classification" :class="gisFieldClass('industry_classification')" @focus="applyGisAutofillOnFocus('industry_classification')" />
           </div>
           <div class="space-y-2">
             <Label>Geographical Code</Label>

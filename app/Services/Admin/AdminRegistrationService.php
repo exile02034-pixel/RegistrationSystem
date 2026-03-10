@@ -117,13 +117,62 @@ class AdminRegistrationService
         $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy', 'requiredDocuments.uploadedBy');
         $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
         $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
-        $this->ensureCertificateExtraction($registrationLink);
+        $this->ensureRequiredDocumentExtraction($registrationLink, 'certificate_of_registration', ['business_trade_name', 'sec_registration_number', 'date_registered', 'business_address', 'corporate_tin']);
+        $this->ensureRequiredDocumentExtraction($registrationLink, 'cover_sheet', ['sec_registration_number', 'industry_classification', 'corporate_name', 'principal_office_address', 'email', 'official_mobile', 'alternate_email', 'alternate_mobile']);
+        $this->ensureRequiredDocumentExtraction($registrationLink, 'articles_of_corporation', ['primary_purpose']);
         $registrationLink->loadMissing('requiredDocuments.uploadedBy');
         $requiredDocumentsByType = $registrationLink->requiredDocuments->keyBy('document_type');
-        $certificateOfRegistration = $requiredDocumentsByType->get('certificate_of_registration');
-        $gisAutofill = is_array($certificateOfRegistration?->extraction_payload)
-            ? $certificateOfRegistration->extraction_payload
+        $certificateDocument = $requiredDocumentsByType->get('certificate_of_registration');
+        $coverSheetDocument = $requiredDocumentsByType->get('cover_sheet');
+        $articlesDocument = $requiredDocumentsByType->get('articles_of_corporation');
+
+        $certificatePayload = is_array($certificateDocument?->extraction_payload)
+            ? $certificateDocument->extraction_payload
             : [];
+        $coverSheetPayload = is_array($coverSheetDocument?->extraction_payload)
+            ? $coverSheetDocument->extraction_payload
+            : [];
+        $articlesPayload = is_array($articlesDocument?->extraction_payload)
+            ? $articlesDocument->extraction_payload
+            : [];
+
+        $gisAutofill = [
+            'corporate_tin' => (string) ($certificatePayload['corporate_tin'] ?? ''),
+            'branch_code' => (string) ($certificatePayload['branch_code'] ?? ''),
+            'business_address' => (string) ($certificatePayload['business_address'] ?? ''),
+            'business_trade_name' => (string) ($certificatePayload['business_trade_name'] ?? ''),
+            'date_registered' => (string) ($certificatePayload['date_registered'] ?? ''),
+            'sec_registration_number' => (string) ($coverSheetPayload['sec_registration_number'] ?? $certificatePayload['sec_registration_number'] ?? ''),
+            'industry_classification' => (string) ($coverSheetPayload['industry_classification'] ?? ''),
+            'corporate_name' => (string) ($coverSheetPayload['corporate_name'] ?? ''),
+            'principal_office_address' => (string) ($coverSheetPayload['principal_office_address'] ?? ''),
+            'email' => (string) ($coverSheetPayload['email'] ?? ''),
+            'official_mobile' => (string) ($coverSheetPayload['official_mobile'] ?? ''),
+            'alternate_email' => (string) ($coverSheetPayload['alternate_email'] ?? ''),
+            'alternate_mobile' => (string) ($coverSheetPayload['alternate_mobile'] ?? ''),
+            'primary_purpose' => (string) ($articlesPayload['primary_purpose'] ?? ''),
+        ];
+        $targetFields = [
+            'corporate_tin',
+            'business_address',
+            'business_trade_name',
+            'date_registered',
+            'sec_registration_number',
+            'industry_classification',
+            'corporate_name',
+            'principal_office_address',
+            'email',
+            'official_mobile',
+            'alternate_email',
+            'alternate_mobile',
+            'primary_purpose',
+        ];
+        $missingFields = collect($targetFields)
+            ->filter(fn (string $field): bool => trim((string) ($gisAutofill[$field] ?? '')) === '')
+            ->values()
+            ->all();
+        $hasUploadedSources = collect(['certificate_of_registration', 'cover_sheet', 'articles_of_corporation'])
+            ->contains(fn (string $type): bool => $requiredDocumentsByType->get($type) !== null);
 
         return [
             'id' => $registrationLink->id,
@@ -149,14 +198,10 @@ class AdminRegistrationService
                 ])
                 ->all(),
             'document_forms' => $this->documentGenerationService->availableDocuments(),
-            'gis_autofill' => [
-                'business_trade_name' => (string) ($gisAutofill['business_trade_name'] ?? ''),
-                'sec_registration_number' => (string) ($gisAutofill['sec_registration_number'] ?? ''),
-                'date_registered' => (string) ($gisAutofill['date_registered'] ?? ''),
-                'registered_address' => (string) ($gisAutofill['registered_address'] ?? ''),
-                'corporate_tin' => (string) ($gisAutofill['corporate_tin'] ?? ''),
-                'branch_code' => (string) ($gisAutofill['branch_code'] ?? ''),
-            ],
+            'gis_autofill' => array_merge($gisAutofill, [
+                'has_uploaded_sources' => $hasUploadedSources,
+                'missing_fields' => $missingFields,
+            ]),
             'required_documents' => collect(self::REQUIRED_DOCUMENT_TYPES)
                 ->map(function (string $label, string $type) use ($registrationLink, $requiredDocumentsByType): array {
                     $uploaded = $requiredDocumentsByType->get($type);
@@ -171,6 +216,7 @@ class AdminRegistrationService
                         'upload_url' => route('admin.register.required-documents.upload', $registrationLink->id),
                         'view_url' => $uploaded !== null ? route('admin.register.required-documents.view', [$registrationLink->id, $uploaded->id]) : null,
                         'download_url' => $uploaded !== null ? route('admin.register.required-documents.download', [$registrationLink->id, $uploaded->id]) : null,
+                        'delete_url' => $uploaded !== null ? route('admin.register.required-documents.destroy', [$registrationLink->id, $uploaded->id]) : null,
                     ];
                 })
                 ->values()
@@ -180,26 +226,26 @@ class AdminRegistrationService
         ];
     }
 
-    private function ensureCertificateExtraction(RegistrationLink $registrationLink): void
+    /**
+     * @param array<int, string> $requiredKeys
+     */
+    private function ensureRequiredDocumentExtraction(
+        RegistrationLink $registrationLink,
+        string $documentType,
+        array $requiredKeys,
+    ): void
     {
-        $certificateDocument = $registrationLink->requiredDocuments()
-            ->where('document_type', 'certificate_of_registration')
+        $document = $registrationLink->requiredDocuments()
+            ->where('document_type', $documentType)
             ->first();
 
-        if ($certificateDocument === null) {
+        if ($document === null) {
             return;
         }
 
-        $existingPayload = is_array($certificateDocument->extraction_payload)
-            ? $certificateDocument->extraction_payload
+        $existingPayload = is_array($document->extraction_payload)
+            ? $document->extraction_payload
             : [];
-        $requiredKeys = [
-            'business_trade_name',
-            'sec_registration_number',
-            'date_registered',
-            'registered_address',
-            'corporate_tin',
-        ];
         $missingRequiredValues = collect($requiredKeys)->some(
             fn (string $key): bool => trim((string) ($existingPayload[$key] ?? '')) === ''
         );
@@ -208,21 +254,22 @@ class AdminRegistrationService
             return;
         }
 
-        if (! Storage::disk('local')->exists($certificateDocument->file_path)) {
+        if (! Storage::disk('local')->exists($document->file_path)) {
             return;
         }
 
-        $absolutePath = Storage::disk('local')->path($certificateDocument->file_path);
-        $payload = $this->requiredDocumentExtractionService->extractCertificateOfRegistrationFields(
+        $absolutePath = Storage::disk('local')->path($document->file_path);
+        $payload = $this->requiredDocumentExtractionService->extractFieldsForDocument(
+            documentType: $documentType,
             absolutePath: $absolutePath,
-            originalFilename: $certificateDocument->original_filename,
+            originalFilename: $document->original_filename,
         );
 
         if ($payload === []) {
             return;
         }
 
-        $certificateDocument->update([
+        $document->update([
             'extraction_payload' => array_merge($existingPayload, $payload),
         ]);
     }

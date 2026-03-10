@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, Download, Eye, Upload, UserPlus } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, Download, Eye, Trash2, Upload, UserPlus } from 'lucide-vue-next'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
@@ -32,6 +32,7 @@ const uploadRequiredDocumentForm = useForm<{ document_type: string; file: File |
   document_type: '',
   file: null,
 })
+const deleteRequiredDocumentForm = useForm({})
 const requiredDocumentFileInputs = ref<Record<string, HTMLInputElement | null>>({})
 
 const setRequiredDocumentFileInput = (type: string, element: Element | null) => {
@@ -63,6 +64,22 @@ const uploadRequiredDocument = (type: string, uploadUrl: string, event: Event) =
     onFinish: () => {
       uploadRequiredDocumentForm.reset('file')
       input.value = ''
+    },
+  })
+}
+
+const deleteRequiredDocument = (deleteUrl: string | null, name: string) => {
+  if (!deleteUrl) return
+  if (!window.confirm(`Delete uploaded file for ${name}?`)) return
+
+  deleteRequiredDocumentForm.delete(deleteUrl, {
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success('Required document deleted successfully.')
+    },
+    onError: (errors) => {
+      const firstMessage = Object.values(errors).find((value) => typeof value === 'string')
+      toast.error((firstMessage as string | undefined) ?? 'Failed to delete required document.')
     },
   })
 }
@@ -226,6 +243,18 @@ const uploadRequiredDocument = (type: string, uploadUrl: string, event: Event) =
                     <Download class="mr-1 h-4 w-4" />
                     Download
                   </a>
+                  <Button
+                    v-if="requiredDocument.delete_url"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="deleteRequiredDocumentForm.processing"
+                    class="border-[#F87171] text-[#B91C1C] hover:bg-[#FEF2F2]"
+                    @click="deleteRequiredDocument(requiredDocument.delete_url, requiredDocument.name)"
+                  >
+                    <Trash2 class="mr-1 h-4 w-4" />
+                    Delete
+                  </Button>
                 </div>
               </div>
             </div>

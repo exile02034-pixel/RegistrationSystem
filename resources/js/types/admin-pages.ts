@@ -140,15 +140,26 @@ export type RequiredRegistrationDocument = {
     upload_url: string;
     view_url: string | null;
     download_url: string | null;
+    delete_url: string | null;
 };
 
 export type GisAutofillData = {
+    corporate_name: string;
     business_trade_name: string;
     sec_registration_number: string;
     date_registered: string;
-    registered_address: string;
+    principal_office_address: string;
+    business_address: string;
     corporate_tin: string;
     branch_code: string;
+    industry_classification: string;
+    email: string;
+    official_mobile: string;
+    alternate_email: string;
+    alternate_mobile: string;
+    primary_purpose: string;
+    has_uploaded_sources: boolean;
+    missing_fields: string[];
 };
 
 export type AdminRegistrationShowRecord = {
