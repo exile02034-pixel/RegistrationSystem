@@ -170,3 +170,105 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer components {
+    .app-page {
+        @apply relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-background p-6 text-foreground;
+    }
+
+    .app-page-bg {
+        @apply pointer-events-none absolute inset-0;
+    }
+
+    .app-page-pattern {
+        @apply absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-30 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-25;
+    }
+
+    .app-page-content {
+        @apply relative space-y-6;
+    }
+
+    .app-title {
+        @apply text-3xl font-semibold tracking-tight text-foreground;
+    }
+
+    .app-section-title {
+        @apply text-xl font-semibold tracking-tight text-foreground;
+    }
+
+    .app-subtitle {
+        @apply text-sm leading-relaxed text-muted-foreground;
+    }
+
+    .app-body {
+        @apply text-sm leading-relaxed text-foreground;
+    }
+
+    .app-card {
+        @apply rounded-2xl border bg-card shadow-sm;
+    }
+
+    .app-card-soft {
+        @apply rounded-xl border bg-muted/40 shadow-xs;
+    }
+
+    .app-empty-state {
+        @apply rounded-xl border border-dashed bg-muted/40 p-8 text-center text-sm text-muted-foreground;
+    }
+
+    .app-form-grid {
+        @apply grid gap-2;
+    }
+
+    .app-label {
+        @apply text-sm font-medium text-foreground;
+    }
+
+    .app-input {
+        @apply border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/50 h-11 w-full rounded-md border px-3 text-sm transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-none;
+    }
+
+    .app-textarea {
+        @apply border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring/50 min-h-24 w-full rounded-md border px-3 py-2 text-sm transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-none;
+    }
+
+    .app-error {
+        @apply text-sm font-medium text-destructive;
+    }
+
+    .app-helper {
+        @apply text-xs text-muted-foreground;
+    }
+
+    .app-icon-button {
+        @apply border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground inline-flex size-9 items-center justify-center rounded-md border transition-colors;
+    }
+
+    .app-table-wrap {
+        @apply overflow-hidden rounded-xl border;
+    }
+
+    .app-table {
+        @apply min-w-full text-sm;
+    }
+
+    .app-table-head {
+        @apply bg-muted/50 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase;
+    }
+
+    .app-table-head th {
+        @apply px-4 py-3;
+    }
+
+    .app-table-row {
+        @apply border-t;
+    }
+
+    .app-table-row td {
+        @apply px-4 py-3 align-middle;
+    }
+
+    .app-dialog {
+        @apply rounded-xl border bg-card shadow-lg;
+    }
+}

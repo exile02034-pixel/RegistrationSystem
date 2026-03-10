@@ -9,6 +9,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { edit as editProfile } from '@/routes/profile';
 import type { BreadcrumbItem } from '@/types';
@@ -147,7 +148,7 @@ onBeforeUnmount(() => {
 
 <template>
     <header
-        class="flex h-16 shrink-0 items-center gap-2 border-b border-[#E2E8F0] bg-[#FFFFFF] px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 dark:border-[#1E3A5F] dark:bg-[#0B1F3A] md:px-4"
+        class="flex h-16 shrink-0 items-center gap-2 border-b bg-sidebar px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4"
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />
@@ -158,26 +159,28 @@ onBeforeUnmount(() => {
         <div class="ml-auto flex items-center gap-2">
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                    <button
+                    <Button
                         type="button"
-                        class="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:hover:bg-[#0F2747]"
+                        variant="outline"
+                        size="icon"
+                        class="app-icon-button relative"
                     >
                         <Bell class="size-4" />
                         <span
                             v-if="notifications.unreadCount > 0"
-                            class="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#2563EB] px-1 text-[10px] font-semibold text-white"
+                            class="bg-primary text-primary-foreground absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold"
                         >
                             {{ notifications.unreadCount > 9 ? '9+' : notifications.unreadCount }}
                         </span>
                         <span class="sr-only">Notifications</span>
-                    </button>
+                    </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     align="end"
-                    class="w-80 rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] p-0 dark:border-[#1E3A5F] dark:bg-[#12325B]"
+                    class="w-80 rounded-xl p-0"
                 >
-                    <div class="border-b border-[#E2E8F0] px-4 py-3 dark:border-[#1E3A5F]">
-                        <p class="text-sm font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">
+                    <div class="border-b px-4 py-3">
+                        <p class="text-sm font-semibold text-foreground">
                             Notifications
                         </p>
                     </div>
@@ -185,27 +188,27 @@ onBeforeUnmount(() => {
                         <div
                             v-for="item in notifications.recent"
                             :key="item.id"
-                            class="border-b border-[#E2E8F0] px-4 py-3 dark:border-[#1E3A5F]"
+                            class="border-b px-4 py-3"
                         >
                             <button
                                 type="button"
                                 class="block w-full text-left"
                                 @click="openNotification(item.id, item.action_url)"
                             >
-                                <p class="text-sm font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">
+                                <p class="text-sm font-medium text-foreground">
                                     {{ item.title }}
                                 </p>
-                                <p class="mt-1 line-clamp-2 text-xs text-[#64748B] dark:text-[#9FB3C8]">
+                                <p class="text-muted-foreground mt-1 line-clamp-2 text-xs">
                                     {{ item.message || 'No details available.' }}
                                 </p>
-                                <p class="mt-1 text-[11px] text-[#94A3B8] dark:text-[#9FB3C8]">
+                                <p class="text-muted-foreground mt-1 text-[11px]">
                                     {{ formatDate(item.created_at) }}
                                 </p>
                             </button>
                         </div>
                         <p
                             v-if="!notifications.recent.length"
-                            class="px-4 py-5 text-center text-xs text-[#64748B] dark:text-[#9FB3C8]"
+                            class="text-muted-foreground px-4 py-5 text-center text-xs"
                         >
                             No notifications yet.
                         </p>
@@ -213,7 +216,7 @@ onBeforeUnmount(() => {
                     <div class="px-4 py-3">
                         <Link
                             href="/notifications"
-                            class="text-xs font-semibold text-[#2563EB] hover:underline dark:text-[#60A5FA]"
+                            class="text-primary hover:text-primary/80 text-xs font-semibold hover:underline"
                         >
                             View all my notifications
                         </Link>
@@ -221,10 +224,12 @@ onBeforeUnmount(() => {
                 </DropdownMenuContent>
             </DropdownMenu>
             <AppearanceTabs />
-            <button
+            <Button
                 v-if="canToggleFullscreen"
                 type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:hover:bg-[#0F2747]"
+                variant="outline"
+                size="icon"
+                class="app-icon-button"
                 @click="toggleFullscreen"
             >
                 <component :is="isFullscreen ? Minimize2 : Maximize2" class="size-4" />
@@ -233,14 +238,13 @@ onBeforeUnmount(() => {
                         isFullscreen ? 'Exit full screen' : 'Enter full screen'
                     }}
                 </span>
-            </button>
-            <Link
-                :href="editProfile()"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:hover:bg-[#0F2747]"
-            >
-                <Settings class="size-4" />
-                <span class="sr-only">Settings</span>
-            </Link>
+            </Button>
+            <Button as-child variant="outline" size="icon" class="app-icon-button">
+                <Link :href="editProfile()">
+                    <Settings class="size-4" />
+                    <span class="sr-only">Settings</span>
+                </Link>
+            </Button>
         </div>
     </header>
 </template>

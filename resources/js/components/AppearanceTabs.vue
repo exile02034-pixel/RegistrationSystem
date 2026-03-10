@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Moon, Sun } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
 import { useAppearance } from '@/composables/useAppearance';
 
 const { resolvedAppearance, updateAppearance } = useAppearance();
@@ -10,8 +11,11 @@ const toggleAppearance = () => {
 </script>
 
 <template>
-    <button
+    <Button
         @click="toggleAppearance"
+        type="button"
+        variant="outline"
+        size="icon"
         :aria-label="
             resolvedAppearance === 'dark'
                 ? 'Switch to light mode'
@@ -22,9 +26,9 @@ const toggleAppearance = () => {
                 ? 'Switch to light mode'
                 : 'Switch to dark mode'
         "
-        class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#E2E8F0] bg-[#FFFFFF] text-[#0B1F3A] transition-colors hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF] dark:hover:bg-[#0F2747]"
+        class="app-icon-button"
     >
         <Sun v-if="resolvedAppearance === 'dark'" class="size-4" />
         <Moon v-else class="size-4" />
-    </button>
+    </Button>
 </template>

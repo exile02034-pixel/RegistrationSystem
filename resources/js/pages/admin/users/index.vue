@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import Button from '@/components/ui/button/Button.vue'
+import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -51,56 +51,54 @@ const {
 
 <template>
   <AppLayout>
-    <div class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]">
-      <div class="pointer-events-none absolute inset-0">
+    <div class="app-page">
+      <div class="app-page-bg">
         <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
         <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
         <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
-        <div class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30" />
+        <div class="app-page-pattern" />
       </div>
 
-      <div class="relative space-y-8">
+      <div class="app-page-content">
         <div class="flex items-center justify-between gap-4">
           <div>
-            <h1 class="font-['Space_Grotesk'] text-3xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Users / Clients</h1>
-            <p class="font-['Public_Sans'] text-sm text-[#475569] dark:text-[#9FB3C8]">Manage all users in the system.</p>
+            <h1 class="app-title">Users / Clients</h1>
+            <p class="app-subtitle">Manage all users in the system.</p>
           </div>
 
           <Dialog :open="isCreateModalOpen" @update:open="isCreateModalOpen = $event">
             <DialogTrigger as-child>
-              <button class="inline-flex h-10 items-center justify-center rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 text-sm font-medium text-white transition hover:bg-[#1D4ED8] dark:hover:bg-[#3B82F6]">
-                Create User
-              </button>
+              <Button>Create User</Button>
             </DialogTrigger>
 
-            <DialogContent class="sm:max-w-lg dark:border-[#1E3A5F] dark:bg-[#12325B]">
+            <DialogContent class="app-dialog sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create User / Client</DialogTitle>
               </DialogHeader>
 
               <div class="space-y-4">
                 <div class="space-y-2">
-                  <Label>Name</Label>
-                  <Input v-model="form.name" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
-                  <p v-if="form.errors.name" class="text-red-500 text-sm">{{ form.errors.name }}</p>
+                  <Label class="app-label">Name</Label>
+                  <Input v-model="form.name" class="app-input" />
+                  <p v-if="form.errors.name" class="app-error">{{ form.errors.name }}</p>
                 </div>
                 <div class="space-y-2">
-                  <Label>Email</Label>
-                  <Input v-model="form.email" type="email" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
-                  <p v-if="form.errors.email" class="text-red-500 text-sm">{{ form.errors.email }}</p>
+                  <Label class="app-label">Email</Label>
+                  <Input v-model="form.email" type="email" class="app-input" />
+                  <p v-if="form.errors.email" class="app-error">{{ form.errors.email }}</p>
                 </div>
                 <div class="space-y-2">
-                  <Label>Password</Label>
-                  <Input v-model="form.password" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
-                  <p v-if="form.errors.password" class="text-red-500 text-sm">{{ form.errors.password }}</p>
+                  <Label class="app-label">Password</Label>
+                  <Input v-model="form.password" type="password" class="app-input" />
+                  <p v-if="form.errors.password" class="app-error">{{ form.errors.password }}</p>
                 </div>
                 <div class="space-y-2">
-                  <Label>Confirm Password</Label>
-                  <Input v-model="form.password_confirmation" type="password" class="border-[#E2E8F0] bg-[#F8FAFC] dark:border-[#1E3A5F] dark:bg-[#0F2747]" />
+                  <Label class="app-label">Confirm Password</Label>
+                  <Input v-model="form.password_confirmation" type="password" class="app-input" />
                 </div>
                 <div class="flex justify-end gap-2">
-                  <button type="button" class="rounded-xl border border-[#E2E8F0] bg-[#FFFFFF] px-4 py-2 text-sm text-[#0B1F3A] transition hover:bg-[#EFF6FF] hover:text-[#1D4ED8] dark:border-[#1E3A5F] dark:bg-[#0F2747] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]" @click="isCreateModalOpen = false">Cancel</button>
-                  <button type="button" class="rounded-xl border border-[#2563EB] bg-[#2563EB] px-4 py-2 text-sm text-white transition hover:bg-[#1D4ED8] dark:hover:bg-[#3B82F6]" @click="submit">Create User</button>
+                  <Button type="button" variant="outline" @click="isCreateModalOpen = false">Cancel</Button>
+                  <Button type="button" @click="submit">Create User</Button>
                 </div>
               </div>
             </DialogContent>
@@ -108,10 +106,10 @@ const {
         </div>
 
         <div class="space-y-3">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Users</h2>
+          <h2 class="app-section-title">Users</h2>
           <div class="mb-3 flex flex-wrap items-center gap-2">
-            <Input v-model="search" placeholder="Search by name or email..." class="max-w-md border-[#E2E8F0] bg-[#FFFFFF] dark:border-[#1E3A5F] dark:bg-[#12325B]" />
-            <select v-model="companyTypeFilter" class="h-9 rounded-md border border-[#E2E8F0] bg-[#FFFFFF] px-2 text-xs text-[#0B1F3A] dark:border-[#1E3A5F] dark:bg-[#12325B] dark:text-[#E6F1FF]">
+            <Input v-model="search" placeholder="Search by name or email..." class="max-w-md" />
+            <select v-model="companyTypeFilter" class="app-input h-9 px-2 text-xs">
               <option value="">All Types</option>
               <option value="opc">OPC</option>
               <option value="sole_prop">SOLE PROP</option>
@@ -119,38 +117,38 @@ const {
             </select>
           </div>
 
-          <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-            <table class="min-w-full text-sm">
-              <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
+          <div class="app-table-wrap overflow-x-auto bg-card shadow-sm">
+            <table class="app-table">
+              <thead class="app-table-head">
                 <tr>
-                  <th class="px-4 py-3">Client</th>
-                  <th class="px-4 py-3">Company Types</th>
-                  <th class="px-4 py-3">
+                  <th>Client</th>
+                  <th>Company Types</th>
+                  <th>
                     <button type="button" class="inline-flex items-center gap-1 cursor-pointer" @click="toggleSort">
                       Created
                       <component :is="sortIcon" class="h-4 w-4" />
                     </button>
                   </th>
-                  <th class="px-4 py-3">Form Submission</th>
-                  <th class="px-4 py-3">Actions</th>
+                  <th>Form Submission</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
               <tbody>
-                <tr v-for="user in users.data" :key="user.id" class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
-                  <td class="px-4 py-3">
+                <tr v-for="user in users.data" :key="user.id" class="app-table-row">
+                  <td>
                     <div class="flex items-center gap-3">
-                      <div class="h-9 w-9 flex items-center justify-center rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold dark:bg-[#0F2747] dark:text-[#E6F1FF]">
+                      <div class="bg-primary/10 text-primary h-9 w-9 flex items-center justify-center rounded-full text-xs font-semibold">
                         {{ initials(user.name) }}
                       </div>
                       <div>
                         <p class="text-sm font-semibold">{{ user.name }}</p>
-                        <p class="text-xs text-[#64748B] dark:text-[#9FB3C8]">{{ user.email }}</p>
+                        <p class="text-muted-foreground text-xs">{{ user.email }}</p>
                       </div>
                     </div>
                   </td>
 
-                  <td class="px-4 py-3 text-sm">
+                  <td class="text-sm">
                     <div class="flex flex-wrap gap-1">
                       <Badge v-for="type in user.company_types" :key="`${user.id}-${type.value}`">
                         {{ shortCompanyType(type.value) }}
@@ -159,13 +157,13 @@ const {
                     </div>
                   </td>
 
-                  <td class="px-4 py-3">{{ formatDate(user.created_at) }}</td>
+                  <td>{{ formatDate(user.created_at) }}</td>
 
-                  <td class="px-4 py-3">
+                  <td>
                     <Badge>{{ user.submissions_count > 0 ? `${user.submissions_count} submitted` : 'Not Submitted' }}</Badge>
                   </td>
 
-                  <td class="px-4 py-3">
+                  <td>
                     <div class="flex items-center gap-3">
                       <Tooltip>
                         <TooltipTrigger as-child>
@@ -193,7 +191,7 @@ const {
                   </td>
                 </tr>
                 <tr v-if="!users.data.length">
-                  <td colspan="5" class="px-4 py-6 text-center text-[#64748B] dark:text-[#9FB3C8]">No users found.</td>
+                  <td colspan="5" class="text-muted-foreground px-4 py-6 text-center">No users found.</td>
                 </tr>
               </tbody>
             </table>

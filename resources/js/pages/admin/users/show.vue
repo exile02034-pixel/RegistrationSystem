@@ -23,14 +23,14 @@ const {
 <template>
   <AppLayout>
     <div
-      class="relative min-h-[calc(100vh-7rem)] overflow-hidden rounded-2xl bg-[#F8FAFC] p-6 text-[#0B1F3A] dark:bg-[#0A192F] dark:text-[#E6F1FF]"
+      class="app-page"
     >
-      <div class="pointer-events-none absolute inset-0">
+      <div class="app-page-bg">
         <div class="absolute -left-20 top-14 h-72 w-72 rounded-full bg-[#60A5FA]/35 blur-3xl dark:bg-[#2563EB]/20" />
         <div class="absolute right-0 top-0 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl dark:bg-[#3B82F6]/20" />
         <div class="absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#60A5FA]/20 blur-3xl dark:bg-[#2563EB]/15" />
         <div
-          class="absolute inset-0 bg-[linear-gradient(rgba(120,140,170,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(120,140,170,0.14)_1px,transparent_1px)] bg-[size:34px_34px] opacity-40 dark:bg-[linear-gradient(rgba(160,180,200,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(160,180,200,0.08)_1px,transparent_1px)] dark:opacity-30"
+          class="app-page-pattern"
         />
       </div>
 
@@ -49,7 +49,7 @@ const {
         </div>
 
         <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Company Types</h2>
+          <h2 class="app-section-title">Company Types</h2>
           <div class="mt-3 flex flex-wrap gap-2">
             <Badge v-for="type in user.company_types" :key="type.value">{{ type.label }}</Badge>
             <p v-if="!user.company_types.length" class="text-sm text-[#64748B] dark:text-[#9FB3C8]">
@@ -59,7 +59,7 @@ const {
         </div>
 
         <div class="space-y-4 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Form Data</h2>
+          <h2 class="app-section-title">Submitted Form Data</h2>
 
           <div
             v-if="!submissions.length"
@@ -141,7 +141,7 @@ const {
         </div>
 
         <div class="space-y-4 rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-5 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">User Activity Log</h2>
+          <h2 class="app-section-title">User Activity Log</h2>
           <div
             v-if="!activities.length"
             class="rounded-lg border border-[#E2E8F0] p-4 text-sm text-[#64748B] dark:border-[#1E3A5F] dark:text-[#9FB3C8]"
