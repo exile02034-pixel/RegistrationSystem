@@ -42,12 +42,35 @@ class GenerateRegistrationDocumentRequest extends FormRequest
             return $rules;
         }
 
+        if ($documentType === 'secretary_certificate_bank') {
+            return array_merge($rules, [
+                'fields.secretary_name' => ['required', 'string', 'max:255'],
+                'fields.secretary_address' => ['required', 'string', 'max:1000'],
+                'fields.corporation_name' => ['required', 'string', 'max:255'],
+                'fields.principal_address' => ['required', 'string', 'max:1000'],
+                'fields.bank_name' => ['required', 'string', 'max:255'],
+                'fields.branch' => ['required', 'string', 'max:255'],
+                'fields.meeting_date' => ['required', 'date'],
+                'fields.authorized_signatory_1_name' => ['required', 'string', 'max:255'],
+                'fields.authorized_signatory_1_position' => ['required', 'string', 'max:255'],
+                'fields.authorized_signatory_2_name' => ['required', 'string', 'max:255'],
+                'fields.authorized_signatory_2_position' => ['required', 'string', 'max:255'],
+                'fields.withdrawal_signatory_1_name' => ['required', 'string', 'max:255'],
+                'fields.withdrawal_signatory_1_position' => ['required', 'string', 'max:255'],
+                'fields.withdrawal_signatory_2_name' => ['required', 'string', 'max:255'],
+                'fields.withdrawal_signatory_2_position' => ['required', 'string', 'max:255'],
+                'fields.corporate_secretary_name' => ['required', 'string', 'max:255'],
+                'fields.certificate_date' => ['required', 'date'],
+                'fields.certificate_location' => ['required', 'string', 'max:255'],
+            ]);
+        }
+
         if ($documentType === 'gis_stock_corporation') {
             return $rules;
         }
 
         return [
-            'document' => ['required', 'in:secretary_certificate,appointment_form_opc,gis_stock_corporation'],
+            'document' => ['required', 'in:secretary_certificate,secretary_certificate_bank,appointment_form_opc,gis_stock_corporation'],
         ];
     }
 }

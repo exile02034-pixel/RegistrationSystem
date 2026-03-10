@@ -27,7 +27,7 @@ import { toast } from '@/components/ui/sonner'
 import { useDelete } from '@/composables/useDelete'
 
 type DocumentForm = {
-  type: 'secretary_certificate' | 'appointment_form_opc' | 'gis_stock_corporation'
+  type: 'secretary_certificate' | 'secretary_certificate_bank' | 'appointment_form_opc' | 'gis_stock_corporation'
   name: string
   description: string
 }
@@ -251,6 +251,29 @@ const defaultFields = (type: DocumentForm['type']) => {
       competent_evidence: '',
       issued_at: '',
       issued_on: '',
+    }
+  }
+
+  if (type === 'secretary_certificate_bank') {
+    return {
+      secretary_name: '',
+      secretary_address: '',
+      corporation_name: '',
+      principal_address: '',
+      bank_name: '',
+      branch: '',
+      meeting_date: '',
+      authorized_signatory_1_name: '',
+      authorized_signatory_1_position: '',
+      authorized_signatory_2_name: '',
+      authorized_signatory_2_position: '',
+      withdrawal_signatory_1_name: '',
+      withdrawal_signatory_1_position: '',
+      withdrawal_signatory_2_name: '',
+      withdrawal_signatory_2_position: '',
+      corporate_secretary_name: '',
+      certificate_date: '',
+      certificate_location: '',
     }
   }
 
@@ -675,7 +698,7 @@ const sanitizeGisStockholderRowsForSubmit = (): Record<string, string>[] => {
   const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
 
   return rows
-    .map((row, index) => ({
+    .map((row: Record<string, unknown>, index: number) => ({
       no: String(index + 1),
       name_address: String(row?.name_address ?? '').trim(),
       nationality: String(row?.nationality ?? '').trim(),
@@ -690,7 +713,7 @@ const sanitizeGisStockholderRowsForSubmit = (): Record<string, string>[] => {
 
 const reorderGisStockholderRows = () => {
   const rows = Array.isArray(form.fields?.step_5?.rows) ? form.fields.step_5.rows : []
-  rows.forEach((row, index) => {
+  rows.forEach((row: Record<string, unknown>, index: number) => {
     row.no = index + 1
   })
 }
@@ -710,7 +733,7 @@ const removeGisStockholderRow = (index: number) => {
     `Delete Stockholder #${index + 1}?`,
     'Delete',
     () => {
-      form.fields.step_5.rows = rows.filter((_, rowIndex) => rowIndex !== index)
+      form.fields.step_5.rows = rows.filter((_: unknown, rowIndex: number) => rowIndex !== index)
       reorderGisStockholderRows()
       toast.success('Stockholder row deleted.')
     },
@@ -808,6 +831,12 @@ const generateUrl = computed(() => {
   return `/admin/registration/${props.registrationId}/documents/${activeType.value}/generate`
 })
 
+const previewUrl = computed(() => {
+  if (!activeType.value) return '#'
+
+  return `/admin/registration/${props.registrationId}/documents/${activeType.value}/preview`
+})
+
 const isBlank = (value: unknown) => String(value ?? '').trim() === ''
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 const isIsoDate = (value: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '').trim())
@@ -892,6 +921,40 @@ const validateAppointmentForm = (): string[] => {
   return errors
 }
 
+const validateSecCertBankForm = (): string[] => {
+  const errors: string[] = []
+  const fields = form.fields ?? {}
+
+  if (isBlank(fields.secretary_name)) errors.push('Name of Secretary is required.')
+  if (isBlank(fields.secretary_address)) errors.push('Address of Secretary is required.')
+  if (isBlank(fields.corporation_name)) errors.push('Corporation Name is required.')
+  if (isBlank(fields.principal_address)) errors.push('Principal Address is required.')
+  if (isBlank(fields.bank_name)) errors.push('Bank Name is required.')
+  if (isBlank(fields.branch)) errors.push('Branch is required.')
+  if (isBlank(fields.meeting_date)) {
+    errors.push('Meeting Date is required.')
+  } else if (!isIsoDate(fields.meeting_date)) {
+    errors.push('Meeting Date must be a valid date.')
+  }
+  if (isBlank(fields.authorized_signatory_1_name)) errors.push('Authorized Signatory 1 Name is required.')
+  if (isBlank(fields.authorized_signatory_1_position)) errors.push('Authorized Signatory 1 Position is required.')
+  if (isBlank(fields.authorized_signatory_2_name)) errors.push('Authorized Signatory 2 Name is required.')
+  if (isBlank(fields.authorized_signatory_2_position)) errors.push('Authorized Signatory 2 Position is required.')
+  if (isBlank(fields.withdrawal_signatory_1_name)) errors.push('Withdrawal Signatory 1 Name is required.')
+  if (isBlank(fields.withdrawal_signatory_1_position)) errors.push('Withdrawal Signatory 1 Position is required.')
+  if (isBlank(fields.withdrawal_signatory_2_name)) errors.push('Withdrawal Signatory 2 Name is required.')
+  if (isBlank(fields.withdrawal_signatory_2_position)) errors.push('Withdrawal Signatory 2 Position is required.')
+  if (isBlank(fields.corporate_secretary_name)) errors.push('Corporate Secretary Name is required.')
+  if (isBlank(fields.certificate_date)) {
+    errors.push('Certificate Date is required.')
+  } else if (!isIsoDate(fields.certificate_date)) {
+    errors.push('Certificate Date must be a valid date.')
+  }
+  if (isBlank(fields.certificate_location)) errors.push('Certificate Location is required.')
+
+  return errors
+}
+
 const validateAllGisSteps = (): string[] => {
   const errors: string[] = []
   const fields = form.fields ?? {}
@@ -948,7 +1011,7 @@ const validateAllGisSteps = (): string[] => {
   if (step5Rows.length < MIN_GIS_STOCKHOLDER_ROWS) {
     errors.push(`Step 5: At least ${MIN_GIS_STOCKHOLDER_ROWS} stockholder rows are required.`)
   } else {
-    step5Rows.forEach((row, index) => {
+    step5Rows.forEach((row: Record<string, unknown>, index: number) => {
       const i = index + 1
       if (isBlank(row.name_address)) errors.push(`Step 5 Row ${i}: Name/Address is required.`)
       if (isBlank(row.nationality)) errors.push(`Step 5 Row ${i}: Nationality is required.`)
@@ -1006,6 +1069,63 @@ const previousGisStep = () => {
   gisStep.value = Math.max(1, gisStep.value - 1)
 }
 
+const activeValidationErrors = (): string[] => {
+  if (activeType.value === 'secretary_certificate') return validateSecretaryForm()
+  if (activeType.value === 'secretary_certificate_bank') return validateSecCertBankForm()
+  if (activeType.value === 'appointment_form_opc') return []
+
+  return []
+}
+
+const submitFieldsPayload = (): Record<string, any> => {
+  if (activeType.value !== 'gis_stock_corporation') {
+    return { ...form.fields }
+  }
+
+  return {
+    ...form.fields,
+    step_5: {
+      ...(form.fields.step_5 ?? {}),
+      rows: sanitizeGisStockholderRowsForSubmit(),
+    },
+  }
+}
+
+const openPreview = () => {
+  if (!activeType.value) return
+
+  const errors = activeValidationErrors()
+  if (errors.length > 0) {
+    toast.error(errors[0])
+    return
+  }
+
+  const fieldsPayload = submitFieldsPayload()
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
+
+  const previewForm = document.createElement('form')
+  previewForm.method = 'POST'
+  previewForm.action = previewUrl.value
+  previewForm.target = '_blank'
+  previewForm.style.display = 'none'
+
+  const csrfInput = document.createElement('input')
+  csrfInput.type = 'hidden'
+  csrfInput.name = '_token'
+  csrfInput.value = csrf
+  previewForm.appendChild(csrfInput)
+
+  const fieldsJsonInput = document.createElement('input')
+  fieldsJsonInput.type = 'hidden'
+  fieldsJsonInput.name = 'fields_json'
+  fieldsJsonInput.value = JSON.stringify(fieldsPayload)
+  previewForm.appendChild(fieldsJsonInput)
+
+  document.body.appendChild(previewForm)
+  previewForm.submit()
+  previewForm.remove()
+}
+
 const submit = () => {
   if (!activeType.value) return
   // GIS validation is temporarily disabled per request.
@@ -1013,26 +1133,14 @@ const submit = () => {
   // Appointment validation is temporarily disabled per request.
   void validateAppointmentForm
 
-  const errors = activeType.value === 'secretary_certificate'
-    ? validateSecretaryForm()
-    : activeType.value === 'appointment_form_opc'
-      ? []
-      : []
+  const errors = activeValidationErrors()
 
   if (errors.length > 0) {
     toast.error(errors[0])
     return
   }
 
-  if (activeType.value === 'gis_stock_corporation') {
-    form.fields = {
-      ...form.fields,
-      step_5: {
-        ...(form.fields.step_5 ?? {}),
-        rows: sanitizeGisStockholderRowsForSubmit(),
-      },
-    }
-  }
+  form.fields = submitFieldsPayload()
 
   form.fields_json = JSON.stringify(form.fields)
 
@@ -1244,6 +1352,81 @@ const submit = () => {
         <div class="space-y-2">
           <Label>Series</Label>
           <Input v-model="form.fields.series" type="number" min="0" step="1" readonly />
+        </div>
+      </div>
+
+      <div v-else-if="activeType === 'secretary_certificate_bank'" class="grid gap-4 md:grid-cols-2">
+        <div class="space-y-2">
+          <Label>Name of Secretary</Label>
+          <Input v-model="form.fields.secretary_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Address of Secretary</Label>
+          <Input v-model="form.fields.secretary_address" />
+        </div>
+        <div class="space-y-2">
+          <Label>Corporation Name</Label>
+          <Input v-model="form.fields.corporation_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Principal Address</Label>
+          <Input v-model="form.fields.principal_address" />
+        </div>
+        <div class="space-y-2">
+          <Label>Bank Name</Label>
+          <Input v-model="form.fields.bank_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Branch</Label>
+          <Input v-model="form.fields.branch" />
+        </div>
+        <div class="space-y-2">
+          <Label>Meeting Date</Label>
+          <Input v-model="form.fields.meeting_date" type="date" />
+        </div>
+        <div class="space-y-2">
+          <Label>Certificate Date</Label>
+          <Input v-model="form.fields.certificate_date" type="date" />
+        </div>
+        <div class="space-y-2">
+          <Label>Authorized Signatory 1 Name</Label>
+          <Input v-model="form.fields.authorized_signatory_1_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Authorized Signatory 1 Position</Label>
+          <Input v-model="form.fields.authorized_signatory_1_position" />
+        </div>
+        <div class="space-y-2">
+          <Label>Authorized Signatory 2 Name</Label>
+          <Input v-model="form.fields.authorized_signatory_2_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Authorized Signatory 2 Position</Label>
+          <Input v-model="form.fields.authorized_signatory_2_position" />
+        </div>
+        <div class="space-y-2">
+          <Label>Withdrawal Signatory 1 Name</Label>
+          <Input v-model="form.fields.withdrawal_signatory_1_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Withdrawal Signatory 1 Position</Label>
+          <Input v-model="form.fields.withdrawal_signatory_1_position" />
+        </div>
+        <div class="space-y-2">
+          <Label>Withdrawal Signatory 2 Name</Label>
+          <Input v-model="form.fields.withdrawal_signatory_2_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Withdrawal Signatory 2 Position</Label>
+          <Input v-model="form.fields.withdrawal_signatory_2_position" />
+        </div>
+        <div class="space-y-2">
+          <Label>Corporate Secretary Name</Label>
+          <Input v-model="form.fields.corporate_secretary_name" />
+        </div>
+        <div class="space-y-2">
+          <Label>Certificate Location</Label>
+          <Input v-model="form.fields.certificate_location" />
         </div>
       </div>
 
@@ -2028,9 +2211,12 @@ const submit = () => {
         </div>
       </div>
 
-      <div v-if="activeType && !isGis" class="mt-2 flex justify-end">
+      <div v-if="activeType && !isGis" class="mt-2 flex justify-end gap-2">
+        <Button type="button" variant="outline" :disabled="form.processing" @click="openPreview">
+          Preview
+        </Button>
         <Button type="button" :disabled="form.processing" @click="submit">
-          {{ form.processing ? 'Generating...' : 'Generate PDF' }}
+          {{ form.processing ? 'Exporting...' : 'Export PDF' }}
         </Button>
       </div>
     </DialogContent>

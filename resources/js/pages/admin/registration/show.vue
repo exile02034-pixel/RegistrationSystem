@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, Download, Eye, Trash2, Upload, UserPlus } from 'lucide-vue-next'
 import { useForm } from '@inertiajs/vue3'
+import { ChevronDown, ChevronUp, Download, Eye, FileText, MoreHorizontal, Upload, UserPlus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
-import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/sonner'
@@ -217,72 +223,102 @@ const confirmDeleteRequiredDocument = () => {
         </Dialog>
 
         <div class="space-y-3">
-          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Required Documents</h2>
           <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
-            <div class="space-y-3">
-              <div
-                v-for="requiredDocument in registration.required_documents"
-                :key="requiredDocument.type"
-                class="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 dark:border-[#1E3A5F] dark:bg-[#0F2747] md:flex-row md:items-center md:justify-between"
-              >
-                <div class="space-y-1">
-                  <p class="text-sm font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">{{ requiredDocument.name }}</p>
-                  <p v-if="requiredDocument.is_uploaded" class="text-xs text-[#475569] dark:text-[#9FB3C8]">
-                    Uploaded: {{ requiredDocument.original_filename }}<span v-if="requiredDocument.uploaded_by"> by {{ requiredDocument.uploaded_by }}</span>
-                  </p>
-                  <p v-else class="text-xs text-[#64748B] dark:text-[#9FB3C8]">No file uploaded yet.</p>
-                </div>
+            <div class="mb-3 flex items-center gap-2">
+              <FileText class="h-4 w-4 text-[#2563EB] dark:text-[#60A5FA]" />
+              <h3 class="font-['Space_Grotesk'] text-lg font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Required Documents</h3>
+            </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                  <input
-                    :ref="(el) => setRequiredDocumentFileInput(requiredDocument.type, el as Element | null)"
-                    type="file"
-                    class="hidden"
-                    @change="(event) => uploadRequiredDocument(requiredDocument.type, requiredDocument.upload_url, event)"
+            <div class="overflow-x-auto rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
+              <table class="min-w-full text-sm">
+                <thead class="bg-[#EFF6FF] text-left text-[#475569] dark:bg-[#0F2747] dark:text-[#9FB3C8]">
+                  <tr>
+                    <th class="px-4 py-3">Document</th>
+                    <th class="px-4 py-3">Uploaded By</th>
+                    <th class="px-4 py-3">Uploaded At</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="requiredDocument in registration.required_documents"
+                    :key="requiredDocument.type"
+                    class="border-t border-[#E2E8F0] dark:border-[#1E3A5F]"
                   >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="uploadRequiredDocumentForm.processing"
-                    @click="openRequiredDocumentPicker(requiredDocument.type)"
-                  >
-                    <Upload class="mr-1 h-4 w-4" />
-                    Upload
-                  </Button>
-
-                  <a
-                    v-if="requiredDocument.view_url"
-                    :href="requiredDocument.view_url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center rounded-md border border-[#E2E8F0] px-3 text-xs font-medium text-[#0B1F3A] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
-                  >
-                    <Eye class="mr-1 h-4 w-4" />
-                    View
-                  </a>
-                  <a
-                    v-if="requiredDocument.download_url"
-                    :href="requiredDocument.download_url"
-                    class="inline-flex h-8 items-center rounded-md border border-[#E2E8F0] px-3 text-xs font-medium text-[#0B1F3A] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
-                  >
-                    <Download class="mr-1 h-4 w-4" />
-                    Download
-                  </a>
-                  <Button
-                    v-if="requiredDocument.delete_url"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="deleteRequiredDocumentForm.processing"
-                    class="border-[#F87171] text-[#B91C1C] hover:bg-[#FEF2F2]"
-                    @click="deleteRequiredDocument(requiredDocument.delete_url, requiredDocument.name)"
-                  >
-                    <Trash2 class="mr-1 h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
+                    <td class="px-4 py-3">
+                      <p class="font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">{{ requiredDocument.name }}</p>
+                      <p v-if="requiredDocument.is_uploaded" class="text-xs text-[#475569] dark:text-[#9FB3C8]">
+                        {{ requiredDocument.original_filename }}
+                      </p>
+                      <p v-else class="text-xs text-[#64748B] dark:text-[#9FB3C8]">No file uploaded yet.</p>
+                    </td>
+                    <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">
+                      {{ requiredDocument.uploaded_by || 'n/a' }}
+                    </td>
+                    <td class="px-4 py-3 text-[#475569] dark:text-[#9FB3C8]">
+                      {{ formatDateTime(requiredDocument.uploaded_at) }}
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <input
+                          :ref="(el) => setRequiredDocumentFileInput(requiredDocument.type, el as Element | null)"
+                          type="file"
+                          class="hidden"
+                          @change="(event) => uploadRequiredDocument(requiredDocument.type, requiredDocument.upload_url, event)"
+                        >
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8"
+                          :disabled="uploadRequiredDocumentForm.processing"
+                          @click="openRequiredDocumentPicker(requiredDocument.type)"
+                        >
+                          <Upload class="h-4 w-4" />
+                        </Button>
+                        <Button
+                          v-if="requiredDocument.view_url"
+                          as="a"
+                          :href="requiredDocument.view_url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8"
+                        >
+                          <Eye class="h-4 w-4" />
+                        </Button>
+                        <Button
+                          v-if="requiredDocument.download_url"
+                          as="a"
+                          :href="requiredDocument.download_url"
+                          variant="ghost"
+                          size="icon"
+                          class="h-8 w-8"
+                        >
+                          <Download class="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu v-if="requiredDocument.delete_url">
+                          <DropdownMenuTrigger as-child>
+                            <Button variant="ghost" size="icon" class="h-8 w-8">
+                              <MoreHorizontal class="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" class="w-40">
+                            <DropdownMenuItem
+                              class="text-destructive"
+                              :disabled="deleteRequiredDocumentForm.processing"
+                              @click="deleteRequiredDocument(requiredDocument.delete_url, requiredDocument.name)"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 

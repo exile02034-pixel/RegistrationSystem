@@ -30,6 +30,18 @@ class AdminDocumentService
         );
     }
 
+    public function previewHtml(
+        RegistrationLink $registrationLink,
+        string $documentType,
+        array $fields,
+    ): string {
+        return $this->documentGenerationService->renderHtml(
+            registrationLink: $registrationLink,
+            documentType: $documentType,
+            fields: $fields,
+        );
+    }
+
     public function documentPayload(
         RegistrationLink $registrationLink,
         RegistrationGeneratedDocument $document,
