@@ -49,5 +49,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])
             ->name('register.required-documents.view');
         Route::get('/registration/{registrationLink}/required-documents/{requiredDocument}/download', [RegistrationController::class, 'downloadRequiredDocument'])
             ->name('register.required-documents.download');
+        Route::delete('/registration/{registrationLink}/required-documents/{requiredDocument}', [RegistrationController::class, 'destroyRequiredDocument'])
+            ->name('register.required-documents.destroy');
         Route::patch('/submissions/{submission}/section/{section}', [AdminFormSubmissionController::class, 'updateSection'])->name('submissions.section.update');
     });
