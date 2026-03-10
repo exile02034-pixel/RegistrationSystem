@@ -162,6 +162,19 @@ export type GisAutofillData = {
     missing_fields: string[];
 };
 
+export type AppointmentAutofillData = {
+    corporate_tin: string;
+    complete_business_address: string;
+    business_trade_name: string;
+    date_of_registration: string;
+    sec_registration_number: string;
+    corporate_name: string;
+    email_address: string;
+    primary_purpose_activity: string;
+    has_uploaded_sources: boolean;
+    missing_fields: string[];
+};
+
 export type AdminRegistrationShowRecord = {
     id: string;
     email: string;
@@ -174,6 +187,7 @@ export type AdminRegistrationShowRecord = {
     generated_documents: GeneratedDocument[];
     document_forms: DocumentForm[];
     gis_autofill: GisAutofillData;
+    appointment_autofill: AppointmentAutofillData;
     required_documents: RequiredRegistrationDocument[];
     revision_count: number;
     last_revision_at: string | null;

@@ -117,7 +117,7 @@ class AdminRegistrationService
         $registrationLink->loadMissing('formSubmission.revisions', 'generatedDocuments.generatedBy', 'requiredDocuments.uploadedBy');
         $revisionCount = $registrationLink->formSubmission?->revisions()->count() ?? 0;
         $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
-        $this->ensureRequiredDocumentExtraction($registrationLink, 'certificate_of_registration', ['business_trade_name', 'sec_registration_number', 'date_registered', 'business_address', 'corporate_tin']);
+        $this->ensureRequiredDocumentExtraction($registrationLink, 'certificate_of_registration', ['business_trade_name', 'date_registered', 'business_address', 'corporate_tin']);
         $this->ensureRequiredDocumentExtraction($registrationLink, 'cover_sheet', ['sec_registration_number', 'industry_classification', 'corporate_name', 'principal_office_address', 'email', 'official_mobile', 'alternate_email', 'alternate_mobile']);
         $this->ensureRequiredDocumentExtraction($registrationLink, 'articles_of_corporation', ['primary_purpose']);
         $registrationLink->loadMissing('requiredDocuments.uploadedBy');
@@ -152,6 +152,16 @@ class AdminRegistrationService
             'alternate_mobile' => (string) ($coverSheetPayload['alternate_mobile'] ?? ''),
             'primary_purpose' => (string) ($articlesPayload['primary_purpose'] ?? ''),
         ];
+        $appointmentAutofill = [
+            'corporate_tin' => (string) ($certificatePayload['corporate_tin'] ?? ''),
+            'complete_business_address' => (string) ($certificatePayload['business_address'] ?? ''),
+            'business_trade_name' => (string) ($certificatePayload['business_trade_name'] ?? ''),
+            'date_of_registration' => (string) ($certificatePayload['date_registered'] ?? ''),
+            'sec_registration_number' => (string) ($coverSheetPayload['sec_registration_number'] ?? ''),
+            'corporate_name' => (string) ($coverSheetPayload['corporate_name'] ?? ''),
+            'email_address' => (string) ($coverSheetPayload['email'] ?? ''),
+            'primary_purpose_activity' => (string) ($articlesPayload['primary_purpose'] ?? ''),
+        ];
         $targetFields = [
             'corporate_tin',
             'business_address',
@@ -169,6 +179,20 @@ class AdminRegistrationService
         ];
         $missingFields = collect($targetFields)
             ->filter(fn (string $field): bool => trim((string) ($gisAutofill[$field] ?? '')) === '')
+            ->values()
+            ->all();
+        $appointmentTargetFields = [
+            'corporate_tin',
+            'complete_business_address',
+            'business_trade_name',
+            'date_of_registration',
+            'sec_registration_number',
+            'corporate_name',
+            'email_address',
+            'primary_purpose_activity',
+        ];
+        $appointmentMissingFields = collect($appointmentTargetFields)
+            ->filter(fn (string $field): bool => trim((string) ($appointmentAutofill[$field] ?? '')) === '')
             ->values()
             ->all();
         $hasUploadedSources = collect(['certificate_of_registration', 'cover_sheet', 'articles_of_corporation'])
@@ -201,6 +225,10 @@ class AdminRegistrationService
             'gis_autofill' => array_merge($gisAutofill, [
                 'has_uploaded_sources' => $hasUploadedSources,
                 'missing_fields' => $missingFields,
+            ]),
+            'appointment_autofill' => array_merge($appointmentAutofill, [
+                'has_uploaded_sources' => $hasUploadedSources,
+                'missing_fields' => $appointmentMissingFields,
             ]),
             'required_documents' => collect(self::REQUIRED_DOCUMENT_TYPES)
                 ->map(function (string $label, string $type) use ($registrationLink, $requiredDocumentsByType): array {
