@@ -37,4 +37,9 @@ class RegistrationLink extends Model
     {
         return $this->hasMany(RegistrationGeneratedDocument::class);
     }
+
+    public function requiredDocuments(): HasMany
+    {
+        return $this->hasMany(RegistrationRequiredDocument::class);
+    }
 }

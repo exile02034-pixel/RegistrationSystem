@@ -130,6 +130,27 @@ export type DocumentForm = {
 
 export type RegistrationStatus = 'pending' | 'incomplete' | 'completed';
 
+export type RequiredRegistrationDocument = {
+    type: string;
+    name: string;
+    is_uploaded: boolean;
+    original_filename: string | null;
+    uploaded_at: string | null;
+    uploaded_by: string | null;
+    upload_url: string;
+    view_url: string | null;
+    download_url: string | null;
+};
+
+export type GisAutofillData = {
+    business_trade_name: string;
+    sec_registration_number: string;
+    date_registered: string;
+    registered_address: string;
+    corporate_tin: string;
+    branch_code: string;
+};
+
 export type AdminRegistrationShowRecord = {
     id: string;
     email: string;
@@ -141,6 +162,8 @@ export type AdminRegistrationShowRecord = {
     form_submission: FormSubmission | null;
     generated_documents: GeneratedDocument[];
     document_forms: DocumentForm[];
+    gis_autofill: GisAutofillData;
+    required_documents: RequiredRegistrationDocument[];
     revision_count: number;
     last_revision_at: string | null;
 };

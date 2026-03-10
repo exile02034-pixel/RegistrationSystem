@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SendRegistrationPdfsEmailRequest;
 use App\Http\Requests\Admin\SendRegistrationLinkRequest;
 use App\Http\Requests\Admin\UpdateRegistrationStatusRequest;
+use App\Models\RegistrationRequiredDocument;
 use App\Models\RegistrationLink;
 use App\Services\NotificationService;
 use App\Services\Admin\AdminRegistrationPdfEmailService;
 use App\Services\Admin\AdminRegistrationService;
+use App\Services\Admin\RequiredDocumentExtractionService;
 use App\Services\RegistrationWorkflowService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,6 +29,7 @@ class RegistrationController extends Controller
         private readonly RegistrationWorkflowService $workflowService,
         private readonly AdminRegistrationService $adminRegistrationService,
         private readonly AdminRegistrationPdfEmailService $adminRegistrationPdfEmailService,
+        private readonly RequiredDocumentExtractionService $requiredDocumentExtractionService,
         private readonly NotificationService $notificationService,
     ) {}
 
@@ -112,5 +119,87 @@ class RegistrationController extends Controller
         }
 
         return back()->with('success', "Sent {$count} selected PDF(s) to {$registrationLink->email}.");
+    }
+
+    public function uploadRequiredDocument(Request $request, RegistrationLink $registrationLink): RedirectResponse
+    {
+        $validated = $request->validate([
+            'document_type' => ['required', 'string', 'in:'.implode(',', array_keys(AdminRegistrationService::REQUIRED_DOCUMENT_TYPES))],
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        /** @var UploadedFile $uploadedFile */
+        $uploadedFile = $validated['file'];
+        $documentType = (string) $validated['document_type'];
+        $documentName = AdminRegistrationService::REQUIRED_DOCUMENT_TYPES[$documentType] ?? $documentType;
+
+        $extension = $uploadedFile->getClientOriginalExtension();
+        $filename = $documentType.'_'.now()->format('Ymd_His').'_'.Str::lower(Str::random(6)).($extension !== '' ? '.'.$extension : '');
+        $path = $uploadedFile->storeAs('required-documents/'.$registrationLink->id, $filename, 'local');
+        $absolutePath = Storage::disk('local')->path($path);
+
+        $extractionPayload = [];
+        if ($documentType === 'certificate_of_registration') {
+            $extractionPayload = $this->requiredDocumentExtractionService->extractCertificateOfRegistrationFields(
+                absolutePath: $absolutePath,
+                originalFilename: $uploadedFile->getClientOriginalName(),
+            );
+        }
+
+        $existing = $registrationLink->requiredDocuments()->where('document_type', $documentType)->first();
+        if ($existing !== null) {
+            Storage::disk('local')->delete($existing->file_path);
+        }
+
+        $registrationLink->requiredDocuments()->updateOrCreate(
+            ['document_type' => $documentType],
+            [
+                'document_name' => $documentName,
+                'original_filename' => $uploadedFile->getClientOriginalName(),
+                'file_path' => $path,
+                'mime_type' => $uploadedFile->getClientMimeType(),
+                'extraction_payload' => $extractionPayload !== [] ? $extractionPayload : null,
+                'uploaded_by' => $request->user()?->id,
+            ],
+        );
+
+        return back()->with('success', "{$documentName} uploaded successfully.");
+    }
+
+    public function viewRequiredDocument(
+        RegistrationLink $registrationLink,
+        RegistrationRequiredDocument $requiredDocument,
+    ): BinaryFileResponse {
+        $this->assertRequiredDocumentOwnership($registrationLink, $requiredDocument);
+
+        $path = Storage::disk('local')->path($requiredDocument->file_path);
+
+        return response()->file($path, [
+            'Content-Type' => $requiredDocument->mime_type ?? 'application/octet-stream',
+        ]);
+    }
+
+    public function downloadRequiredDocument(
+        RegistrationLink $registrationLink,
+        RegistrationRequiredDocument $requiredDocument,
+    ): BinaryFileResponse {
+        $this->assertRequiredDocumentOwnership($registrationLink, $requiredDocument);
+
+        $path = Storage::disk('local')->path($requiredDocument->file_path);
+
+        return response()->download(
+            $path,
+            $requiredDocument->original_filename,
+            ['Content-Type' => $requiredDocument->mime_type ?? 'application/octet-stream'],
+        );
+    }
+
+    private function assertRequiredDocumentOwnership(
+        RegistrationLink $registrationLink,
+        RegistrationRequiredDocument $requiredDocument,
+    ): void {
+        if ($requiredDocument->registration_link_id !== $registrationLink->id) {
+            abort(404);
+        }
     }
 }

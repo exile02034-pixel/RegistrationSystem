@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, UserPlus } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, Download, Eye, Upload, UserPlus } from 'lucide-vue-next'
+import { useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import DocumentFormsPanel from '@/components/admin/registration/DocumentFormsPanel.vue'
 import FormPdfList from '@/components/forms/FormPdfList.vue'
 import FormSection from '@/components/forms/FormSection.vue'
@@ -8,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { toast } from '@/components/ui/sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAdminRegistrationShow } from '@/composables/admin/useAdminRegistrationShow'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -24,6 +27,45 @@ const {
   submitCreateUser,
   updateStatus,
 } = useAdminRegistrationShow(props.registration)
+
+const uploadRequiredDocumentForm = useForm<{ document_type: string; file: File | null }>({
+  document_type: '',
+  file: null,
+})
+const requiredDocumentFileInputs = ref<Record<string, HTMLInputElement | null>>({})
+
+const setRequiredDocumentFileInput = (type: string, element: Element | null) => {
+  requiredDocumentFileInputs.value[type] = (element as HTMLInputElement | null)
+}
+
+const openRequiredDocumentPicker = (type: string) => {
+  requiredDocumentFileInputs.value[type]?.click()
+}
+
+const uploadRequiredDocument = (type: string, uploadUrl: string, event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  if (file === null) return
+
+  uploadRequiredDocumentForm.document_type = type
+  uploadRequiredDocumentForm.file = file
+
+  uploadRequiredDocumentForm.post(uploadUrl, {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      toast.success('Required document uploaded successfully.')
+    },
+    onError: (errors) => {
+      const firstMessage = Object.values(errors).find((value) => typeof value === 'string')
+      toast.error((firstMessage as string | undefined) ?? 'Failed to upload required document.')
+    },
+    onFinish: () => {
+      uploadRequiredDocumentForm.reset('file')
+      input.value = ''
+    },
+  })
+}
 </script>
 
 <template>
@@ -132,6 +174,63 @@ const {
         </Dialog>
 
         <div class="space-y-3">
+          <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Required Documents</h2>
+          <div class="rounded-2xl border border-[#E2E8F0] bg-[#FFFFFF] p-4 shadow-sm dark:border-[#1E3A5F] dark:bg-[#12325B]">
+            <div class="space-y-3">
+              <div
+                v-for="requiredDocument in registration.required_documents"
+                :key="requiredDocument.type"
+                class="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3 dark:border-[#1E3A5F] dark:bg-[#0F2747] md:flex-row md:items-center md:justify-between"
+              >
+                <div class="space-y-1">
+                  <p class="text-sm font-medium text-[#0B1F3A] dark:text-[#E6F1FF]">{{ requiredDocument.name }}</p>
+                  <p v-if="requiredDocument.is_uploaded" class="text-xs text-[#475569] dark:text-[#9FB3C8]">
+                    Uploaded: {{ requiredDocument.original_filename }}<span v-if="requiredDocument.uploaded_by"> by {{ requiredDocument.uploaded_by }}</span>
+                  </p>
+                  <p v-else class="text-xs text-[#64748B] dark:text-[#9FB3C8]">No file uploaded yet.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    :ref="(el) => setRequiredDocumentFileInput(requiredDocument.type, el as Element | null)"
+                    type="file"
+                    class="hidden"
+                    @change="(event) => uploadRequiredDocument(requiredDocument.type, requiredDocument.upload_url, event)"
+                  >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="uploadRequiredDocumentForm.processing"
+                    @click="openRequiredDocumentPicker(requiredDocument.type)"
+                  >
+                    <Upload class="mr-1 h-4 w-4" />
+                    Upload
+                  </Button>
+
+                  <a
+                    v-if="requiredDocument.view_url"
+                    :href="requiredDocument.view_url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex h-8 items-center rounded-md border border-[#E2E8F0] px-3 text-xs font-medium text-[#0B1F3A] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
+                  >
+                    <Eye class="mr-1 h-4 w-4" />
+                    View
+                  </a>
+                  <a
+                    v-if="requiredDocument.download_url"
+                    :href="requiredDocument.download_url"
+                    class="inline-flex h-8 items-center rounded-md border border-[#E2E8F0] px-3 text-xs font-medium text-[#0B1F3A] hover:bg-[#EFF6FF] dark:border-[#1E3A5F] dark:text-[#E6F1FF] dark:hover:bg-[#12325B]"
+                  >
+                    <Download class="mr-1 h-4 w-4" />
+                    Download
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <h2 class="font-['Space_Grotesk'] text-xl font-semibold text-[#0B1F3A] dark:text-[#E6F1FF]">Submitted Form Data</h2>
 
           <FormPdfList
@@ -146,6 +245,7 @@ const {
             :registration-id="registration.id"
             :forms="registration.document_forms"
             :generated-documents="registration.generated_documents"
+            :gis-autofill="registration.gis_autofill"
           />
 
           <Collapsible
