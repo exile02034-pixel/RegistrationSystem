@@ -119,8 +119,8 @@ class AdminRegistrationService
         $lastRevisionAt = $registrationLink->formSubmission?->revisions()->latest('created_at')->first()?->created_at;
         $this->ensureRequiredDocumentExtraction($registrationLink, 'certificate_of_registration', ['business_trade_name', 'date_registered', 'business_address', 'corporate_tin']);
         $this->ensureRequiredDocumentExtraction($registrationLink, 'cover_sheet', ['sec_registration_number', 'industry_classification', 'corporate_name', 'principal_office_address', 'email', 'official_mobile', 'alternate_email', 'alternate_mobile']);
-        $this->ensureRequiredDocumentExtraction($registrationLink, 'articles_of_corporation', ['primary_purpose', 'gis_step_3']);
-        $registrationLink->load('requiredDocuments.uploadedBy');
+        $this->ensureRequiredDocumentExtraction($registrationLink, 'articles_of_corporation', ['primary_purpose']);
+        $registrationLink->loadMissing('requiredDocuments.uploadedBy');
         $requiredDocumentsByType = $registrationLink->requiredDocuments->keyBy('document_type');
         $certificateDocument = $requiredDocumentsByType->get('certificate_of_registration');
         $coverSheetDocument = $requiredDocumentsByType->get('cover_sheet');
@@ -151,8 +151,6 @@ class AdminRegistrationService
             'alternate_email' => (string) ($coverSheetPayload['alternate_email'] ?? ''),
             'alternate_mobile' => (string) ($coverSheetPayload['alternate_mobile'] ?? ''),
             'primary_purpose' => (string) ($articlesPayload['primary_purpose'] ?? ''),
-            'step_3' => is_array($articlesPayload['gis_step_3'] ?? null) ? $articlesPayload['gis_step_3'] : [],
-            'aoi_capital_stock_available' => $articlesDocument !== null,
         ];
         $appointmentAutofill = [
             'corporate_tin' => (string) ($certificatePayload['corporate_tin'] ?? ''),
@@ -277,7 +275,7 @@ class AdminRegistrationService
             ? $document->extraction_payload
             : [];
         $missingRequiredValues = collect($requiredKeys)->some(
-            fn (string $key): bool => $this->isExtractionValueMissing($existingPayload[$key] ?? null)
+            fn (string $key): bool => trim((string) ($existingPayload[$key] ?? '')) === ''
         );
 
         if ($existingPayload !== [] && $missingRequiredValues === false) {
@@ -302,23 +300,6 @@ class AdminRegistrationService
         $document->update([
             'extraction_payload' => array_merge($existingPayload, $payload),
         ]);
-    }
-
-    private function isExtractionValueMissing(mixed $value): bool
-    {
-        if ($value === null) {
-            return true;
-        }
-
-        if (is_string($value)) {
-            return trim($value) === '';
-        }
-
-        if (is_array($value)) {
-            return $value === [];
-        }
-
-        return false;
     }
 
     public function deleteRegistration(RegistrationLink $registrationLink, ?User $performedBy): void

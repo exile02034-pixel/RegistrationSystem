@@ -8,7 +8,7 @@ use ZipArchive;
 class RequiredDocumentExtractionService
 {
     /**
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     public function extractFieldsForDocument(string $documentType, string $absolutePath, string $originalFilename): array
     {
@@ -31,7 +31,7 @@ class RequiredDocumentExtractionService
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     private function extractCertificateOfRegistrationFieldsFromText(string $text, string $normalized): array
     {
@@ -81,7 +81,7 @@ class RequiredDocumentExtractionService
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     private function extractCoverSheetFieldsFromText(string $text, string $normalized): array
     {
@@ -189,7 +189,7 @@ class RequiredDocumentExtractionService
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     private function extractArticlesOfCorporationFieldsFromText(string $text, string $normalized): array
     {
@@ -197,371 +197,12 @@ class RequiredDocumentExtractionService
             $text,
             '/Primary:\s*(.+?)\s*Secondary:/is'
         );
-        $gisStep3 = $this->extractGisStep3CapitalStockFromArticles($text);
 
         $payload = array_filter([
             'primary_purpose' => $this->cleanInlineValue($primaryPurpose),
         ], static fn ($value): bool => is_string($value) && trim($value) !== '');
 
-        if ($gisStep3 !== []) {
-            $payload['gis_step_3'] = $gisStep3;
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function extractGisStep3CapitalStockFromArticles(string $text): array
-    {
-        $seventhClause = $this->extractClauseText($text, 'seventh', 'eighth');
-        $eighthClause = $this->extractClauseText($text, 'eighth', 'ninth');
-
-        if ($seventhClause === '' && $eighthClause === '') {
-            return [];
-        }
-
-        $authorizedCapital = $this->extractAuthorizedCapitalFromSeventh($seventhClause);
-        $authorizedShares = $this->extractAuthorizedSharesFromSeventh($seventhClause);
-        $parValue = $this->extractParValueFromSeventh($seventhClause);
-        $shareType = $this->extractShareTypeFromSeventh($seventhClause);
-
-        $authorizedAmount = null;
-        if ($authorizedShares !== null && $parValue !== null) {
-            $authorizedAmount = $authorizedShares * $parValue;
-        } elseif ($authorizedCapital !== null) {
-            $authorizedAmount = $authorizedCapital;
-        }
-
-        $authorizedRows = [];
-        if ($authorizedShares !== null || $parValue !== null || $authorizedAmount !== null || $shareType !== '') {
-            $authorizedRows[] = array_filter([
-                'type_of_shares' => $shareType,
-                'number_of_shares' => $authorizedShares !== null ? number_format($authorizedShares, 0, '.', ',') : '',
-                'par_or_stated_value' => $parValue !== null ? $this->formatPeso($parValue) : '',
-                'amount' => $authorizedAmount !== null ? $this->formatPeso($authorizedAmount) : '',
-            ], static fn ($value): bool => is_string($value) ? trim($value) !== '' : $value !== null);
-        }
-
-        $subscribers = $this->extractSubscribersFromEighth($eighthClause);
-        $totalsFromEighth = $this->extractSubscribedAndPaidTotalsFromEighth($eighthClause);
-        $subscribedTotal = $totalsFromEighth['subscribed'] ?? $this->sumNumericField($subscribers, 'amount_subscribed');
-        $paidTotal = $totalsFromEighth['paid'] ?? $this->sumNumericField($subscribers, 'amount_paid');
-
-        $filipinoSubscribers = array_values(array_filter(
-            $subscribers,
-            static fn (array $row): bool => str_contains(strtolower((string) ($row['nationality'] ?? '')), 'filipino')
-        ));
-        $foreignSubscribers = array_values(array_filter(
-            $subscribers,
-            static fn (array $row): bool => !str_contains(strtolower((string) ($row['nationality'] ?? '')), 'filipino')
-        ));
-
-        $subscribedFilipinoRows = $this->buildStep3SubscribedRows($filipinoSubscribers, $shareType, $parValue, $authorizedShares);
-        $subscribedForeignRows = $this->buildStep3SubscribedRows($foreignSubscribers, $shareType, $parValue, $authorizedShares);
-        $paidupFilipinoRows = $this->buildStep3PaidupRows($filipinoSubscribers, $shareType, $parValue, $authorizedShares);
-        $paidupForeignRows = $this->buildStep3PaidupRows($foreignSubscribers, $shareType, $parValue, $authorizedShares);
-
-        $foreignSubscribed = $this->sumNumericField($foreignSubscribers, 'amount_subscribed');
-        $foreignEquityPercent = null;
-        if ($subscribedTotal !== null && $subscribedTotal > 0 && $foreignSubscribed !== null) {
-            $foreignEquityPercent = ($foreignSubscribed / $subscribedTotal) * 100;
-        }
-
-        return array_filter([
-            'authorized_capital_stock' => $authorizedCapital !== null ? number_format($authorizedCapital, 2, '.', '') : '',
-            'subscribed_capital_stock' => $subscribedTotal !== null ? number_format($subscribedTotal, 2, '.', '') : '',
-            'paid_up_capital_stock' => $paidTotal !== null ? number_format($paidTotal, 2, '.', '') : '',
-            'authorized_rows' => $authorizedRows,
-            'subscribed_filipino_rows' => $subscribedFilipinoRows,
-            'subscribed_foreign_rows' => $subscribedForeignRows,
-            'paidup_filipino_rows' => $paidupFilipinoRows,
-            'paidup_foreign_rows' => $paidupForeignRows,
-            'percentage_foreign_equity' => $foreignEquityPercent !== null ? number_format($foreignEquityPercent, 2).'%' : '',
-            'total_subscribed_capital' => $subscribedTotal !== null ? $this->formatPeso($subscribedTotal) : '',
-            'total_paid_up_capital' => $paidTotal !== null ? $this->formatPeso($paidTotal) : '',
-        ], static function ($value): bool {
-            if (is_array($value)) {
-                return $value !== [];
-            }
-
-            return is_string($value) ? trim($value) !== '' : $value !== null;
-        });
-    }
-
-    private function extractClauseText(string $text, string $startClause, string $nextClause): string
-    {
-        $pattern = '/\b'.preg_quote($startClause, '/').'\b\s*[:.\-]?\s*(.+?)\s*\b'
-            .preg_quote($nextClause, '/').'\b\s*[:.\-]?/is';
-        if (preg_match($pattern, $text, $matches) === 1) {
-            return trim((string) ($matches[1] ?? ''));
-        }
-
-        $fallbackPattern = '/\b'.preg_quote($startClause, '/').'\b\s*[:.\-]?\s*(.+)$/is';
-        if (preg_match($fallbackPattern, $text, $fallbackMatches) !== 1) {
-            return '';
-        }
-
-        $tail = (string) ($fallbackMatches[1] ?? '');
-        $tail = preg_replace('/\b(ninth|tenth|in witness whereof)\b.*$/is', '', $tail) ?? $tail;
-
-        return trim($tail);
-    }
-
-    private function extractAuthorizedCapitalFromSeventh(string $seventhClause): ?float
-    {
-        if ($seventhClause === '') {
-            return null;
-        }
-
-        if (preg_match('/capital\s+stock[^P₱]*(?:₱|PHP|P)\s*([0-9][0-9,]*(?:\.[0-9]{2})?)/i', $seventhClause, $matches) === 1) {
-            return $this->parseNumber((string) ($matches[1] ?? ''));
-        }
-
-        if (preg_match('/(?:₱|PHP|P)\s*([0-9][0-9,]*(?:\.[0-9]{2})?)/i', $seventhClause, $fallback) === 1) {
-            return $this->parseNumber((string) ($fallback[1] ?? ''));
-        }
-
-        return null;
-    }
-
-    private function extractAuthorizedSharesFromSeventh(string $seventhClause): ?float
-    {
-        if ($seventhClause === '') {
-            return null;
-        }
-
-        if (preg_match('/\b([0-9][0-9,]*)\s+shares?\b/i', $seventhClause, $matches) === 1) {
-            return $this->parseNumber((string) ($matches[1] ?? ''));
-        }
-
-        if (preg_match('/\(\s*([0-9][0-9,]*)\s*\)\s*shares?/i', $seventhClause, $fallback) === 1) {
-            return $this->parseNumber((string) ($fallback[1] ?? ''));
-        }
-
-        return null;
-    }
-
-    private function extractParValueFromSeventh(string $seventhClause): ?float
-    {
-        if ($seventhClause === '') {
-            return null;
-        }
-
-        if (preg_match('/par\s+value\s+of[^P₱]*(?:₱|PHP|P)\s*([0-9][0-9,]*(?:\.[0-9]{2})?)/i', $seventhClause, $matches) === 1) {
-            return $this->parseNumber((string) ($matches[1] ?? ''));
-        }
-
-        if (preg_match('/(?:₱|PHP|P)\s*([0-9][0-9,]*(?:\.[0-9]{2})?)\s+per\s+share/i', $seventhClause, $fallback) === 1) {
-            return $this->parseNumber((string) ($fallback[1] ?? ''));
-        }
-
-        return null;
-    }
-
-    private function extractShareTypeFromSeventh(string $seventhClause): string
-    {
-        if ($seventhClause === '') {
-            return '';
-        }
-
-        if (preg_match('/\b(common|preferred)([^.,;\n]*?)shares?\b/i', $seventhClause, $matches) === 1) {
-            return $this->cleanInlineValue(trim((string) ($matches[0] ?? '')));
-        }
-
-        if (preg_match('/\b([a-z][a-z\-\s]{2,60})\s+shares?\b/i', $seventhClause, $fallback) === 1) {
-            return $this->cleanInlineValue(trim((string) ($fallback[1] ?? '')).' shares');
-        }
-
-        return '';
-    }
-
-    /**
-     * @return array<int, array<string, mixed>>
-     */
-    private function extractSubscribersFromEighth(string $eighthClause): array
-    {
-        if ($eighthClause === '') {
-            return [];
-        }
-
-        $rows = [];
-        $lines = $this->normalizedLines($eighthClause);
-
-        foreach ($lines as $line) {
-            if (stripos($line, 'total') === 0) {
-                continue;
-            }
-
-            if (preg_match(
-                '/^(.+?)\s+(Filipino|[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s+([0-9][0-9,]*)\s+(?:₱|PHP|P)?\s*([0-9][0-9,]*(?:\.[0-9]{2})?)(?:\s+(?:₱|PHP|P)?\s*([0-9][0-9,]*(?:\.[0-9]{2})?))?$/i',
-                $line,
-                $matches
-            ) !== 1) {
-                continue;
-            }
-
-            $shares = $this->parseNumber((string) ($matches[3] ?? ''));
-            $amountSubscribed = $this->parseNumber((string) ($matches[4] ?? ''));
-            $amountPaid = $this->parseNumber((string) ($matches[5] ?? ''));
-
-            $rows[] = array_filter([
-                'name' => $this->normalizePersonName((string) ($matches[1] ?? '')),
-                'nationality' => trim((string) ($matches[2] ?? '')),
-                'shares' => $shares,
-                'amount_subscribed' => $amountSubscribed,
-                'amount_paid' => $amountPaid,
-            ], static fn ($value): bool => $value !== null && $value !== '');
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @return array{subscribed:?float, paid:?float}
-     */
-    private function extractSubscribedAndPaidTotalsFromEighth(string $eighthClause): array
-    {
-        if ($eighthClause === '') {
-            return ['subscribed' => null, 'paid' => null];
-        }
-
-        if (preg_match(
-            '/\bTOTAL\b[^0-9P₱]*(?:₱|PHP|P)?\s*([0-9][0-9,]*(?:\.[0-9]{2})?)(?:[^0-9P₱]+(?:₱|PHP|P)?\s*([0-9][0-9,]*(?:\.[0-9]{2})?))?/i',
-            $eighthClause,
-            $matches
-        ) === 1) {
-            return [
-                'subscribed' => $this->parseNumber((string) ($matches[1] ?? '')),
-                'paid' => $this->parseNumber((string) ($matches[2] ?? '')),
-            ];
-        }
-
-        return ['subscribed' => null, 'paid' => null];
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $subscribers
-     * @return array<int, array<string, string>>
-     */
-    private function buildStep3SubscribedRows(
-        array $subscribers,
-        string $shareType,
-        ?float $parValue,
-        ?float $authorizedShares,
-    ): array {
-        if ($subscribers === []) {
-            return [];
-        }
-
-        $shares = $this->sumNumericField($subscribers, 'shares');
-        $amount = $this->sumNumericField($subscribers, 'amount_subscribed');
-        $ownership = null;
-        if ($shares !== null && $authorizedShares !== null && $authorizedShares > 0) {
-            $ownership = ($shares / $authorizedShares) * 100;
-        }
-
-        return [[
-            'no_of_stockholders' => (string) count($subscribers),
-            'type_of_shares' => $shareType,
-            'number_of_shares' => $shares !== null ? number_format($shares, 0, '.', ',') : '',
-            'public_shares' => '',
-            'par_or_stated_value' => $parValue !== null ? $this->formatPeso($parValue) : '',
-            'amount' => $amount !== null ? $this->formatPeso($amount) : '',
-            'ownership_percent' => $ownership !== null ? number_format($ownership, 2) : '',
-        ]];
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $subscribers
-     * @return array<int, array<string, string>>
-     */
-    private function buildStep3PaidupRows(
-        array $subscribers,
-        string $shareType,
-        ?float $parValue,
-        ?float $authorizedShares,
-    ): array {
-        if ($subscribers === []) {
-            return [];
-        }
-
-        $shares = $this->sumNumericField($subscribers, 'shares');
-        $amount = $this->sumNumericField($subscribers, 'amount_paid');
-        $ownership = null;
-        if ($shares !== null && $authorizedShares !== null && $authorizedShares > 0) {
-            $ownership = ($shares / $authorizedShares) * 100;
-        }
-
-        return [[
-            'no_of_stockholders' => (string) count($subscribers),
-            'type_of_shares' => $shareType,
-            'number_of_shares' => $shares !== null ? number_format($shares, 0, '.', ',') : '',
-            'par_or_stated_value' => $parValue !== null ? $this->formatPeso($parValue) : '',
-            'amount' => $amount !== null ? $this->formatPeso($amount) : '',
-            'ownership_percent' => $ownership !== null ? number_format($ownership, 2) : '',
-        ]];
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $rows
-     */
-    private function sumNumericField(array $rows, string $field): ?float
-    {
-        $sum = 0.0;
-        $hasValue = false;
-
-        foreach ($rows as $row) {
-            $value = $row[$field] ?? null;
-            if (! is_numeric($value)) {
-                continue;
-            }
-
-            $sum += (float) $value;
-            $hasValue = true;
-        }
-
-        return $hasValue ? $sum : null;
-    }
-
-    private function parseNumber(string $value): ?float
-    {
-        $clean = preg_replace('/[^0-9.]/', '', $value) ?? '';
-        if ($clean === '' || ! is_numeric($clean)) {
-            return null;
-        }
-
-        return (float) $clean;
-    }
-
-    private function formatPeso(float $value): string
-    {
-        return 'P'.number_format($value, 2, '.', ',');
-    }
-
-    private function normalizePersonName(string $name): string
-    {
-        $cleaned = $this->cleanInlineValue($name);
-        if ($cleaned === '') {
-            return '';
-        }
-
-        if (str_contains($cleaned, ',')) {
-            return $cleaned;
-        }
-
-        $parts = preg_split('/\s+/', $cleaned) ?: [];
-        if (count($parts) < 2) {
-            return $cleaned;
-        }
-
-        $lastName = array_pop($parts);
-        if ($lastName === null) {
-            return $cleaned;
-        }
-
-        return trim($lastName.', '.implode(' ', $parts));
+        return array_map(static fn ($value) => trim((string) $value), $payload);
     }
 
     private function extractText(string $absolutePath, string $originalFilename): string
