@@ -159,6 +159,20 @@ export type GisAutofillData = {
     alternate_email: string;
     alternate_mobile: string;
     primary_purpose: string;
+    step_3?: {
+        authorized_capital_stock?: string;
+        subscribed_capital_stock?: string;
+        paid_up_capital_stock?: string;
+        authorized_rows?: Array<Record<string, string>>;
+        subscribed_filipino_rows?: Array<Record<string, string>>;
+        subscribed_foreign_rows?: Array<Record<string, string>>;
+        paidup_filipino_rows?: Array<Record<string, string>>;
+        paidup_foreign_rows?: Array<Record<string, string>>;
+        percentage_foreign_equity?: string;
+        total_subscribed_capital?: string;
+        total_paid_up_capital?: string;
+    };
+    aoi_capital_stock_available?: boolean;
     has_uploaded_sources: boolean;
     missing_fields: string[];
 };
